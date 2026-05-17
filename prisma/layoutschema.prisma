@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+  needs_review
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  products  Product[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  slug          String        @unique
+
+  subcategories Subcategory[]
+  segments      Segment[]
+  products      Product[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Subcategory {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String
+
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  segments   Segment[]
+  products   Product[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([categoryId, name])
+  @@unique([categoryId, slug])
+}
+
+model Segment {
+  id            String       @id @default(cuid())
+  name          String
+  slug          String
+
+  categoryId    String
+  category      Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  products      Product[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([categoryId, subcategoryId, name])
+  @@unique([categoryId, subcategoryId, slug])
+}
+
+model Product {
+  id           String       @id @default(cuid())
+
+  name         String
+  slug         String       @unique
+  description  String?
+
+  price        Int
+  oldPrice     Int?
+  inStock      Boolean      @default(false)
+
+  reviewStatus ReviewStatus @default(pending)
+
+  sourceUrl    String?
+  scrapedAt    DateTime?
+
+  brandId      String
+  brand        Brand        @relation(fields: [brandId], references: [id])
+
+  categoryId   String
+  category     Category     @relation(fields: [categoryId], references: [id])
+
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+
+  segmentId     String?
+  segment       Segment?     @relation(fields: [segmentId], references: [id])
+
+  images       ProductImage[]
+  variants     ProductVariant[]
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  url       String
+  position  Int      @default(0)
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([productId, url])
+}
+
+model ProductVariant {
+  id              String   @id @default(cuid())
+
+  sourceVariantId String?
+  sku             String?
+  option          String?
+
+  price           Int
+  oldPrice        Int?
+  stock           Int      @default(0)
+  available       Boolean  @default(false)
+
+  imageUrl        String?
+
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([productId, sku])
+}
