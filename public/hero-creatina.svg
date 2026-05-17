@@ -1,0 +1,18 @@
+<svg width="1600" height="620" viewBox="0 0 1600 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="620" fill="#0f172a"/>
+  <rect width="1600" height="620" fill="url(#g)"/>
+  <path d="M1010 95h330l90 405H920l90-405Z" fill="#f8fafc"/>
+  <path d="M1060 155h250l32 140h-314l32-140Z" fill="#39B000"/>
+  <rect x="1060" y="345" width="250" height="20" rx="10" fill="#111827"/>
+  <rect x="1090" y="382" width="190" height="16" rx="8" fill="#111827" opacity=".55"/>
+  <text x="120" y="245" fill="#ffffff" font-family="Arial, sans-serif" font-size="82" font-weight="800">CREATINA</text>
+  <text x="124" y="315" fill="#d1d5db" font-family="Arial, sans-serif" font-size="34" font-weight="600">Fuerza, potencia y foco para entrenar pesado</text>
+  <text x="124" y="385" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">VER PERFORMANCE</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1600" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset=".65" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#39B000"/>
+    </linearGradient>
+  </defs>
+</svg>

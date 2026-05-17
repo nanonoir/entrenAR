@@ -1,0 +1,18 @@
+<svg width="680" height="820" viewBox="0 0 680 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="820" fill="#020617"/>
+  <rect width="680" height="820" fill="url(#g)"/>
+  <path d="M225 260h230l62 355H163l62-355Z" fill="#f8fafc"/>
+  <path d="M260 330h160l24 110H236l24-110Z" fill="#39B000"/>
+  <rect x="250" y="505" width="180" height="18" rx="9" fill="#111827"/>
+  <rect x="280" y="540" width="120" height="14" rx="7" fill="#111827" opacity=".55"/>
+  <text x="54" y="118" fill="#ffffff" font-family="Arial, sans-serif" font-size="58" font-weight="800">CREATINA</text>
+  <text x="58" y="174" fill="#d1d5db" font-family="Arial, sans-serif" font-size="25" font-weight="600">Fuerza y potencia</text>
+  <text x="58" y="690" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="800">VER PERFORMANCE</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="680" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset=".62" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#39B000"/>
+    </linearGradient>
+  </defs>
+</svg>

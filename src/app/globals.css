@@ -1,26 +1,78 @@
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap");
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-heading: "Bebas Neue", sans-serif;
+  --font-subtitle: "Oswald", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --color-background: #f7f7f7;
+  --color-surface: #ffffff;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+
+  --color-accent: #39b000;
+  --color-accent-hover: #2e8f00;
+  --color-accent-soft: #eafbe5;
+  --color-on-accent: #ffffff;
+
+  --color-sale: #e53935;
+  --color-warning: #f59e0b;
+  --color-success: #39b000;
+
+  --radius-card: 0.5rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 4px 14px rgb(0 0 0 / 0.08);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply min-h-screen bg-background text-text font-body antialiased;
+}
+
+section[id] {
+  scroll-margin-top: 6rem;
+}
+
+@keyframes promo-rotate {
+  0% {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  8%,
+  42% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+}
+
+@keyframes mega-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.promo-rotator-item {
+  animation: promo-rotate var(--promo-duration) ease-in-out infinite;
+  animation-delay: var(--promo-delay);
+  animation-fill-mode: both;
+  opacity: 0;
 }

@@ -1,0 +1,18 @@
+<svg width="680" height="820" viewBox="0 0 680 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="820" fill="#18181b"/>
+  <rect width="680" height="820" fill="url(#g)"/>
+  <rect x="190" y="300" width="300" height="105" rx="18" fill="#ffffff"/>
+  <rect x="235" y="340" width="165" height="22" rx="11" fill="#39B000"/>
+  <rect x="150" y="455" width="330" height="105" rx="18" fill="#ffffff"/>
+  <rect x="205" y="495" width="170" height="22" rx="11" fill="#39B000"/>
+  <text x="54" y="118" fill="#ffffff" font-family="Arial, sans-serif" font-size="54" font-weight="800">MARKET</text>
+  <text x="58" y="174" fill="#d1d5db" font-family="Arial, sans-serif" font-size="25" font-weight="600">Snacks y barras</text>
+  <text x="58" y="690" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="800">EXPLORAR MARKET</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="680" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset=".55" stop-color="#334155"/>
+      <stop offset="1" stop-color="#39B000"/>
+    </linearGradient>
+  </defs>
+</svg>

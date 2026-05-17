@@ -1,0 +1,19 @@
+<svg width="680" height="820" viewBox="0 0 680 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="820" fill="#111827"/>
+  <rect width="680" height="820" fill="url(#g)"/>
+  <circle cx="520" cy="200" r="170" fill="#39B000" opacity=".25"/>
+  <rect x="235" y="265" width="210" height="330" rx="22" fill="#ffffff"/>
+  <rect x="265" y="310" width="150" height="36" rx="18" fill="#39B000"/>
+  <rect x="270" y="385" width="135" height="18" rx="9" fill="#111827"/>
+  <rect x="270" y="420" width="105" height="18" rx="9" fill="#111827" opacity=".55"/>
+  <text x="54" y="118" fill="#ffffff" font-family="Arial, sans-serif" font-size="58" font-weight="800">PROTEINAS</text>
+  <text x="58" y="174" fill="#d1d5db" font-family="Arial, sans-serif" font-size="25" font-weight="600">Recupera mejor</text>
+  <text x="58" y="690" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="800">COMPRAR AHORA</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="680" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b0f16"/>
+      <stop offset=".58" stop-color="#182318"/>
+      <stop offset="1" stop-color="#39B000"/>
+    </linearGradient>
+  </defs>
+</svg>

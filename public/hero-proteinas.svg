@@ -1,0 +1,21 @@
+<svg width="1600" height="620" viewBox="0 0 1600 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="620" fill="#111827"/>
+  <rect x="0" y="0" width="1600" height="620" fill="url(#g)"/>
+  <circle cx="1270" cy="230" r="230" fill="#39B000" opacity=".28"/>
+  <circle cx="1090" cy="470" r="190" fill="#ffffff" opacity=".12"/>
+  <rect x="980" y="90" width="250" height="410" rx="24" fill="#ffffff"/>
+  <rect x="1015" y="130" width="180" height="42" rx="21" fill="#39B000"/>
+  <rect x="1015" y="205" width="160" height="18" rx="9" fill="#111827"/>
+  <rect x="1015" y="238" width="130" height="18" rx="9" fill="#111827" opacity=".55"/>
+  <rect x="1015" y="380" width="110" height="14" rx="7" fill="#39B000"/>
+  <text x="120" y="245" fill="#ffffff" font-family="Arial, sans-serif" font-size="82" font-weight="800">PROTEINAS</text>
+  <text x="124" y="315" fill="#d1d5db" font-family="Arial, sans-serif" font-size="34" font-weight="600">Ofertas seleccionadas para recuperar mejor</text>
+  <text x="124" y="385" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">COMPRAR AHORA</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1600" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b0f16"/>
+      <stop offset=".58" stop-color="#182318"/>
+      <stop offset="1" stop-color="#39B000"/>
+    </linearGradient>
+  </defs>
+</svg>
