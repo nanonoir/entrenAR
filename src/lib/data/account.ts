@@ -1,31 +1,42 @@
 import type { AccountNavItem } from "@/types/account";
 
+const EXISTING_ACCOUNT_EMAILS = new Set(["cliente@entrenar.com"]);
+export const accountEntryLabel = "Iniciar sesión / Registrarse";
+
 export const guestAccountLinks: AccountNavItem[] = [
   {
-    label: "Iniciar sesión",
-    href: "/login",
+    label: accountEntryLabel,
+    href: "#cuenta",
     variant: "primary",
-  },
-  {
-    label: "Registrarse",
-    href: "/register",
-    variant: "secondary",
   },
 ];
 
 export const authenticatedAccountLinks: AccountNavItem[] = [
   {
     label: "Mi cuenta",
-    href: "/account",
+    href: "#cuenta",
     variant: "primary",
   },
   {
     label: "Pedidos",
-    href: "/account/orders",
+    href: "#cuenta",
     variant: "secondary",
   },
 ];
 
 export function getMobileAccountLinks({ isAuthenticated = false } = {}) {
   return isAuthenticated ? authenticatedAccountLinks : guestAccountLinks;
+}
+
+export function findMockAccountByEmail(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!EXISTING_ACCOUNT_EMAILS.has(normalizedEmail)) {
+    return null;
+  }
+
+  return {
+    email: normalizedEmail,
+    name: "Cliente EntrenAR",
+  };
 }

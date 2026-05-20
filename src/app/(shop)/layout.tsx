@@ -1,4 +1,5 @@
 import { CartDrawer } from "@/components/shop/cart/CartDrawer";
+import { AccountDrawer } from "@/components/shop/account/AccountDrawer";
 import { CategoriesBar } from "@/components/shop/layout/CategoriesBar";
 import { Footer } from "@/components/shop/layout/Footer";
 import { MobileMenu } from "@/components/shop/layout/MobileMenu";
@@ -27,6 +28,7 @@ export default function ShopLayout({
       <MobileMenu accountLinks={mobileAccountLinks} navItems={navItems} />
       <main className="flex-1">{children}</main>
       <Footer />
+      <AccountDrawer />
       <CartDrawer />
     </>
   );

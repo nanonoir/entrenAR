@@ -3,3 +3,8 @@ export type AccountNavItem = {
   href: string;
   variant: "primary" | "secondary";
 };
+
+export type MockAccountUser = {
+  email: string;
+  name: string;
+};

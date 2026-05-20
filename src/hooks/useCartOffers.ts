@@ -29,8 +29,14 @@ export function useCartOffers({
     let active = true;
 
     if (!enabled) {
-      setOffers([]);
-      return;
+      Promise.resolve().then(() => {
+        if (active) {
+          setOffers([]);
+        }
+      });
+      return () => {
+        active = false;
+      };
     }
 
     getQuickBuyOfferProducts(excludedProductIds).then((products) => {

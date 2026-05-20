@@ -3,7 +3,7 @@
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
-import { FavoriteAuthModal } from "@/components/shop/products/FavoriteAuthModal";
+import { FavoriteAuthModal } from "@/components/shop/account/FavoriteAuthModal";
 import { ProductImageGallery } from "@/components/shop/products/ProductImageGallery";
 import { useFavoriteProduct } from "@/hooks/useFavoriteProduct";
 import { useProductVariantSelection } from "@/hooks/useProductVariantSelection";
@@ -21,7 +21,8 @@ type ProductDetailCardProps = {
 export function ProductDetailCard({ product }: ProductDetailCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
-  const { closeFavoriteModal, favoriteModalOpen, isFavorite, toggleFavorite } = useFavoriteProduct();
+  const { closeFavoriteAuthModal, favoriteAuthModalOpen, isFavorite, toggleFavorite } =
+    useFavoriteProduct();
   const {
     compareAtPrice,
     maxQuantity,
@@ -134,7 +135,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
         </div>
         </div>
       </section>
-      <FavoriteAuthModal onClose={closeFavoriteModal} open={favoriteModalOpen} />
+      <FavoriteAuthModal onClose={closeFavoriteAuthModal} open={favoriteAuthModalOpen} />
     </>
   );
 }

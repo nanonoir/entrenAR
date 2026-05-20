@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { AccountEntryButton } from "@/components/shop/account/AccountEntryButton";
 import { Drawer } from "@/components/ui/Drawer";
-import { LinkButton } from "@/components/ui/LinkButton";
+import { Button } from "@/components/ui/Button";
+import { accountEntryLabel } from "@/lib/data/account";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
 import type { AccountNavItem } from "@/types/account";
@@ -18,6 +20,7 @@ type MobileMenuProps = {
 export function MobileMenu({ navItems, accountLinks }: MobileMenuProps) {
   const isOpen = useUIStore((state) => state.isMobileMenuOpen);
   const close = useUIStore((state) => state.closeMobileMenu);
+  const openAccountDrawer = useUIStore((state) => state.openAccountDrawer);
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
@@ -28,6 +31,11 @@ export function MobileMenu({ navItems, accountLinks }: MobileMenuProps) {
 
   function toggleGroup(title: string) {
     setOpenGroup((current) => (current === title ? null : title));
+  }
+
+  function handleAccountAction() {
+    close();
+    openAccountDrawer();
   }
 
   return (
@@ -141,15 +149,18 @@ export function MobileMenu({ navItems, accountLinks }: MobileMenuProps) {
         </nav>
         <div className="grid gap-2 border-t border-border p-4">
           {accountLinks.map((item) => (
-            <LinkButton
-              className="w-full"
-              href={item.href}
-              key={item.label}
-              onClick={close}
-              variant={item.variant}
-            >
-              {item.label}
-            </LinkButton>
+            item.label === accountEntryLabel ? (
+              <AccountEntryButton key={item.label} onClick={handleAccountAction} />
+            ) : (
+              <Button
+                className="w-full"
+                key={item.label}
+                onClick={handleAccountAction}
+                variant={item.variant}
+              >
+                {item.label}
+              </Button>
+            )
           ))}
         </div>
       </div>

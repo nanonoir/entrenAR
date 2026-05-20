@@ -5,6 +5,12 @@ const supplementCategoryBySlug: Record<string, string> = {
   performance: "creatina-y-pre",
 };
 
+export const accountRoutes = {
+  passwordReset: "/cambiar-contrasena",
+  privacy: "/politicas/privacidad",
+  terms: "/terminos-y-condiciones",
+} as const;
+
 export function getProductHref(slug: string) {
   return `/productos/${slug}`;
 }

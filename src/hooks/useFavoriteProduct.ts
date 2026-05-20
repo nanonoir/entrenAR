@@ -1,29 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function useFavoriteProduct() {
-  // Mock hasta implementar auth real y persistencia de favoritos en backend.
-  const isAuthenticated = false;
-  const [favoriteModalOpen, setFavoriteModalOpen] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const [favoriteAuthModalOpen, setFavoriteAuthModalOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
   function toggleFavorite() {
-    if (!isAuthenticated) {
-      setFavoriteModalOpen(true);
+    if (!user) {
+      setFavoriteAuthModalOpen(true);
       return;
     }
 
     setIsFavorite((current) => !current);
   }
 
-  function closeFavoriteModal() {
-    setFavoriteModalOpen(false);
+  function closeFavoriteAuthModal() {
+    setFavoriteAuthModalOpen(false);
   }
 
   return {
-    closeFavoriteModal,
-    favoriteModalOpen,
+    closeFavoriteAuthModal,
+    favoriteAuthModalOpen,
     isFavorite,
     toggleFavorite,
   };
