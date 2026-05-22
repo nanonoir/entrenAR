@@ -38,7 +38,7 @@ const simpleCategoryBySegment: Record<string, { categorySlug: string; title: str
   market: {
     categorySlug: "market",
     title: "Market",
-    description: "Snacks, barras y alimentos funcionales para el dia a dia.",
+    description: "Snacks, barras y alimentos funcionales para el día a día.",
   },
   shakers: {
     categorySlug: "shakers",
@@ -53,7 +53,7 @@ const simpleCategoryBySegment: Record<string, { categorySlug: string; title: str
   indumentaria: {
     categorySlug: "indumentaria",
     title: "Indumentaria",
-    description: "Prendas para entrenar y usar todos los dias.",
+    description: "Prendas para entrenar y usar todos los días.",
   },
 };
 
@@ -102,7 +102,7 @@ export function resolveShopRoute(segments: string[]): ShopRouteResolution {
 
       return listingRoute(
         "Suplementos",
-        "Proteinas, creatina, vitaminas y soporte para tu rutina de entrenamiento.",
+        "Proteínas, creatina, vitaminas y soporte para tu rutina de entrenamiento.",
         products,
       );
     }

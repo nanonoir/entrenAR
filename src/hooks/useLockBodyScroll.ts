@@ -2,29 +2,65 @@
 
 import { useEffect } from "react";
 
+type BodyScrollSnapshot = {
+  overflow: string;
+  position: string;
+  scrollY: number;
+  top: string;
+  width: string;
+};
+
+let activeLockCount = 0;
+let bodyScrollSnapshot: BodyScrollSnapshot | null = null;
+
+function lockBodyScroll() {
+  if (activeLockCount === 0) {
+    const scrollY = window.scrollY;
+
+    bodyScrollSnapshot = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      scrollY,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  activeLockCount += 1;
+}
+
+function unlockBodyScroll() {
+  activeLockCount = Math.max(0, activeLockCount - 1);
+
+  if (activeLockCount > 0 || !bodyScrollSnapshot) {
+    return;
+  }
+
+  const { overflow, position, scrollY, top, width } = bodyScrollSnapshot;
+
+  document.body.style.position = position;
+  document.body.style.top = top;
+  document.body.style.width = width;
+  document.body.style.overflow = overflow;
+  bodyScrollSnapshot = null;
+  window.scrollTo(0, scrollY);
+}
+
 export function useLockBodyScroll(locked: boolean) {
   useEffect(() => {
     if (!locked) {
       return;
     }
 
-    const scrollY = window.scrollY;
-    const previousPosition = document.body.style.position;
-    const previousTop = document.body.style.top;
-    const previousWidth = document.body.style.width;
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
 
     return () => {
-      document.body.style.position = previousPosition;
-      document.body.style.top = previousTop;
-      document.body.style.width = previousWidth;
-      document.body.style.overflow = previousOverflow;
-      window.scrollTo(0, scrollY);
+      unlockBodyScroll();
     };
   }, [locked]);
 }

@@ -66,7 +66,7 @@ export function CartDrawer() {
                   </>
                 ) : (
                   <>
-                    Felicidades, tenes <strong className="font-bold text-text">env&iacute;o gratis</strong>!
+                    Felicidades, tenés <strong className="font-bold text-text">env&iacute;o gratis</strong>!
                   </>
                 )}
               </p>
@@ -82,8 +82,8 @@ export function CartDrawer() {
         {items.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              description="Todavia no agregaste productos. Empeza por una categoria y arma tu stack."
-              title="Carrito vacio"
+              description="Todavía no agregaste productos. Empezá por una categoría y armá tu stack."
+              title="Carrito vacío"
             />
           </div>
         ) : (
@@ -161,7 +161,7 @@ export function CartDrawer() {
                 <span className="font-subtitle text-sm font-semibold uppercase">Total</span>
                 <PriceDisplay price={subtotal} />
               </div>
-              <LinkButton className="mt-4 w-full" href="/checkout" onClick={close} size="lg">
+              <LinkButton className="mt-4 w-full" href="/finalizar-compra" onClick={close} size="lg">
                 Iniciar Pago
               </LinkButton>
             </div>

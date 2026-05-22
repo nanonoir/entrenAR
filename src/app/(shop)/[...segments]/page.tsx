@@ -78,7 +78,7 @@ export default async function CatchAllShopPage({ params }: CatchAllShopPageProps
             </QuickBuyController>
           ) : (
             <EmptyState
-              description="Esta ruta de catalogo esta preparada, pero todavia no tiene mocks curados."
+              description="Esta ruta de catálogo está preparada, pero todavía no tiene mocks curados."
               title="Sin productos"
             />
           )}

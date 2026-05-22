@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 type DrawerProps = {
   open: boolean;
   title: string;
+  headerContent?: ReactNode;
   side?: "left" | "right";
   children: ReactNode;
   onClose: () => void;
@@ -17,7 +18,15 @@ type DrawerProps = {
 
 const DRAWER_ANIMATION_MS = 240;
 
-export function Drawer({ open, title, side = "right", children, onClose, className }: DrawerProps) {
+export function Drawer({
+  open,
+  title,
+  headerContent,
+  side = "right",
+  children,
+  onClose,
+  className,
+}: DrawerProps) {
   const { isVisible, shouldRender } = usePresenceTransition({
     durationMs: DRAWER_ANIMATION_MS,
     open,
@@ -51,7 +60,7 @@ export function Drawer({ open, title, side = "right", children, onClose, classNa
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <h2 className="font-subtitle text-lg font-semibold uppercase">{title}</h2>
+          {headerContent ?? <h2 className="font-subtitle text-lg font-semibold uppercase">{title}</h2>}
           <Button aria-label="Cerrar" onClick={onClose} size="icon" variant="ghost">
             <X aria-hidden size={20} />
           </Button>

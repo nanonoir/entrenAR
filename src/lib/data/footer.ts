@@ -31,7 +31,7 @@ export const footerSections: FooterSection[] = [
       { label: "Market saludable", href: "/market" },
       { label: "Accesorios", href: "/accesorios" },
       { label: "Ofertas", href: "/ofertas" },
-      { label: "Checkout", href: "/checkout" },
+      { label: "Finalizar compra", href: "/finalizar-compra" },
     ],
   },
   {

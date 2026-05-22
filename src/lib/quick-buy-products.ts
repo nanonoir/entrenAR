@@ -1,4 +1,4 @@
-// Mock client-safe para el flujo visual estatico. Reemplazar por una API cuando el backend este implementado.
+// Mock client-safe para el flujo visual estático. Reemplazar por una API cuando el backend esté implementado.
 import { getAllProductDetails, getProductBySlug } from "@/lib/data/products";
 import type { QuickBuyProduct } from "@/types/product";
 

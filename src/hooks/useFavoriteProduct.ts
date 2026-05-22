@@ -1,29 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
+import { useWishlistStore } from "@/stores/wishlist-store";
 
-export function useFavoriteProduct() {
-  // Mock hasta implementar auth real y persistencia de favoritos en backend.
-  const isAuthenticated = false;
-  const [favoriteModalOpen, setFavoriteModalOpen] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+export function useFavoriteProduct(productId: string) {
+  const user = useAuthStore((state) => state.user);
+  const isFavorite = useWishlistStore((state) => state.productIds.includes(productId));
+  const toggleProduct = useWishlistStore((state) => state.toggleProduct);
+  const [favoriteFeedbackKey, setFavoriteFeedbackKey] = useState(0);
+  const [favoriteAuthModalOpen, setFavoriteAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    useWishlistStore.persist.rehydrate();
+  }, []);
 
   function toggleFavorite() {
-    if (!isAuthenticated) {
-      setFavoriteModalOpen(true);
+    if (!user) {
+      setFavoriteAuthModalOpen(true);
       return;
     }
 
-    setIsFavorite((current) => !current);
+    const shouldAnimate = !isFavorite;
+
+    toggleProduct(productId);
+
+    if (shouldAnimate) {
+      setFavoriteFeedbackKey((current) => current + 1);
+    }
   }
 
-  function closeFavoriteModal() {
-    setFavoriteModalOpen(false);
+  function closeFavoriteAuthModal() {
+    setFavoriteAuthModalOpen(false);
   }
 
   return {
-    closeFavoriteModal,
-    favoriteModalOpen,
+    closeFavoriteAuthModal,
+    favoriteFeedbackKey,
+    favoriteAuthModalOpen,
     isFavorite,
     toggleFavorite,
   };

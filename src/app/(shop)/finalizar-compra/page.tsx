@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/Input";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { getPreviewCartItems } from "@/lib/data/cart-preview";
 
-export default function CheckoutPage() {
+export default function FinalizarCompraPage() {
   const previewCartItems = getPreviewCartItems();
   const subtotal = previewCartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
   return (
     <Container className="py-10" size="wide">
       <div className="mb-8">
-        <p className="font-subtitle text-sm font-semibold uppercase text-accent">Checkout estatico</p>
+        <p className="font-subtitle text-sm font-semibold uppercase text-accent">Checkout estático</p>
         <h1 className="font-heading text-6xl leading-none">Finalizar compra</h1>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -38,12 +38,12 @@ export default function CheckoutPage() {
           <section className="rounded-card border border-border bg-surface p-5">
             <div className="flex items-center gap-3">
               <MapPin aria-hidden className="text-accent" size={24} />
-              <h2 className="font-subtitle text-xl font-semibold uppercase">2. Direccion</h2>
+              <h2 className="font-subtitle text-xl font-semibold uppercase">2. Dirección</h2>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Input label="Nombre" placeholder="Tu nombre" />
-              <Input label="Telefono" placeholder="11 5555 5555" />
-              <Input className="md:col-span-2" label="Direccion" placeholder="Calle, altura, piso" />
+              <Input label="Teléfono" placeholder="11 5555 5555" />
+              <Input className="md:col-span-2" label="Dirección" placeholder="Calle, altura, piso" />
             </div>
           </section>
           <section className="rounded-card border border-border bg-surface p-5">
@@ -64,7 +64,7 @@ export default function CheckoutPage() {
               <PriceDisplay price={subtotal} size="sm" />
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">Envio</span>
+              <span className="text-text-muted">Envío</span>
               <span className="font-semibold">A coordinar</span>
             </div>
           </div>
