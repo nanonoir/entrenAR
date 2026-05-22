@@ -1,6 +1,6 @@
 import type { CartPreviewItem } from "@/types/cart";
 
-// Mock client-safe para precargar el carrito en el flujo visual estatico. Reemplazar por carrito real/API cuando el backend este implementado.
+// Mock client-safe para precargar el carrito en el flujo visual estático. Reemplazar por carrito real/API cuando el backend esté implementado.
 const previewCartItems: CartPreviewItem[] = [
   {
     productId: "p-whey-pro",

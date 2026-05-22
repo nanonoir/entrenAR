@@ -21,8 +21,8 @@ type ProductDetailCardProps = {
 export function ProductDetailCard({ product }: ProductDetailCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
-  const { closeFavoriteAuthModal, favoriteAuthModalOpen, isFavorite, toggleFavorite } =
-    useFavoriteProduct();
+  const { closeFavoriteAuthModal, favoriteAuthModalOpen, favoriteFeedbackKey, isFavorite, toggleFavorite } =
+    useFavoriteProduct(product.id);
   const {
     compareAtPrice,
     maxQuantity,
@@ -71,13 +71,15 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
                 size="icon"
                 variant="ghost"
               >
-                <Heart
-                  aria-hidden
-                  className="text-accent"
-                  fill={isFavorite ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  size={22}
-                />
+                <span className={favoriteFeedbackKey > 0 ? "favorite-pop" : ""} key={favoriteFeedbackKey}>
+                  <Heart
+                    aria-hidden
+                    className="text-accent"
+                    fill={isFavorite ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    size={22}
+                  />
+                </span>
               </Button>
             </div>
             <h1 className="mt-2 font-heading text-6xl leading-none sm:text-7xl">{product.name}</h1>
@@ -130,7 +132,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
           </Button>
         </div>
         <div className="grid gap-3 rounded-card border border-border bg-surface p-4">
-          <h2 className="font-subtitle text-lg font-semibold uppercase">Descripcion</h2>
+          <h2 className="font-subtitle text-lg font-semibold uppercase">Descripción</h2>
           <p className="text-sm leading-6 text-text-muted">{product.description}</p>
         </div>
         </div>

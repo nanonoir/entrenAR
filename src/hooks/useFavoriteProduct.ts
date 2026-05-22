@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { useWishlistStore } from "@/stores/wishlist-store";
 
-export function useFavoriteProduct() {
+export function useFavoriteProduct(productId: string) {
   const user = useAuthStore((state) => state.user);
+  const isFavorite = useWishlistStore((state) => state.productIds.includes(productId));
+  const toggleProduct = useWishlistStore((state) => state.toggleProduct);
+  const [favoriteFeedbackKey, setFavoriteFeedbackKey] = useState(0);
   const [favoriteAuthModalOpen, setFavoriteAuthModalOpen] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    useWishlistStore.persist.rehydrate();
+  }, []);
 
   function toggleFavorite() {
     if (!user) {
@@ -14,7 +21,13 @@ export function useFavoriteProduct() {
       return;
     }
 
-    setIsFavorite((current) => !current);
+    const shouldAnimate = !isFavorite;
+
+    toggleProduct(productId);
+
+    if (shouldAnimate) {
+      setFavoriteFeedbackKey((current) => current + 1);
+    }
   }
 
   function closeFavoriteAuthModal() {
@@ -23,6 +36,7 @@ export function useFavoriteProduct() {
 
   return {
     closeFavoriteAuthModal,
+    favoriteFeedbackKey,
     favoriteAuthModalOpen,
     isFavorite,
     toggleFavorite,

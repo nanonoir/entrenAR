@@ -12,10 +12,22 @@ type AuthState = {
 };
 
 function createMockUser(email: string): MockAccountUser {
+  const normalizedEmail = email.trim().toLowerCase();
+
   return {
-    email: email.trim().toLowerCase(),
-    name: "Cliente EntrenAR",
+    email: normalizedEmail,
+    name: normalizedEmail === "cliente@entrenar.com" ? "Cliente" : deriveNameFromEmail(normalizedEmail),
   };
+}
+
+function deriveNameFromEmail(email: string) {
+  const [localPart] = email.split("@");
+  const [firstName = "Cliente"] = localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+
+  return firstName;
 }
 
 export const useAuthStore = create<AuthState>()(

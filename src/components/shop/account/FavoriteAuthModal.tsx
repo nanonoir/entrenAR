@@ -1,7 +1,7 @@
 "use client";
 
-import { Modal } from "@/components/ui/Modal";
 import { AccountEntryButton } from "@/components/shop/account/AccountEntryButton";
+import { Modal } from "@/components/ui/Modal";
 import { useUIStore } from "@/stores/ui-store";
 
 type FavoriteAuthModalProps = {

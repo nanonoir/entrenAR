@@ -5,7 +5,6 @@ import { Footer } from "@/components/shop/layout/Footer";
 import { MobileMenu } from "@/components/shop/layout/MobileMenu";
 import { Navbar } from "@/components/shop/layout/Navbar";
 import { TopPromoBar } from "@/components/shop/layout/TopPromoBar";
-import { getMobileAccountLinks } from "@/lib/data/account";
 import { getPromoMessages } from "@/lib/data/promotions";
 import { getShopNavItems } from "@/lib/data/navigation";
 
@@ -16,7 +15,6 @@ export default function ShopLayout({
 }>) {
   const navItems = getShopNavItems();
   const promoMessages = getPromoMessages();
-  const mobileAccountLinks = getMobileAccountLinks({ isAuthenticated: false });
 
   return (
     <>
@@ -25,7 +23,7 @@ export default function ShopLayout({
         <Navbar />
         <CategoriesBar navItems={navItems} />
       </div>
-      <MobileMenu accountLinks={mobileAccountLinks} navItems={navItems} />
+      <MobileMenu navItems={navItems} />
       <main className="flex-1">{children}</main>
       <Footer />
       <AccountDrawer />

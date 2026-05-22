@@ -5,7 +5,7 @@ const heroBanners: HeroBanner[] = [
     id: "proteinas-oferta",
     imageSrc: "/hero-proteinas.svg",
     mobileImageSrc: "/hero-proteinas-mobile.svg",
-    alt: "Oferta de proteinas seleccionadas",
+    alt: "Oferta de proteínas seleccionadas",
     href: "/suplementos/proteinas",
   },
   {

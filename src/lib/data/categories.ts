@@ -3,12 +3,12 @@ import type { CategoryNavItem } from "@/types/navigation";
 const categories: CategoryNavItem[] = [
   {
     slug: "proteinas",
-    label: "Proteinas",
-    description: "Whey, blends y ganadores para sostener volumen y recuperacion.",
+    label: "Proteínas",
+    description: "Whey, blends y ganadores para sostener volumen y recuperación.",
     featured: true,
     groups: [
       {
-        title: "Proteinas",
+        title: "Proteínas",
         links: [
           { label: "Whey protein", href: "/suplementos/proteinas/whey-protein" },
           { label: "Isolate", href: "/suplementos/proteinas/isolate" },
@@ -19,8 +19,8 @@ const categories: CategoryNavItem[] = [
         title: "Objetivo",
         links: [
           { label: "Masa muscular", href: "/suplementos/proteinas" },
-          { label: "Recuperacion", href: "/suplementos/proteinas" },
-          { label: "Definicion", href: "/suplementos/proteinas" },
+          { label: "Recuperación", href: "/suplementos/proteinas" },
+          { label: "Definición", href: "/suplementos/proteinas" },
         ],
       },
     ],
@@ -28,7 +28,7 @@ const categories: CategoryNavItem[] = [
   {
     slug: "creatina-y-pre",
     label: "Creatina y pre",
-    description: "Energia, fuerza y foco para entrenamientos pesados.",
+    description: "Energía, fuerza y foco para entrenamientos pesados.",
     featured: true,
     groups: [
       {
@@ -49,7 +49,7 @@ const categories: CategoryNavItem[] = [
       {
         title: "Salud diaria",
         links: [
-          { label: "Multivitaminicos", href: "/suplementos/vitaminas-suplementos/multivitaminicos" },
+          { label: "Multivitamínicos", href: "/suplementos/vitaminas-suplementos/multivitaminicos" },
           { label: "Omega", href: "/suplementos/vitaminas-suplementos/omega" },
           { label: "Magnesio", href: "/suplementos/vitaminas-suplementos/magnesio" },
         ],
@@ -59,7 +59,7 @@ const categories: CategoryNavItem[] = [
   {
     slug: "market",
     label: "Market",
-    description: "Snacks, barras y alimentos funcionales para el dia a dia.",
+    description: "Snacks, barras y alimentos funcionales para el día a día.",
   },
   {
     slug: "accesorios",

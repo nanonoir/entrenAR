@@ -6,6 +6,7 @@ const supplementCategoryBySlug: Record<string, string> = {
 };
 
 export const accountRoutes = {
+  profile: "/mi-cuenta",
   passwordReset: "/cambiar-contrasena",
   privacy: "/politicas/privacidad",
   terms: "/terminos-y-condiciones",

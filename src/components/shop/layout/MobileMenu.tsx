@@ -1,23 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, UserRound } from "lucide-react";
 import { useState } from "react";
 import { AccountEntryButton } from "@/components/shop/account/AccountEntryButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
-import { accountEntryLabel } from "@/lib/data/account";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { useUIStore } from "@/stores/ui-store";
-import type { AccountNavItem } from "@/types/account";
 import type { ShopNavItem } from "@/types/navigation";
 
 type MobileMenuProps = {
   navItems: ShopNavItem[];
-  accountLinks: AccountNavItem[];
 };
 
-export function MobileMenu({ navItems, accountLinks }: MobileMenuProps) {
+export function MobileMenu({ navItems }: MobileMenuProps) {
+  const user = useAuthStore((state) => state.user);
   const isOpen = useUIStore((state) => state.isMobileMenuOpen);
   const close = useUIStore((state) => state.closeMobileMenu);
   const openAccountDrawer = useUIStore((state) => state.openAccountDrawer);
@@ -148,20 +147,14 @@ export function MobileMenu({ navItems, accountLinks }: MobileMenuProps) {
           })}
         </nav>
         <div className="grid gap-2 border-t border-border p-4">
-          {accountLinks.map((item) => (
-            item.label === accountEntryLabel ? (
-              <AccountEntryButton key={item.label} onClick={handleAccountAction} />
-            ) : (
-              <Button
-                className="w-full"
-                key={item.label}
-                onClick={handleAccountAction}
-                variant={item.variant}
-              >
-                {item.label}
-              </Button>
-            )
-          ))}
+          {user ? (
+            <Button className="w-full" onClick={handleAccountAction}>
+              <UserRound aria-hidden size={18} />
+              Mi cuenta
+            </Button>
+          ) : (
+            <AccountEntryButton onClick={handleAccountAction} />
+          )}
         </div>
       </div>
     </Drawer>

@@ -19,7 +19,7 @@ export function DesktopSearch() {
           aria-label="Buscar productos"
           className="border-white bg-white pl-10 text-text"
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar proteina, creatina, marca..."
+          placeholder="Buscar proteína, creatina, marca..."
           ref={inputRef}
           value={query}
         />

@@ -2,17 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Menu, ShoppingCart, UserRound } from "lucide-react";
 import { useState } from "react";
 import { FavoriteAuthModal } from "@/components/shop/account/FavoriteAuthModal";
 import { Button } from "@/components/ui/Button";
 import { DesktopSearch } from "@/components/shop/layout/DesktopSearch";
 import { MobileSearch } from "@/components/shop/layout/MobileSearch";
+import { accountRoutes } from "@/lib/routes";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useUIStore } from "@/stores/ui-store";
 
 export function Navbar() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const openAccountDrawer = useUIStore((state) => state.openAccountDrawer);
   const openCart = useUIStore((state) => state.openCart);
@@ -28,7 +31,7 @@ export function Navbar() {
       return;
     }
 
-    openAccountDrawer();
+    router.push(`${accountRoutes.profile}?seccion=lista-de-deseados`);
   }
 
   return (
