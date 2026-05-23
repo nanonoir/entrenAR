@@ -36,7 +36,7 @@ export function useProductSearch({
       return;
     }
 
-    router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+    router.push(`/buscar?q=${encodeURIComponent(trimmedQuery)}`);
     onSubmitSuccess?.();
   }
 

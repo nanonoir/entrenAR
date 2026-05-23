@@ -5,18 +5,19 @@ import type { ProductSummary } from "@/types/product";
 type ProductGridProps = {
   products: ProductSummary[];
   columns?: "listing" | "featured";
+  cardDensity?: "standard" | "compactMobile";
 };
 
 const columnStyles = {
-  listing: "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-  featured: "sm:grid-cols-2 lg:grid-cols-5",
+  listing: "grid-cols-2 lg:grid-cols-4",
+  featured: "grid-cols-2 lg:grid-cols-5",
 };
 
-export function ProductGrid({ products, columns = "listing" }: ProductGridProps) {
+export function ProductGrid({ products, columns = "listing", cardDensity = "standard" }: ProductGridProps) {
   return (
     <div className={cn("grid gap-5", columnStyles[columns])}>
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard density={cardDensity} key={product.id} product={product} />
       ))}
     </div>
   );

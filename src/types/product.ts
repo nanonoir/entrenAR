@@ -43,6 +43,7 @@ export type ProductSummary = {
   stock: number;
   isFeatured?: boolean;
   isBestSeller?: boolean;
+  subcategorySlugs?: string[];
 };
 
 export type ProductDetail = ProductSummary & {

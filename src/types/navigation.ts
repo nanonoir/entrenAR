@@ -5,6 +5,7 @@ export type CategoryNavItem = {
   featured?: boolean;
   groups?: Array<{
     title: string;
+    href?: string;
     links: Array<{ label: string; href: string }>;
   }>;
 };
@@ -16,6 +17,7 @@ export type ShopNavItem = {
   megaMenuLayout?: "flat-5" | "grouped-5" | "flat-1";
   groups?: Array<{
     title: string;
+    href?: string;
     links: Array<{ label: string; href: string }>;
   }>;
 };
