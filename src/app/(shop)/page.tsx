@@ -47,7 +47,7 @@ export default function HomePage() {
                   key={product.id}
                   role="listitem"
                 >
-                  <ProductCard product={product} />
+                  <ProductCard density="compactMobile" product={product} />
                 </div>
               ))}
             </HorizontalProductScroller>

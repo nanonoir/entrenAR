@@ -18,6 +18,11 @@ type ResolvedListingContext = ProductListingContext & {
   filterProducts?: ProductDetail[];
 };
 
+type SupplementListingGroup = {
+  title: string;
+  productCategorySlug?: string;
+};
+
 export const productListingSortOptions: ProductListingSortOption[] = [
   { value: "relevantes", label: "Más relevantes" },
   { value: "menor-precio", label: "Menor precio" },
@@ -26,11 +31,12 @@ export const productListingSortOptions: ProductListingSortOption[] = [
   { value: "mas-vendidos", label: "Más vendidos" },
 ];
 
-const supplementCategoryBySegment: Record<string, string> = {
-  proteinas: "proteinas",
-  "pre-intra-creatina": "creatina-y-pre",
-  "vitaminas-suplementos": "vitaminas",
-  performance: "creatina-y-pre",
+const supplementListingGroupsBySegment: Record<string, SupplementListingGroup> = {
+  proteinas: { title: "Proteínas", productCategorySlug: "proteinas" },
+  "pre-intra-creatina": { title: "Pre Intra & Creatina", productCategorySlug: "creatina-y-pre" },
+  "vitaminas-suplementos": { title: "Vitaminas & Suplementos", productCategorySlug: "vitaminas" },
+  performance: { title: "Performance" },
+  "control-de-peso": { title: "Control de peso" },
 };
 
 const categorySegmentBySlug: Record<string, string> = {
@@ -106,6 +112,14 @@ function productMatchesSearch(product: ProductDetail, query: string) {
   return normalizedQuery.length === 0 || getProductSearchText(product).includes(normalizedQuery);
 }
 
+function getSupplementSubcategorySlugs(segment: string) {
+  return getShopNavItems()
+    .find((item) => item.href === "/suplementos")
+    ?.groups?.find((group) => group.href === `/suplementos/${segment}`)
+    ?.links.map((link) => link.href.split("/").filter(Boolean).at(-1) ?? "")
+    .filter(Boolean) ?? [];
+}
+
 function resolveListingContext(
   segments: string[],
   searchParams: SearchParamsInput,
@@ -163,7 +177,9 @@ function resolveListingContext(
 
   if (section === "suplementos") {
     if (!firstSlug) {
-      const supplementSlugs = Object.values(supplementCategoryBySegment);
+      const supplementSlugs = Object.values(supplementListingGroupsBySegment)
+        .map((group) => group.productCategorySlug)
+        .filter((categorySlug): categorySlug is string => Boolean(categorySlug));
 
       return {
         type: "category",
@@ -173,27 +189,30 @@ function resolveListingContext(
       };
     }
 
-    const categorySlug = supplementCategoryBySegment[firstSlug];
+    const group = supplementListingGroupsBySegment[firstSlug];
 
-    if (!categorySlug) {
+    if (!group) {
       return null;
     }
 
-    const category = getCategoryBySlug(categorySlug);
-    const baseProducts = products.filter((product) => product.categorySlug === categorySlug);
+    const category = group.productCategorySlug ? getCategoryBySlug(group.productCategorySlug) : undefined;
+    const baseProducts = group.productCategorySlug
+      ? products.filter((product) => product.categorySlug === group.productCategorySlug)
+      : [];
     const subcategoryProducts = secondSlug
       ? baseProducts.filter((product) => product.subcategorySlugs?.includes(secondSlug))
       : baseProducts;
+    const validSubcategorySlugs = getSupplementSubcategorySlugs(firstSlug);
 
-    if (secondSlug && subcategoryProducts.length === 0) {
+    if (secondSlug && !validSubcategorySlugs.includes(secondSlug)) {
       return null;
     }
 
     return {
       type: secondSlug ? "subcategory" : "category",
-      title: category?.label ?? firstSlug,
+      title: category?.label ?? group.title,
       routePath,
-      categorySlug,
+      categorySlug: group.productCategorySlug,
       categorySegment: firstSlug,
       subcategorySlug: secondSlug,
       baseProducts: subcategoryProducts,
@@ -277,6 +296,13 @@ function getCategorySubcategoryLinks(categorySlug: string) {
     .filter((link) => link.href.startsWith(`/${categorySegment}/`) || link.href.startsWith(`/suplementos/${categorySegment}/`));
 }
 
+function getSegmentSubcategoryLinks(segment: string) {
+  return getShopNavItems()
+    .flatMap((item) => item.groups ?? [])
+    .find((group) => group.href === `/suplementos/${segment}` || group.href === `/${segment}`)
+    ?.links ?? [];
+}
+
 function createCategoryOptions(products: ProductDetail[]) {
   const categoryLabels = new Map(getCategories().map((category) => [category.slug, category.label]));
   const categories = createOptionCounts(products, (product) => [
@@ -317,14 +343,22 @@ function createCategoryOptions(products: ProductDetail[]) {
 }
 
 function createSubcategoryOptions(context: ProductListingContext, products: ProductDetail[]) {
-  if (!context.categorySlug) {
+  const links = context.categorySlug
+    ? getCategorySubcategoryLinks(context.categorySlug)
+    : context.categorySegment
+      ? getSegmentSubcategoryLinks(context.categorySegment)
+      : [];
+
+  if (links.length === 0) {
     return [];
   }
 
-  const categoryProducts = products.filter((product) => product.categorySlug === context.categorySlug);
+  const categoryProducts = context.categorySlug
+    ? products.filter((product) => product.categorySlug === context.categorySlug)
+    : products;
   const seenSubcategories = new Set<string>();
 
-  return getCategorySubcategoryLinks(context.categorySlug)
+  return links
     .map((link) => {
       const slug = link.href.split("/").filter(Boolean).at(-1) ?? "";
       const count = categoryProducts.filter((product) => product.subcategorySlugs?.includes(slug)).length;
@@ -350,15 +384,16 @@ function createFilterGroups(
   products: ProductDetail[],
 ): ProductListingFilterGroup[] {
   const groups: ProductListingFilterGroup[] = [];
-  const categoryOptions = context.categorySlug
+  const hasRouteCategoryContext = Boolean(context.categorySlug || context.categorySegment);
+  const categoryOptions = hasRouteCategoryContext
     ? createSubcategoryOptions(context, products)
     : createCategoryOptions(products);
 
   if (categoryOptions.length > 0) {
     groups.push({
-      id: context.categorySlug ? "subcategory" : "category",
-      label: context.categorySlug ? "Subcategorías" : "Categorías",
-      paramName: context.categorySlug ? "subcategoria" : "categoria",
+      id: hasRouteCategoryContext ? "subcategory" : "category",
+      label: hasRouteCategoryContext ? "Subcategorías" : "Categorías",
+      paramName: hasRouteCategoryContext ? "subcategoria" : "categoria",
       options: categoryOptions,
     });
   }
@@ -460,7 +495,6 @@ export function resolveProductListing(
     filterState,
     filterGroups: createFilterGroups(context, filterProducts ?? baseProducts),
     sortOptions: productListingSortOptions,
-    subcategories: [],
     priceBounds: getPriceBounds(baseProducts),
   };
 }

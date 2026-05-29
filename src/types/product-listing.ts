@@ -18,7 +18,6 @@ export type ProductListingContext = {
   brandSlug?: string;
   searchQuery?: string;
   hideBrandFilter?: boolean;
-  hideCategoryFilter?: boolean;
 };
 
 export type ProductListingFilterState = {
@@ -56,14 +55,6 @@ export type ProductListingSortOption = {
   label: string;
 };
 
-export type ProductListingSubcategory = {
-  label: string;
-  slug: string;
-  href: string;
-  count: number;
-  active: boolean;
-};
-
 export type ProductListingResult = {
   context: ProductListingContext;
   products: ProductSummary[];
@@ -71,7 +62,6 @@ export type ProductListingResult = {
   filterState: ProductListingFilterState;
   filterGroups: ProductListingFilterGroup[];
   sortOptions: ProductListingSortOption[];
-  subcategories: ProductListingSubcategory[];
   priceBounds: {
     min: number;
     max: number;

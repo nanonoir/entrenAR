@@ -89,8 +89,7 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
         key === "subcategoria" ||
         key === "precioMin" ||
         key === "precioMax" ||
-        key === "orden" ||
-        key.startsWith("f_")
+        key === "orden"
       ) {
         params.delete(key);
       }
@@ -139,7 +138,7 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
         <div>
           {listing.products.length > 0 ? (
             <QuickBuyController>
-              <ProductGrid cardDensity="compactMobile" products={listing.products} />
+              <ProductGrid products={listing.products} />
             </QuickBuyController>
           ) : (
             <EmptyState

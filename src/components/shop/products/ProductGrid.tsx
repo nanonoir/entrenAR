@@ -13,7 +13,7 @@ const columnStyles = {
   featured: "grid-cols-2 lg:grid-cols-5",
 };
 
-export function ProductGrid({ products, columns = "listing", cardDensity = "standard" }: ProductGridProps) {
+export function ProductGrid({ products, columns = "listing", cardDensity = "compactMobile" }: ProductGridProps) {
   return (
     <div className={cn("grid gap-5", columnStyles[columns])}>
       {products.map((product) => (
