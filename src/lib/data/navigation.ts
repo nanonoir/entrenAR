@@ -55,6 +55,7 @@ const shopNavItems: ShopNavItem[] = [
     groups: [
       {
         title: "PROTE\u00cdNAS",
+        href: "/suplementos/proteinas",
         links: [
           { label: "Whey Protein", href: "/suplementos/proteinas/whey-protein" },
           { label: "Ganadores", href: "/suplementos/proteinas/ganadores" },
@@ -67,6 +68,7 @@ const shopNavItems: ShopNavItem[] = [
       },
       {
         title: "PRE INTRA & CREATINA",
+        href: "/suplementos/pre-intra-creatina",
         links: [
           { label: "Creatina", href: "/suplementos/pre-intra-creatina/creatina" },
           { label: "Pre & Intra Entreno", href: "/suplementos/pre-intra-creatina/pre-intra-entreno" },
@@ -76,6 +78,7 @@ const shopNavItems: ShopNavItem[] = [
       },
       {
         title: "VITAMINAS & SUPLEMENTOS",
+        href: "/suplementos/vitaminas-suplementos",
         links: [
           { label: "Multivitam\u00ednicos", href: "/suplementos/vitaminas-suplementos/multivitaminicos" },
           { label: "Fish Oil & Omegas", href: "/suplementos/vitaminas-suplementos/fish-oil-omegas" },
@@ -90,6 +93,7 @@ const shopNavItems: ShopNavItem[] = [
       },
       {
         title: "PERFORMANCE",
+        href: "/suplementos/performance",
         links: [
           { label: "Hidrataci\u00f3n y Resistencia", href: "/suplementos/performance/hidratacion-resistencia" },
           { label: "Glutamina", href: "/suplementos/performance/glutamina" },
@@ -97,6 +101,7 @@ const shopNavItems: ShopNavItem[] = [
       },
       {
         title: "CONTROL DE PESO",
+        href: "/suplementos/control-de-peso",
         links: [
           { label: "Quemadores de Grasa", href: "/suplementos/control-de-peso/quemadores-de-grasa" },
           { label: "Control de Apetito", href: "/suplementos/control-de-peso/control-de-apetito" },
@@ -114,6 +119,7 @@ const shopNavItems: ShopNavItem[] = [
     groups: [
       {
         title: "MARKET",
+        href: "/market",
         links: [
           { label: "Pastas de Man\u00ed", href: "/market/pastas-de-mani" },
           { label: "Barras", href: "/market/barras" },
@@ -136,6 +142,7 @@ const shopNavItems: ShopNavItem[] = [
     groups: [
       {
         title: "INDUMENTARIA",
+        href: "/indumentaria",
         links: [
           { label: "Entreno", href: "/indumentaria/entreno" },
           { label: "Shark", href: "/indumentaria/shark" },
