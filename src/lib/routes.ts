@@ -12,6 +12,11 @@ export const accountRoutes = {
   terms: "/terminos-y-condiciones",
 } as const;
 
+export const checkoutRoutes = {
+  cart: "/carrito",
+  checkout: "/checkout",
+} as const;
+
 export function getProductHref(slug: string) {
   return `/productos/${slug}`;
 }

@@ -1,3 +1,5 @@
+import { checkoutRoutes } from "@/lib/routes";
+
 export type FooterLink = {
   label: string;
   href: string;
@@ -31,7 +33,7 @@ export const footerSections: FooterSection[] = [
       { label: "Market saludable", href: "/market" },
       { label: "Accesorios", href: "/accesorios" },
       { label: "Ofertas", href: "/ofertas" },
-      { label: "Finalizar compra", href: "/finalizar-compra" },
+      { label: "Mi carrito", href: checkoutRoutes.cart },
     ],
   },
   {

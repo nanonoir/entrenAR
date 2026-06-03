@@ -10,6 +10,7 @@ import { HorizontalProductScroller } from "@/components/shop/products/Horizontal
 import { ProductVisual } from "@/components/shop/products/ProductVisual";
 import { useCartOffers } from "@/hooks/useCartOffers";
 import { formatCurrency } from "@/lib/pricing";
+import { checkoutRoutes } from "@/lib/routes";
 import { useCartStore } from "@/stores/cart-store";
 import type { AddedCartItemPreview } from "@/types/cart";
 
@@ -99,7 +100,7 @@ export function ProductAddedModal({ open, item, onClose }: ProductAddedModalProp
           <Button className="h-11 px-2 text-xs leading-tight sm:h-12 sm:px-3 sm:text-base" onClick={onClose} size="lg" variant="secondary">
             Ignorar Sugerencia
           </Button>
-          <LinkButton className="h-11 px-2 text-[11px] leading-tight sm:h-12 sm:px-3 sm:text-base" href="/finalizar-compra" onClick={onClose} size="lg">
+          <LinkButton className="h-11 px-2 text-[11px] leading-tight sm:h-12 sm:px-3 sm:text-base" href={checkoutRoutes.cart} onClick={onClose} size="lg">
             <ShoppingCart aria-hidden size={20} />
             Finalizar compra
           </LinkButton>
