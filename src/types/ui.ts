@@ -9,8 +9,11 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
+  errorText?: string;
   label?: string;
   helperText?: string;
+  trailingIcon?: ReactNode;
+  trailingLabel?: string;
 };
 
 export type BadgeTone = "neutral" | "accent" | "sale" | "warning" | "success";

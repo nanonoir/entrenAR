@@ -44,4 +44,9 @@ next-env.d.ts
 /prisma/data/
 
 #agents
+AGENTS.md
 .codex
+.atl/
+
+#docs
+/openspec
