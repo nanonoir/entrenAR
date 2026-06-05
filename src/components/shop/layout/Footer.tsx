@@ -69,7 +69,7 @@ export function Footer() {
                 className="grid h-10 w-10 place-items-center rounded-button border border-white/20 transition hover:border-accent"
                 href={link.href}
                 key={link.label}
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 target="_blank"
               >
                 <Image alt="" aria-hidden height={20} src={link.iconSrc} width={20} />
