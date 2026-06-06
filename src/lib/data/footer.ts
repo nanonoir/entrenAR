@@ -51,12 +51,18 @@ export const footerHelpText =
   "Atención al cliente: Lunes a viernes de 9 a 18 hs.\nRetiros coordinados y envíos a todo el país.";
 
 export const footerHelpActions: FooterAction[] = [
-  { label: "Cambios y devoluciones", href: "/ayuda/cambios-devoluciones" },
-  { label: "Botón de arrepentimiento", href: "/ayuda/boton-arrepentimiento" },
-  { label: "Gestión de pedidos", href: "/cuenta/pedidos" },
+  // Hidden until these flows have implemented routes.
+  // { label: "Cambios y devoluciones", href: "/ayuda/cambios-devoluciones" },
+  // { label: "Botón de arrepentimiento", href: "/ayuda/boton-arrepentimiento" },
+  // { label: "Gestión de pedidos", href: "/cuenta/pedidos" },
 ];
 
 export const footerSocialLinks: FooterSocialLink[] = [
+  {
+    label: "Portfolio",
+    href: "https://noirnahuel.vercel.app/",
+    iconSrc: "/logoNR.svg",
+  },
   {
     label: "LinkedIn",
     href: "https://www.linkedin.com/in/nahuelnicolasnoir/",
