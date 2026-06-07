@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, UserRound } from "lucide-react";
-import { useState } from "react";
+import type { MouseEvent } from "react";
+import { useRef, useState } from "react";
 import { AccountEntryButton } from "@/components/shop/account/AccountEntryButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
@@ -16,10 +18,14 @@ type MobileMenuProps = {
 };
 
 export function MobileMenu({ navItems }: MobileMenuProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isOpen = useUIStore((state) => state.isMobileMenuOpen);
   const close = useUIStore((state) => state.closeMobileMenu);
   const openAccountDrawer = useUIStore((state) => state.openAccountDrawer);
+  const pendingHref = useRef<string | null>(null);
+  const [skipExitAnimation, setSkipExitAnimation] = useState(false);
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
@@ -37,8 +43,50 @@ export function MobileMenu({ navItems }: MobileMenuProps) {
     openAccountDrawer();
   }
 
+  function getPathname(href: string) {
+    return href.split("#")[0]?.split("?")[0] ?? href;
+  }
+
+  function handleLinkClick(href: string) {
+    return (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+      pendingHref.current = href;
+      setSkipExitAnimation(true);
+      close();
+    };
+  }
+
+  function handleExited() {
+    const href = pendingHref.current;
+
+    if (!href) {
+      return;
+    }
+
+    pendingHref.current = null;
+    setSkipExitAnimation(false);
+
+    if (getPathname(href) === pathname) {
+      window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+      return;
+    }
+
+    router.push(href);
+  }
+
   return (
-    <Drawer onClose={close} open={isOpen} side="left" title="Menu">
+    <Drawer
+      onClose={close}
+      onExited={handleExited}
+      open={isOpen}
+      side="left"
+      skipExitAnimation={skipExitAnimation}
+      title="Menu"
+    >
       <div className="flex min-h-0 flex-1 flex-col">
         <nav className="grid flex-1 content-start gap-1 overflow-y-auto p-4">
           {navItems.map((item) => {
@@ -53,7 +101,7 @@ export function MobileMenu({ navItems }: MobileMenuProps) {
                   )}
                   href={item.href}
                   key={item.label}
-                  onClick={close}
+                  onClick={handleLinkClick(item.href)}
                 >
                   {item.label}
                 </Link>
@@ -94,7 +142,7 @@ export function MobileMenu({ navItems }: MobileMenuProps) {
                                 className="rounded-button px-3 py-2 text-sm text-text-muted hover:bg-black/5 hover:text-accent"
                                 href={link.href}
                                 key={link.label}
-                                onClick={close}
+                                onClick={handleLinkClick(link.href)}
                               >
                                 {link.label}
                               </Link>
@@ -130,7 +178,7 @@ export function MobileMenu({ navItems }: MobileMenuProps) {
                                   className="rounded-button px-3 py-2 text-sm text-text-muted hover:bg-black/5 hover:text-accent"
                                   href={link.href}
                                   key={link.label}
-                                  onClick={close}
+                                  onClick={handleLinkClick(link.href)}
                                 >
                                   {link.label}
                                 </Link>
