@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Container } from "@/components/ui/Container";
+import { SameRouteScrollLink } from "@/components/shop/layout/SameRouteScrollLink";
 import type { ShopNavItem } from "@/types/navigation";
 
 type MegaMenuProps = {
@@ -18,17 +18,17 @@ export function MegaMenu({ item }: MegaMenuProps) {
             {item.groups?.map((group) => (
               <div className="min-w-0" key={group.title}>
                 {group.href ? (
-                  <Link className="font-subtitle text-sm font-bold uppercase hover:text-accent" href={group.href}>
+                  <SameRouteScrollLink className="font-subtitle text-sm font-bold uppercase hover:text-accent" href={group.href}>
                     {group.title}
-                  </Link>
+                  </SameRouteScrollLink>
                 ) : (
                   <h3 className="font-subtitle text-sm font-bold uppercase">{group.title}</h3>
                 )}
                 <div className="mt-3 grid gap-2">
                   {group.links.map((link) => (
-                    <Link className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
+                    <SameRouteScrollLink className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
                       {link.label}
-                    </Link>
+                    </SameRouteScrollLink>
                   ))}
                 </div>
               </div>
@@ -39,19 +39,19 @@ export function MegaMenu({ item }: MegaMenuProps) {
           <div className="grid grid-cols-5 gap-x-8 gap-y-2">
             {item.groups?.map((group) =>
               group.href ? (
-                <Link
+                <SameRouteScrollLink
                   className="block font-subtitle text-sm font-bold uppercase hover:text-accent"
                   href={group.href}
                   key={group.title}
                 >
                   {group.title}
-                </Link>
+                </SameRouteScrollLink>
               ) : null,
             )}
             {links.map((link) => (
-              <Link className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
+              <SameRouteScrollLink className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
                 {link.label}
-              </Link>
+              </SameRouteScrollLink>
             ))}
           </div>
         ) : null}
@@ -59,19 +59,19 @@ export function MegaMenu({ item }: MegaMenuProps) {
           <div className="mx-auto grid max-w-xs gap-2 text-center">
             {item.groups?.map((group) =>
               group.href ? (
-                <Link
+                <SameRouteScrollLink
                   className="block font-subtitle text-sm font-bold uppercase hover:text-accent"
                   href={group.href}
                   key={group.title}
                 >
                   {group.title}
-                </Link>
+                </SameRouteScrollLink>
               ) : null,
             )}
             {links.map((link) => (
-              <Link className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
+              <SameRouteScrollLink className="block text-sm text-text-muted hover:text-accent" href={link.href} key={link.label}>
                 {link.label}
-              </Link>
+              </SameRouteScrollLink>
             ))}
           </div>
         ) : null}

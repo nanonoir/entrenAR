@@ -27,10 +27,6 @@
   --shadow-card: 0 4px 14px rgb(0 0 0 / 0.08);
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   @apply min-h-screen bg-background text-text font-body antialiased;
 }

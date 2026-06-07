@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
@@ -19,6 +19,7 @@ import { useUIStore } from "@/stores/ui-store";
 export function CartDrawer() {
   const isOpen = useUIStore((state) => state.isCartOpen);
   const close = useUIStore((state) => state.closeCart);
+  const [skipExitAnimation, setSkipExitAnimation] = useState(false);
   const items = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -46,9 +47,25 @@ export function CartDrawer() {
     useCartStore.persist.rehydrate();
   }, []);
 
+  function handleNavigationClick() {
+    setSkipExitAnimation(true);
+    close();
+  }
+
+  function handleExited() {
+    setSkipExitAnimation(false);
+  }
+
   return (
     <>
-      <Drawer className="md:max-w-[420px]" onClose={close} open={isOpen} title="Tu carrito">
+      <Drawer
+        className="md:max-w-[420px]"
+        onClose={close}
+        onExited={handleExited}
+        open={isOpen}
+        skipExitAnimation={skipExitAnimation}
+        title="Tu carrito"
+      >
         <div className="border-b border-border p-4">
           <CartFreeShippingProgress
             freeShippingProgress={freeShippingProgress}
@@ -70,7 +87,7 @@ export function CartDrawer() {
                   <CartLineItem
                     item={item}
                     key={`${item.productId}-${item.variantId}`}
-                    onProductClick={close}
+                    onProductClick={handleNavigationClick}
                     onRemove={removeItem}
                     onUpdateQuantity={updateQuantity}
                   />
@@ -103,7 +120,7 @@ export function CartDrawer() {
                 <span className="font-subtitle text-sm font-semibold uppercase">Total</span>
                 <PriceDisplay price={subtotal} />
               </div>
-              <LinkButton className="mt-4 w-full" href={checkoutRoutes.cart} onClick={close} size="lg">
+              <LinkButton className="mt-4 w-full" href={checkoutRoutes.cart} onClick={handleNavigationClick} size="lg">
                 Iniciar Pago
               </LinkButton>
             </div>

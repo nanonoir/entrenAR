@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
+import { SameRouteScrollLink } from "@/components/shop/layout/SameRouteScrollLink";
 import {
   footerDeveloperText,
   footerHelpActions,
@@ -16,9 +17,9 @@ function FooterLinks({ title, links }: { title: string; links: Array<{ label: st
       <h3 className="font-subtitle text-sm font-semibold uppercase text-white">{title}</h3>
       <div className="mt-4 grid gap-2.5 text-sm text-zinc-300">
         {links.map((link) => (
-          <Link className="transition hover:text-accent" href={link.href} key={link.label}>
+          <SameRouteScrollLink className="transition hover:text-accent" href={link.href} key={link.label}>
             {link.label}
-          </Link>
+          </SameRouteScrollLink>
         ))}
       </div>
     </div>

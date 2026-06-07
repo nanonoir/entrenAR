@@ -5,6 +5,7 @@ import { useEffect } from "react";
 type BodyScrollSnapshot = {
   overflow: string;
   position: string;
+  routeKey: string;
   scrollY: number;
   top: string;
   width: string;
@@ -20,6 +21,7 @@ function lockBodyScroll() {
     bodyScrollSnapshot = {
       overflow: document.body.style.overflow,
       position: document.body.style.position,
+      routeKey: `${window.location.pathname}${window.location.search}`,
       scrollY,
       top: document.body.style.top,
       width: document.body.style.width,
@@ -41,14 +43,20 @@ function unlockBodyScroll() {
     return;
   }
 
-  const { overflow, position, scrollY, top, width } = bodyScrollSnapshot;
+  const { overflow, position, routeKey, scrollY, top, width } = bodyScrollSnapshot;
+  const currentRouteKey = `${window.location.pathname}${window.location.search}`;
 
   document.body.style.position = position;
   document.body.style.top = top;
   document.body.style.width = width;
   document.body.style.overflow = overflow;
   bodyScrollSnapshot = null;
-  window.scrollTo(0, scrollY);
+
+  window.scrollTo({
+    left: 0,
+    top: currentRouteKey === routeKey ? scrollY : 0,
+    behavior: "auto",
+  });
 }
 
 export function useLockBodyScroll(locked: boolean) {

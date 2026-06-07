@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { usePresenceTransition } from "@/hooks/usePresenceTransition";
 import { cn } from "@/lib/utils";
 
@@ -12,16 +13,32 @@ type ModalProps = {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  onExited?: () => void;
   className?: string;
+  lockBodyScroll?: boolean;
+  skipExitAnimation?: boolean;
 };
 
 const MODAL_ANIMATION_MS = 200;
 
-export function Modal({ open, title, children, onClose, className }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  onExited,
+  className,
+  lockBodyScroll = true,
+  skipExitAnimation = false,
+}: ModalProps) {
   const { isVisible, shouldRender } = usePresenceTransition({
     durationMs: MODAL_ANIMATION_MS,
+    onExited,
     open,
+    skipExitAnimation,
   });
+
+  useLockBodyScroll(lockBodyScroll && shouldRender);
 
   useEffect(() => {
     if (!shouldRender) {

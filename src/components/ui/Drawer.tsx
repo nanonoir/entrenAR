@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { usePresenceTransition } from "@/hooks/usePresenceTransition";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +14,10 @@ type DrawerProps = {
   side?: "left" | "right";
   children: ReactNode;
   onClose: () => void;
+  onExited?: () => void;
   className?: string;
+  lockBodyScroll?: boolean;
+  skipExitAnimation?: boolean;
 };
 
 const DRAWER_ANIMATION_MS = 240;
@@ -25,12 +29,19 @@ export function Drawer({
   side = "right",
   children,
   onClose,
+  onExited,
   className,
+  lockBodyScroll = true,
+  skipExitAnimation = false,
 }: DrawerProps) {
   const { isVisible, shouldRender } = usePresenceTransition({
     durationMs: DRAWER_ANIMATION_MS,
+    onExited,
     open,
+    skipExitAnimation,
   });
+
+  useLockBodyScroll(lockBodyScroll && shouldRender);
 
   if (!shouldRender) {
     return null;
