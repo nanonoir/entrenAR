@@ -60,7 +60,7 @@ export default function ReturnsPolicyPage() {
             <div className="rounded-card border border-border bg-surface p-5">
               <Link
                 className="inline-flex min-h-12 items-center justify-center rounded-button border border-border bg-text px-5 py-3 text-center font-subtitle text-sm font-semibold uppercase text-surface transition hover:bg-accent"
-                href="/ayuda/cambios-devoluciones"
+                href="/cambios-y-devoluciones"
               >
                 Iniciar cambio o devolución
               </Link>
