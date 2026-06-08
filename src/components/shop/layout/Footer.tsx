@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SameRouteScrollLink } from "@/components/shop/layout/SameRouteScrollLink";
 import {
@@ -49,13 +48,13 @@ export function Footer() {
           <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-300">{footerHelpText}</p>
           <div className="mt-5 grid gap-2">
             {footerHelpActions.map((action) => (
-              <Link
+              <SameRouteScrollLink
                 className="inline-flex min-h-10 items-center justify-center rounded-button border border-white/25 bg-transparent px-4 py-2 text-center font-subtitle text-sm font-semibold uppercase text-white transition hover:border-accent hover:text-accent"
                 href={action.href}
                 key={action.label}
               >
                 {action.label}
-              </Link>
+              </SameRouteScrollLink>
             ))}
           </div>
         </div>

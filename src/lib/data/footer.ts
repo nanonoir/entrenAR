@@ -51,10 +51,9 @@ export const footerHelpText =
   "Atención al cliente: Lunes a viernes de 9 a 18 hs.\nRetiros coordinados y envíos a todo el país.";
 
 export const footerHelpActions: FooterAction[] = [
-  // Hidden until these flows have implemented routes.
-  // { label: "Cambios y devoluciones", href: "/ayuda/cambios-devoluciones" },
-  // { label: "Botón de arrepentimiento", href: "/ayuda/boton-arrepentimiento" },
-  // { label: "Gestión de pedidos", href: "/cuenta/pedidos" },
+  { label: "Gestión de Pedidos", href: "/gestion-de-pedidos" },
+  { label: "Botón de Arrepentimiento", href: "/boton-de-arrepentimiento" },
+  { label: "Cambios y Devoluciones", href: "/cambios-y-devoluciones" },
 ];
 
 export const footerSocialLinks: FooterSocialLink[] = [
