@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
@@ -14,6 +14,12 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   helperText?: string;
   trailingIcon?: ReactNode;
   trailingLabel?: string;
+};
+
+export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  errorText?: string;
+  label?: string;
+  helperText?: string;
 };
 
 export type BadgeTone = "neutral" | "accent" | "sale" | "warning" | "success";
