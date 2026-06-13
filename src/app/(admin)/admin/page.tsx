@@ -2,8 +2,8 @@ import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { AdminLineChart } from "@/components/admin/charts";
 import { KpiGrid } from "@/components/admin/stats/KpiGrid";
 import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
-import { overviewKpis, visitorBehaviorBlocks } from "@/lib/data/admin/dashboard";
-import { visitSeries } from "@/lib/data/admin/visits";
+import { overviewKpis, visitorBehaviorBlocks } from "@/lib/data/admin/statistics/dashboard";
+import { visitSeries } from "@/lib/data/admin/statistics/visits";
 
 export default function AdminPage() {
   return (

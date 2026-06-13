@@ -1,7 +1,7 @@
 import { AdminBarChart, AdminDonutChart } from "@/components/admin/charts";
 import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
-import { paymentMethodRevenue, paymentStatusData, salesMetrics, shippingSplit, topCustomers, topProvinces } from "@/lib/data/admin/sales";
+import { paymentMethodRevenue, paymentStatusData, salesMetrics, shippingSplit, topCustomers, topProvinces } from "@/lib/data/admin/statistics/sales";
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 

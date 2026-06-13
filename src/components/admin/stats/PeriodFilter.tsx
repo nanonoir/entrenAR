@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { adminPeriodOptions, defaultAdminPeriodId, type AdminPeriodId } from "@/lib/data/admin/periods";
+import { adminPeriodOptions, defaultAdminPeriodId, type AdminPeriodId } from "@/lib/data/admin/statistics/periods";
 
 export function PeriodFilter() {
   const [period, setPeriod] = useState<AdminPeriodId>(defaultAdminPeriodId);

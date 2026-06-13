@@ -16,7 +16,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         aria-describedby={[helperId, errorId].filter(Boolean).join(" ") || undefined}
         aria-invalid={errorText ? true : undefined}
         className={cn(
-          "min-h-32 w-full resize-y rounded-button border border-border bg-surface px-3 py-3 text-base outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-sm",
+          "min-h-32 w-full resize-y rounded-button border border-border bg-surface px-3 py-3 text-base outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm",
           errorText && "border-sale focus:border-sale focus:ring-sale/20",
           className,
         )}

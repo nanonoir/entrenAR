@@ -1,7 +1,7 @@
 import { AdminBarChart } from "@/components/admin/charts";
 import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
-import { couponComparison, topCoupons } from "@/lib/data/admin/coupons";
+import { couponComparison, topCoupons } from "@/lib/data/admin/statistics/coupons";
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 

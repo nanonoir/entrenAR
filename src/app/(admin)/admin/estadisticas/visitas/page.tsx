@@ -2,7 +2,7 @@ import { AdminLineChart } from "@/components/admin/charts";
 import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { AdminComingSoonState } from "@/components/admin/ui/States";
-import { deviceBreakdown, mostVisitedProducts, visitSeries, visitSummary } from "@/lib/data/admin/visits";
+import { deviceBreakdown, mostVisitedProducts, visitSeries, visitSummary } from "@/lib/data/admin/statistics/visits";
 
 export default function VisitsStatsPage() {
   return (
