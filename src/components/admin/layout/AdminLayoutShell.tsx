@@ -1,5 +1,6 @@
 import { AdminMobileNav } from "@/components/admin/layout/MobileNav";
 import { AdminSidebar } from "@/components/admin/layout/Sidebar";
+import { AdminToastContainer } from "@/components/admin/sales-flow/AdminToastContainer";
 
 export function AdminLayoutShell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export function AdminLayoutShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       <AdminMobileNav />
+      <AdminToastContainer />
     </div>
   );
 }
