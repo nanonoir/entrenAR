@@ -1,6 +1,6 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import type { AdminKpiMetric } from "@/lib/data/admin/dashboard";
+import type { AdminKpiMetric } from "@/lib/data/admin/statistics/dashboard";
 
 const trendIcons = {
   up: ArrowUpRight,

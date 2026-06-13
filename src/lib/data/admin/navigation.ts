@@ -1,30 +1,77 @@
-import { BadgePercent, BarChart3, Boxes, CreditCard, Home, LogOut, Megaphone, Menu, Settings, ShoppingBag, TicketPercent, Truck, Users, ChartNoAxesCombined } from "lucide-react";
+import { Archive, BadgePercent, BarChart3, Boxes, CreditCard, Home, LogOut, Megaphone, Menu, Settings, ShoppingBag, TicketPercent, Truck, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
-export type AdminNavItem = { label: string; href: string; icon: ComponentType<{ className?: string; size?: number }> };
-export type AdminNavGroup = { label: string; items: AdminNavItem[] };
+export type AdminNavItem = {
+  label: string;
+  href: string;
+  icon: ComponentType<{ className?: string; size?: number }>;
+};
+
+export type AdminNavChild = {
+  label: string;
+  href: string;
+  icon?: ComponentType<{ className?: string; size?: number }>;
+};
+
+// A nav entry is either a direct link or an accordion group with children.
+export type AdminNavEntry =
+  | { type: "link"; label: string; href: string; icon: ComponentType<{ className?: string; size?: number }> }
+  | {
+      type: "accordion";
+      label: string;
+      href: string; // Primary route — navigated when parent label is clicked
+      icon: ComponentType<{ className?: string; size?: number }>;
+      children: AdminNavChild[];
+    };
+
+export type AdminNavGroup = {
+  label: string;
+  entries: AdminNavEntry[];
+};
 
 export const adminNavGroups: AdminNavGroup[] = [
-  { label: "Inicio", items: [{ label: "Visión general", href: "/admin", icon: Home }] },
+  {
+    label: "Inicio",
+    entries: [{ type: "link", label: "Inicio: Visión General", href: "/admin", icon: Home }],
+  },
   {
     label: "Estadísticas",
-    items: [
-      { label: "Productos", href: "/admin/estadisticas/productos", icon: Boxes },
-      { label: "Ventas y Clientes", href: "/admin/estadisticas/ventas-clientes", icon: BarChart3 },
-      { label: "Visitas", href: "/admin/estadisticas/visitas", icon: ChartNoAxesCombined },
-      { label: "Reporte de cupones", href: "/admin/estadisticas/reporte-cupones", icon: TicketPercent },
+    entries: [
+      {
+        type: "accordion",
+        label: "Estadísticas",
+        href: "/admin/estadisticas/productos",
+        icon: BarChart3,
+        children: [
+          { label: "Productos", href: "/admin/estadisticas/productos", icon: Boxes },
+          { label: "Ventas y Clientes", href: "/admin/estadisticas/ventas-clientes", icon: BarChart3 },
+          { label: "Visitas", href: "/admin/estadisticas/visitas", icon: BarChart3 },
+          { label: "Reporte de cupones", href: "/admin/estadisticas/reporte-cupones", icon: TicketPercent },
+        ],
+      },
     ],
   },
   {
     label: "Gestión",
-    items: [
-      { label: "Ventas", href: "/admin/ventas", icon: ShoppingBag },
-      { label: "Productos", href: "/admin/productos", icon: Boxes },
-      { label: "Medios de Pago", href: "/admin/medios-de-pago", icon: CreditCard },
-      { label: "Envíos", href: "/admin/envios", icon: Truck },
-      { label: "Clientes", href: "/admin/clientes", icon: Users },
-      { label: "Descuentos", href: "/admin/descuentos", icon: BadgePercent },
-      { label: "Marketing", href: "/admin/marketing", icon: Megaphone },
+    entries: [
+      {
+        type: "accordion",
+        label: "Ventas",
+        href: "/admin/ventas",
+        icon: ShoppingBag,
+        children: [
+          { label: "Listado de Ventas", href: "/admin/ventas" },
+          { label: "Órdenes de Compra", href: "/admin/ventas/ordenes" },
+          { label: "Carritos Abandonados", href: "/admin/ventas/carritos" },
+          { label: "Archivados", href: "/admin/ventas/archivados" },
+        ],
+      },
+      { type: "link", label: "Productos", href: "/admin/productos", icon: Boxes },
+      { type: "link", label: "Medios de Pago", href: "/admin/medios-de-pago", icon: CreditCard },
+      { type: "link", label: "Envíos", href: "/admin/envios", icon: Truck },
+      { type: "link", label: "Clientes", href: "/admin/clientes", icon: Users },
+      { type: "link", label: "Descuentos", href: "/admin/descuentos", icon: BadgePercent },
+      { type: "link", label: "Marketing", href: "/admin/marketing", icon: Megaphone },
     ],
   },
 ];
@@ -40,3 +87,7 @@ export const adminFooterActions: AdminNavItem[] = [
   { label: "Configuración", href: "#configuracion", icon: Settings },
   { label: "Cerrar sesión", href: "#cerrar-sesion", icon: LogOut },
 ];
+
+// Keep the old AdminNavGroup shape for anything that used it before (unused outside sidebar/drawer now).
+// Re-export a flattened version for backward compatibility if needed.
+export { Archive };
