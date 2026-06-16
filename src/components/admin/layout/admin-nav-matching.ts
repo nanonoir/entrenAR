@@ -5,6 +5,11 @@ export function isAdminPathActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+export function isAdminAccordionChildActive(pathname: string, parentHref: string, childHref: string) {
+  if (childHref === parentHref) return pathname === childHref;
+  return isAdminPathActive(pathname, childHref);
+}
+
 export function isAdminAccordionActive(pathname: string, href: string, children: { href: string }[]) {
   if (href === "/admin/ventas") {
     return pathname === href || pathname.startsWith(`${href}/`);
