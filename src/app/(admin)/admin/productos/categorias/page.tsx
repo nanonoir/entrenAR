@@ -1,5 +1,8 @@
-import { ProductPlaceholderPage } from "@/components/admin/products-flow/ProductPlaceholderPage";
+import { CategoriesManagementPage } from "@/components/admin/products-flow/categories/CategoriesManagementPage";
+import { getAdminProductCategories } from "@/lib/data/admin/sales-flow/mock-products";
 
-export default function ProductCategoriesPage() {
-  return <ProductPlaceholderPage title="Categorías" description="La gestión de categorías está planificada para la fase de categorías." />;
+export default async function ProductCategoriesPage() {
+  const categories = await getAdminProductCategories();
+
+  return <CategoriesManagementPage categories={categories} />;
 }

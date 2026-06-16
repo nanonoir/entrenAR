@@ -8,6 +8,12 @@ export type AdminProductCategory = {
   id: string;
   name: string;
   slug: string;
+  description?: string;
+  imageUrl?: string;
+  googleShoppingCategory?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  visibility: AdminProductVisibility;
   parentId?: string;
 };
 
@@ -34,10 +40,10 @@ export type AdminProduct = {
 };
 
 export const mockAdminProductCategories: AdminProductCategory[] = [
-  { id: "cat-supplements", name: "Suplementos", slug: "suplementos" },
-  { id: "cat-protein", name: "Proteínas", slug: "proteinas", parentId: "cat-supplements" },
-  { id: "cat-training", name: "Entrenamiento", slug: "entrenamiento" },
-  { id: "cat-accessories", name: "Accesorios", slug: "accesorios" },
+  { id: "cat-supplements", name: "Suplementos", slug: "suplementos", description: "Nutrición deportiva y apoyo al rendimiento.", seoTitle: "Suplementos deportivos", seoDescription: "Suplementos seleccionados para entrenamiento y recuperación.", visibility: "visible" },
+  { id: "cat-protein", name: "Proteínas", slug: "proteinas", description: "Proteínas y fórmulas para recuperación muscular.", visibility: "visible", parentId: "cat-supplements" },
+  { id: "cat-training", name: "Entrenamiento", slug: "entrenamiento", description: "Elementos para entrenamiento funcional.", visibility: "visible" },
+  { id: "cat-accessories", name: "Accesorios", slug: "accesorios", description: "Accesorios y complementos para el día a día.", visibility: "hidden" },
 ];
 
 export const mockAdminProducts: AdminProduct[] = [
@@ -131,6 +137,10 @@ export async function getAdminProductById(id: string): Promise<AdminProduct | un
 
 export async function getAdminProductCategories(): Promise<AdminProductCategory[]> {
   return mockAdminProductCategories;
+}
+
+export async function getAdminProductCategoryById(id: string): Promise<AdminProductCategory | undefined> {
+  return mockAdminProductCategories.find((category) => category.id === id);
 }
 
 export function formatAdminProductStock(stock: AdminProductStock): string {
