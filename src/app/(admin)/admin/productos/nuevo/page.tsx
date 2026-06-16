@@ -1,5 +1,8 @@
-import { ProductPlaceholderPage } from "@/components/admin/products-flow/ProductPlaceholderPage";
+import { ProductCreateFormPage } from "@/components/admin/products-flow/ProductCreateFormPage";
+import { getAdminProductCategories } from "@/lib/data/admin/sales-flow/mock-products";
 
-export default function NewProductPage() {
-  return <ProductPlaceholderPage title="Agregar producto" description="El formulario de producto está planificado para la fase de creación." />;
+export default async function NewProductPage() {
+  const categories = await getAdminProductCategories();
+
+  return <ProductCreateFormPage categories={categories} />;
 }
