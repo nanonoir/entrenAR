@@ -125,6 +125,10 @@ export async function getAdminProducts(): Promise<AdminProduct[]> {
   return mockAdminProducts;
 }
 
+export async function getAdminProductById(id: string): Promise<AdminProduct | undefined> {
+  return mockAdminProducts.find((product) => product.id === id);
+}
+
 export async function getAdminProductCategories(): Promise<AdminProductCategory[]> {
   return mockAdminProductCategories;
 }
