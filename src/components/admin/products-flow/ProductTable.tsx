@@ -6,7 +6,7 @@ import { MoreHorizontal, PackageOpen } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { ProductActionMenu } from "@/components/admin/products-flow/ProductActionMenu";
-import { formatARS } from "@/lib/data/admin/sales-flow/helpers";
+import { InlinePriceCell } from "@/components/admin/products-flow/InlinePriceCell";
 import {
   formatAdminProductStock,
   getAdminProductStockTone,
@@ -20,7 +20,6 @@ type ProductTableProps = {
 };
 
 export function ProductTable({ products: initialProducts }: ProductTableProps) {
-  const products = useAdminProductsStore((state) => state.products);
   const selectedProductIds = useAdminProductsStore((state) => state.selectedProductIds);
   const initializeProducts = useAdminProductsStore((state) => state.initializeProducts);
   const toggleProductSelection = useAdminProductsStore((state) => state.toggleProductSelection);
@@ -32,7 +31,7 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
     initializeProducts(initialProducts);
   }, [initialProducts, initializeProducts]);
 
-  const visibleProducts = products.length > 0 ? products : initialProducts;
+  const visibleProducts = initialProducts;
   const visibleIds = visibleProducts.map((product) => product.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedProductIds.includes(id));
   const someVisibleSelected = visibleIds.some((id) => selectedProductIds.includes(id));
@@ -89,10 +88,22 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
                     <Badge tone={getAdminProductStockTone(product.stock)}>{formatAdminProductStock(product.stock)}</Badge>
                   </td>
                   <td className="px-3 py-4">
-                    <SalePrice product={product} />
+                    <InlinePriceCell
+                      productId={product.id}
+                      productName={product.name}
+                      field="salePrice"
+                      salePrice={product.salePrice}
+                      promotionalPrice={product.promotionalPrice}
+                    />
                   </td>
                   <td className="px-3 py-4">
-                    <PromotionalPrice product={product} />
+                    <InlinePriceCell
+                      productId={product.id}
+                      productName={product.name}
+                      field="promotionalPrice"
+                      salePrice={product.salePrice}
+                      promotionalPrice={product.promotionalPrice}
+                    />
                   </td>
                   <td className="px-3 py-4">
                     <Badge tone={product.visibility === "visible" ? "success" : "neutral"}>
@@ -157,8 +168,24 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
                   {product.visibility === "visible" ? "Visible" : "Oculto"}
                 </Badge>
               </ProductMeta>
-              <ProductMeta label="Precio"><SalePrice product={product} /></ProductMeta>
-              <ProductMeta label="Promocional"><PromotionalPrice product={product} /></ProductMeta>
+              <ProductMeta label="Precio">
+                <InlinePriceCell
+                  productId={product.id}
+                  productName={product.name}
+                  field="salePrice"
+                  salePrice={product.salePrice}
+                  promotionalPrice={product.promotionalPrice}
+                />
+              </ProductMeta>
+              <ProductMeta label="Promocional">
+                <InlinePriceCell
+                  productId={product.id}
+                  productName={product.name}
+                  field="promotionalPrice"
+                  salePrice={product.salePrice}
+                  promotionalPrice={product.promotionalPrice}
+                />
+              </ProductMeta>
             </dl>
           </article>
         ))}
@@ -166,20 +193,6 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
       </div>
     </section>
   );
-}
-
-function SalePrice({ product }: { product: AdminProduct }) {
-  if (product.promotionalPrice) {
-    return <span className="font-semibold text-zinc-400 line-through">{formatARS(product.salePrice)}</span>;
-  }
-
-  return <span className="font-semibold text-zinc-950">{formatARS(product.salePrice)}</span>;
-}
-
-function PromotionalPrice({ product }: { product: AdminProduct }) {
-  if (!product.promotionalPrice) return <span className="text-zinc-400">—</span>;
-
-  return <span className="font-bold text-accent">{formatARS(product.promotionalPrice)}</span>;
 }
 
 function ProductHeaderCell({ children }: { children: React.ReactNode }) {

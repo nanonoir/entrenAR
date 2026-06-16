@@ -23,6 +23,10 @@ export type AdminProduct = {
   stock: AdminProductStock;
   salePrice: number;
   promotionalPrice?: number;
+  tags: string[];
+  shippingRequired: boolean;
+  missingLogistics: boolean;
+  manualOrder: number;
   visibility: AdminProductVisibility;
   salesCount: number;
   createdAt: string;
@@ -48,6 +52,10 @@ export const mockAdminProducts: AdminProduct[] = [
     stock: { type: "limited", quantity: 42 },
     salePrice: 52900,
     promotionalPrice: 46900,
+    tags: ["proteína", "whey", "performance", "suplemento"],
+    shippingRequired: true,
+    missingLogistics: false,
+    manualOrder: 1,
     visibility: "visible",
     salesCount: 128,
     createdAt: "2026-05-04T13:20:00.000Z",
@@ -63,6 +71,10 @@ export const mockAdminProducts: AdminProduct[] = [
     categoryName: "Suplementos",
     stock: { type: "limited", quantity: 8 },
     salePrice: 28900,
+    tags: ["creatina", "monohidrato", "fuerza", "suplemento"],
+    shippingRequired: true,
+    missingLogistics: false,
+    manualOrder: 2,
     visibility: "visible",
     salesCount: 94,
     createdAt: "2026-05-11T11:15:00.000Z",
@@ -79,6 +91,10 @@ export const mockAdminProducts: AdminProduct[] = [
     stock: { type: "infinite" },
     salePrice: 18900,
     promotionalPrice: 15900,
+    tags: ["bandas", "entrenamiento", "accesorios"],
+    shippingRequired: true,
+    missingLogistics: true,
+    manualOrder: 3,
     visibility: "visible",
     salesCount: 56,
     createdAt: "2026-04-22T15:00:00.000Z",
@@ -94,6 +110,10 @@ export const mockAdminProducts: AdminProduct[] = [
     categoryName: "Entrenamiento",
     stock: { type: "limited", quantity: 0 },
     salePrice: 21900,
+    tags: ["guantes", "training", "entrenamiento"],
+    shippingRequired: true,
+    missingLogistics: true,
+    manualOrder: 4,
     visibility: "hidden",
     salesCount: 33,
     createdAt: "2026-03-29T10:30:00.000Z",

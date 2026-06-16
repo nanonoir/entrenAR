@@ -54,6 +54,7 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
   clearProductSelection: () => set({ selectedProductIds: [] }),
 
   updateProductPrice: async (id, prices) => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
     set((state) => ({
       products: state.products.map((product) => (product.id === id ? { ...product, ...prices, updatedAt: new Date().toISOString() } : product)),
     }));
