@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
+import type { AdminProduct, AdminProductStock } from "@/lib/data/admin/sales-flow/mock-products";
 import type { ProductCreateValues } from "@/schemas/admin/product-schemas";
 
 type ProductPriceInput = {
@@ -11,6 +11,7 @@ type ProductPriceInput = {
 
 type AdminProductsState = {
   products: AdminProduct[];
+  stockHistory: StockHistoryEntry[];
   selectedProductIds: string[];
   isInitializing: boolean;
   error: string | null;
@@ -23,7 +24,36 @@ type AdminProductsState = {
   updateProduct: (id: string, data: ProductCreateValues & { categoryName: string }) => Promise<AdminProduct>;
   duplicateProduct: (id: string) => Promise<AdminProduct | undefined>;
   deleteProduct: (id: string) => Promise<void>;
+  updateInventoryStock: (input: UpdateInventoryStockInput) => Promise<void>;
 };
+
+export type StockHistoryEntry = {
+  id: string;
+  productId: string;
+  variantId?: string;
+  productName: string;
+  variantName?: string;
+  change: string;
+  resultingStock: string;
+  origin: string;
+  actor: string;
+  reason?: string;
+  type: "stock-edit" | "new-product";
+  createdAt: string;
+};
+
+type UpdateInventoryStockInput = {
+  productId: string;
+  variantId?: string;
+  stock: AdminProductStock | number | "infinite";
+  reason?: string;
+};
+
+function formatStockValue(stock: AdminProductStock | number | "infinite") {
+  if (stock === "infinite") return "∞";
+  if (typeof stock === "number") return String(stock);
+  return stock.type === "infinite" ? "∞" : String(stock.quantity);
+}
 
 function slugify(value: string) {
   return value
@@ -70,6 +100,7 @@ function buildProductFromForm(data: ProductCreateValues & { categoryName: string
 
 export const useAdminProductsStore = create<AdminProductsState>()((set, get) => ({
   products: [],
+  stockHistory: [],
   selectedProductIds: [],
   isInitializing: false,
   error: null,
@@ -159,5 +190,42 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
   deleteProduct: async (id) => {
     await new Promise((resolve) => setTimeout(resolve, 250));
     set((state) => ({ products: state.products.filter((product) => product.id !== id) }));
+  },
+
+  updateInventoryStock: async ({ productId, reason, stock, variantId }) => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    set((state) => {
+      const product = state.products.find((item) => item.id === productId);
+      if (!product) return state;
+      const variant = product.variantCombinations.find((item) => item.id === variantId);
+      const nextProducts = state.products.map((item) => {
+        if (item.id !== productId) return item;
+        if (variantId) {
+          const variantStock = typeof stock === "object" ? formatStockValue(stock) === "∞" ? "infinite" : Number(formatStockValue(stock)) : stock;
+          return {
+            ...item,
+            variantCombinations: item.variantCombinations.map((combo) => (combo.id === variantId ? { ...combo, stock: variantStock } : combo)),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        const nextStock: AdminProductStock = typeof stock === "object" ? stock : stock === "infinite" ? { type: "infinite" } : { type: "limited", quantity: stock };
+        return { ...item, stock: nextStock, updatedAt: new Date().toISOString() };
+      });
+      const entry: StockHistoryEntry = {
+        id: `hist-${Date.now()}`,
+        productId,
+        variantId,
+        productName: product.name,
+        variantName: variant?.name,
+        change: `Stock actualizado a ${formatStockValue(stock)}`,
+        resultingStock: formatStockValue(stock),
+        origin: "CRM Productos",
+        actor: "Admin demo",
+        reason,
+        type: "stock-edit",
+        createdAt: new Date().toISOString(),
+      };
+      return { products: nextProducts, stockHistory: [entry, ...state.stockHistory] };
+    });
   },
 }));

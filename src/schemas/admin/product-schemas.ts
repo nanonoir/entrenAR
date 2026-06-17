@@ -50,7 +50,7 @@ export const productVariantCombinationSchema = z.object({
   id: z.string(),
   name: z.string(),
   sku: z.string(),
-  stock: z.number(),
+  stock: z.union([z.number(), z.literal("infinite")]),
   price: z.number().optional(),
 });
 

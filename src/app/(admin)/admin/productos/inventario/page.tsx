@@ -1,5 +1,8 @@
-import { ProductPlaceholderPage } from "@/components/admin/products-flow/ProductPlaceholderPage";
+import { InventoryPage } from "@/components/admin/products-flow/inventory/InventoryPage";
+import { getAdminProducts } from "@/lib/data/admin/sales-flow/mock-products";
 
-export default function ProductInventoryPage() {
-  return <ProductPlaceholderPage title="Inventario" description="Los controles de stock y el historial están planificados para la fase de inventario." />;
+export default async function ProductInventoryPage() {
+  const products = await getAdminProducts();
+
+  return <InventoryPage products={products} />;
 }

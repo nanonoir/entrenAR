@@ -35,7 +35,7 @@ export type AdminProduct = {
   seoDescription?: string;
   highlightSections: string[];
   variantProperties: Array<{ name: string; values: string[] }>;
-  variantCombinations: Array<{ id: string; name: string; sku: string; stock: number; price?: number }>;
+  variantCombinations: Array<{ id: string; name: string; sku: string; stock: number | "infinite"; price?: number }>;
   shippingRequired: boolean;
   missingLogistics: boolean;
   manualOrder: number;
