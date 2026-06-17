@@ -41,6 +41,19 @@ export type InlineProductPrice = z.output<typeof inlineProductPriceSchema>;
 
 const optionalTextSchema = z.string().trim().optional().transform((value) => value || undefined);
 
+export const productVariantPropertySchema = z.object({
+  name: z.string().trim().min(1, "Ingresá el nombre de la propiedad"),
+  values: z.array(z.string().trim().min(1)).min(1, "Agregá al menos un valor"),
+});
+
+export const productVariantCombinationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sku: z.string(),
+  stock: z.number(),
+  price: z.number().optional(),
+});
+
 export const productCreateSchema = z
   .object({
     name: z.string().trim().min(3, "Ingresá al menos 3 caracteres"),
@@ -56,6 +69,11 @@ export const productCreateSchema = z
     visibility: z.enum(["visible", "hidden"]),
     brand: optionalTextSchema,
     tags: optionalTextSchema,
+    seoTitle: z.string().trim().max(70, "El título SEO no puede superar 70 caracteres").optional().transform((value) => value || undefined),
+    seoDescription: z.string().trim().max(160, "La descripción SEO no puede superar 160 caracteres").optional().transform((value) => value || undefined),
+    highlightSections: z.array(z.string()).default([]),
+    variantProperties: z.array(productVariantPropertySchema).default([]),
+    variantCombinations: z.array(productVariantCombinationSchema).default([]),
     shippingRequired: z.boolean(),
     missingLogistics: z.boolean(),
   })

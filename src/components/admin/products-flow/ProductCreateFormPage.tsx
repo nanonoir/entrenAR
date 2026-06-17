@@ -10,6 +10,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { ProductIdentityCard } from "@/components/admin/products-flow/product-form/ProductIdentityCard";
 import { ProductLogisticsCard } from "@/components/admin/products-flow/product-form/ProductLogisticsCard";
 import { ProductPricingCard } from "@/components/admin/products-flow/product-form/ProductPricingCard";
+import { ProductAdvancedDrawersCard } from "@/components/admin/products-flow/product-form/ProductAdvancedDrawersCard";
 import { getProductHref } from "@/lib/routes";
 import type { AdminProduct, AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { productCreateSchema, type ProductCreateInput, type ProductCreateValues } from "@/schemas/admin/product-schemas";
@@ -35,6 +36,11 @@ const defaultValues: ProductCreateInput = {
   visibility: "visible",
   brand: "",
   tags: "",
+  seoTitle: "",
+  seoDescription: "",
+  highlightSections: [],
+  variantProperties: [],
+  variantCombinations: [],
   shippingRequired: true,
   missingLogistics: false,
 };
@@ -55,6 +61,11 @@ function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
     visibility: product.visibility,
     brand: "",
     tags: product.tags.join(", "),
+    seoTitle: product.seoTitle ?? "",
+    seoDescription: product.seoDescription ?? "",
+    highlightSections: product.highlightSections,
+    variantProperties: product.variantProperties,
+    variantCombinations: product.variantCombinations,
     shippingRequired: product.shippingRequired,
     missingLogistics: product.missingLogistics,
   };
@@ -164,6 +175,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
           <ProductIdentityCard />
           <ProductPricingCard />
           <ProductLogisticsCard categories={categories} />
+          <ProductAdvancedDrawersCard categories={categories} />
           <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-between">
             {product ? <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={handleDuplicate}>Duplicar</Button><Button type="button" variant="danger" onClick={() => setDeleteOpen(true)}><Trash2 aria-hidden size={16} />Borrar</Button></div> : <span />}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

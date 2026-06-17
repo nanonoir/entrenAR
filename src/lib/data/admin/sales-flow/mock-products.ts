@@ -30,6 +30,12 @@ export type AdminProduct = {
   salePrice: number;
   promotionalPrice?: number;
   tags: string[];
+  brand?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  highlightSections: string[];
+  variantProperties: Array<{ name: string; values: string[] }>;
+  variantCombinations: Array<{ id: string; name: string; sku: string; stock: number; price?: number }>;
   shippingRequired: boolean;
   missingLogistics: boolean;
   manualOrder: number;
@@ -59,6 +65,13 @@ export const mockAdminProducts: AdminProduct[] = [
     salePrice: 52900,
     promotionalPrice: 46900,
     tags: ["proteína", "whey", "performance", "suplemento"],
+    brand: "EntrenAR",
+    highlightSections: ["home"],
+    variantProperties: [{ name: "Sabor", values: ["Vainilla", "Chocolate"] }],
+    variantCombinations: [
+      { id: "var-whey-vainilla", name: "Vainilla", sku: "SUP-WHEY-001-VAI", stock: 20 },
+      { id: "var-whey-chocolate", name: "Chocolate", sku: "SUP-WHEY-001-CHO", stock: 22 },
+    ],
     shippingRequired: true,
     missingLogistics: false,
     manualOrder: 1,
@@ -78,6 +91,10 @@ export const mockAdminProducts: AdminProduct[] = [
     stock: { type: "limited", quantity: 8 },
     salePrice: 28900,
     tags: ["creatina", "monohidrato", "fuerza", "suplemento"],
+    brand: "EntrenAR",
+    highlightSections: [],
+    variantProperties: [],
+    variantCombinations: [],
     shippingRequired: true,
     missingLogistics: false,
     manualOrder: 2,
@@ -98,6 +115,13 @@ export const mockAdminProducts: AdminProduct[] = [
     salePrice: 18900,
     promotionalPrice: 15900,
     tags: ["bandas", "entrenamiento", "accesorios"],
+    brand: "EntrenAR",
+    highlightSections: ["featured"],
+    variantProperties: [{ name: "Resistencia", values: ["Media", "Alta"] }],
+    variantCombinations: [
+      { id: "var-band-media", name: "Media", sku: "ACC-BAND-SET-MED", stock: 999 },
+      { id: "var-band-alta", name: "Alta", sku: "ACC-BAND-SET-ALT", stock: 999 },
+    ],
     shippingRequired: true,
     missingLogistics: true,
     manualOrder: 3,
@@ -117,6 +141,14 @@ export const mockAdminProducts: AdminProduct[] = [
     stock: { type: "limited", quantity: 0 },
     salePrice: 21900,
     tags: ["guantes", "training", "entrenamiento"],
+    brand: "EntrenAR",
+    highlightSections: [],
+    variantProperties: [{ name: "Talle", values: ["S", "M", "L"] }],
+    variantCombinations: [
+      { id: "var-gloves-s", name: "S", sku: "ACC-GLOV-PRO-S", stock: 0 },
+      { id: "var-gloves-m", name: "M", sku: "ACC-GLOV-PRO-M", stock: 0 },
+      { id: "var-gloves-l", name: "L", sku: "ACC-GLOV-PRO-L", stock: 0 },
+    ],
     shippingRequired: true,
     missingLogistics: true,
     manualOrder: 4,
