@@ -41,8 +41,6 @@ const defaultValues: ProductCreateInput = {
   highlightSections: [],
   variantProperties: [],
   variantCombinations: [],
-  shippingRequired: true,
-  missingLogistics: false,
 };
 
 function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
@@ -66,8 +64,6 @@ function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
     highlightSections: product.highlightSections,
     variantProperties: product.variantProperties,
     variantCombinations: product.variantCombinations,
-    shippingRequired: product.shippingRequired,
-    missingLogistics: product.missingLogistics,
   };
 }
 

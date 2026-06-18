@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { ImageDropZone } from "@/components/admin/products-flow/product-form/ImageDropZone";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { categoryFormSchema, type CategoryFormInput, type CategoryFormValues } from "@/schemas/admin/product-schemas";
 import { useAdminCategoriesStore } from "@/stores/admin-categories-store";
@@ -39,11 +40,12 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
   const updateCategory = useAdminCategoriesStore((state) => state.updateCategory);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const { formState: { errors }, handleSubmit, register } = useForm<CategoryFormInput, unknown, CategoryFormValues>({
+  const { control, formState: { errors }, handleSubmit, register, setValue } = useForm<CategoryFormInput, unknown, CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: defaultValues(category, parentId),
     mode: "onBlur",
   });
+  const imageUrl = useWatch({ control, name: "imageUrl" });
 
   async function onSubmit(data: CategoryFormValues) {
     setIsSubmitting(true);
@@ -67,11 +69,11 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
       {message ? <p className="rounded-2xl border border-green-200 p-3 text-sm font-medium text-green-700">{message}</p> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Input id="category-name" label="Nombre" helperText="Nombre visible de la categoría." errorText={errors.name?.message} {...register("name")} />
-        <Input id="category-slug" label="URL slug" helperText="Si se repite, el contrato mock lo ajusta." errorText={errors.slug?.message} {...register("slug")} />
+        <Input id="category-slug" label="URL slug" helperText="Se genera automáticamente desde el nombre si lo dejás en blanco" errorText={errors.slug?.message} {...register("slug")} />
       </div>
       <Textarea id="category-description" label="Descripción" helperText="Máximo 140 caracteres." errorText={errors.description?.message} {...register("description")} />
       <div className="grid gap-4 md:grid-cols-2">
-        <Input id="category-image" label="Imagen" helperText="Opcional para preparar media futura." errorText={errors.imageUrl?.message} {...register("imageUrl")} />
+        <ImageDropZone label="Imagen" value={imageUrl} errorText={errors.imageUrl?.message} onChange={(value) => setValue("imageUrl", value, { shouldDirty: true, shouldValidate: true })} />
         <Input id="category-shopping" label="Google Shopping" helperText="Campo preparado para integración futura." errorText={errors.googleShoppingCategory?.message} {...register("googleShoppingCategory")} />
       </div>
       <div className="grid gap-4 md:grid-cols-2">

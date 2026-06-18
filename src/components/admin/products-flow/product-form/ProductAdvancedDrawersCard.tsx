@@ -101,6 +101,7 @@ export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawer
         <DrawerBody footer={<Button onClick={() => setOpenDrawer(null)}>Guardar panel</Button>}>
           <Input id="drawer-brand" label="Marca" helperText="Opcional para filtros y edición futura." {...register("brand")} />
           <Input id="drawer-tags" label="Etiquetas" helperText="Separá etiquetas con coma." {...register("tags")} />
+          <Input id="drawer-slug" label="Slug público" helperText="Opcional. Si lo dejás vacío se genera desde el nombre." {...register("slug")} />
           <Input id="drawer-seo-title" label="Título SEO" helperText="Máximo 70 caracteres." trailingIcon={<Search aria-hidden size={14} />} {...register("seoTitle")} />
           <Textarea id="drawer-seo-description" label="Descripción SEO" helperText="Máximo 160 caracteres." {...register("seoDescription")} />
         </DrawerBody>

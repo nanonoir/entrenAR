@@ -58,7 +58,7 @@ export const productCreateSchema = z
   .object({
     name: z.string().trim().min(3, "Ingresá al menos 3 caracteres"),
     slug: optionalTextSchema,
-    sku: z.string().trim().min(3, "Ingresá un SKU válido"),
+    sku: optionalTextSchema,
     categoryId: z.string().trim().min(1, "Seleccioná una categoría"),
     description: z.string().trim().min(10, "Agregá una descripción más completa"),
     imageUrl: optionalTextSchema,
@@ -74,8 +74,6 @@ export const productCreateSchema = z
     highlightSections: z.array(z.string()).default([]),
     variantProperties: z.array(productVariantPropertySchema).default([]),
     variantCombinations: z.array(productVariantCombinationSchema).default([]),
-    shippingRequired: z.boolean(),
-    missingLogistics: z.boolean(),
   })
   .refine(
     (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.salePrice,
@@ -91,7 +89,7 @@ export type ProductCreateValues = z.output<typeof productCreateSchema>;
 
 export const categoryFormSchema = z.object({
   name: z.string().trim().min(2, "Ingresá al menos 2 caracteres"),
-  slug: z.string().trim().min(2, "Ingresá una URL válida"),
+  slug: optionalTextSchema,
   description: z.string().trim().max(140, "La descripción no puede superar 140 caracteres").optional().transform((value) => value || undefined),
   imageUrl: optionalTextSchema,
   googleShoppingCategory: optionalTextSchema,
