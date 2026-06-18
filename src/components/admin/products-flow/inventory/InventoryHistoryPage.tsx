@@ -1,13 +1,14 @@
 "use client";
 
 import { PackageSearch } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 
 export function InventoryHistoryPage({ product }: { product: AdminProduct }) {
   const initializeProducts = useAdminProductsStore((state) => state.initializeProducts);
-  const history = useAdminProductsStore((state) => state.stockHistory.filter((entry) => entry.productId === product.id));
+  const stockHistory = useAdminProductsStore((state) => state.stockHistory);
+  const history = useMemo(() => stockHistory.filter((entry) => entry.productId === product.id), [product.id, stockHistory]);
 
   useEffect(() => { initializeProducts([product]); }, [initializeProducts, product]);
 

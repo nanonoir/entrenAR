@@ -10,8 +10,6 @@ export type ProductFilters = {
   stock: "all" | "available" | "out" | "infinite";
   priceType: "all" | "promotional" | "regular";
   visibility: "all" | "visible" | "hidden";
-  shipping: "all" | "required" | "not-required";
-  logistics: "all" | "missing" | "complete";
 };
 
 export const defaultProductFilters: ProductFilters = {
@@ -19,8 +17,6 @@ export const defaultProductFilters: ProductFilters = {
   stock: "all",
   priceType: "all",
   visibility: "all",
-  shipping: "all",
-  logistics: "all",
 };
 
 type ProductFilterDrawerProps = {
@@ -80,18 +76,6 @@ export function ProductFilterDrawer({ categories, draftFilters, open, onApply, o
               <RadioOption label="Todas" checked={draftFilters.visibility === "all"} onChange={() => onDraftChange({ ...draftFilters, visibility: "all" })} />
               <RadioOption label="Visible" checked={draftFilters.visibility === "visible"} onChange={() => onDraftChange({ ...draftFilters, visibility: "visible" })} />
               <RadioOption label="Oculto" checked={draftFilters.visibility === "hidden"} onChange={() => onDraftChange({ ...draftFilters, visibility: "hidden" })} />
-            </FilterSection>
-
-            <FilterSection title="Envío">
-              <RadioOption label="Todos" checked={draftFilters.shipping === "all"} onChange={() => onDraftChange({ ...draftFilters, shipping: "all" })} />
-              <RadioOption label="Requiere envío" checked={draftFilters.shipping === "required"} onChange={() => onDraftChange({ ...draftFilters, shipping: "required" })} />
-              <RadioOption label="Sin envío" checked={draftFilters.shipping === "not-required"} onChange={() => onDraftChange({ ...draftFilters, shipping: "not-required" })} />
-            </FilterSection>
-
-            <FilterSection title="Logística">
-              <RadioOption label="Todos" checked={draftFilters.logistics === "all"} onChange={() => onDraftChange({ ...draftFilters, logistics: "all" })} />
-              <RadioOption label="Con datos pendientes" checked={draftFilters.logistics === "missing"} onChange={() => onDraftChange({ ...draftFilters, logistics: "missing" })} />
-              <RadioOption label="Completa" checked={draftFilters.logistics === "complete"} onChange={() => onDraftChange({ ...draftFilters, logistics: "complete" })} />
             </FilterSection>
           </div>
         </div>

@@ -40,10 +40,6 @@ function matchesFilters(product: AdminProduct, filters: ProductFilters) {
   if (filters.priceType === "promotional" && !product.promotionalPrice) return false;
   if (filters.priceType === "regular" && product.promotionalPrice) return false;
   if (filters.visibility !== "all" && product.visibility !== filters.visibility) return false;
-  if (filters.shipping === "required" && !product.shippingRequired) return false;
-  if (filters.shipping === "not-required" && product.shippingRequired) return false;
-  if (filters.logistics === "missing" && !product.missingLogistics) return false;
-  if (filters.logistics === "complete" && product.missingLogistics) return false;
   return true;
 }
 
@@ -96,10 +92,10 @@ export function ProductListClient({ categories, products: initialProducts }: Pro
             <SlidersHorizontal aria-hidden size={16} />
             Organizar
           </LinkButton>
-          <Button className="w-full sm:w-auto" variant="secondary" size="sm">
+          <LinkButton className="w-full sm:w-auto" variant="secondary" size="sm" href="/admin/productos/importar-exportar">
             <Download aria-hidden size={16} />
             Exportar
-          </Button>
+          </LinkButton>
           <LinkButton className="w-full sm:w-auto" variant="secondary" size="sm" href="/admin/productos/importar-exportar">
             <Upload aria-hidden size={16} />
             Importar

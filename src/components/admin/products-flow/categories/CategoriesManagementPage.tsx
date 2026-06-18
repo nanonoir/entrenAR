@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { EyeOff, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/LinkButton";
 import { CategoryForm } from "@/components/admin/products-flow/categories/CategoryForm";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminCategoriesStore } from "@/stores/admin-categories-store";
@@ -75,7 +75,7 @@ export function CategoriesManagementPage({ categories: initialCategories }: Cate
 function CategoryNode({ categories, category, onCreateChild, onDelete, onToggleVisibility }: { categories: AdminProductCategory[]; category: AdminProductCategory; onCreateChild: (id: string) => void; onDelete: (category: AdminProductCategory) => void; onToggleVisibility: (id: string) => void }) {
   const children = categories.filter((item) => item.parentId === category.id);
   return (
-    <article className="grid gap-3 rounded-2xl border border-zinc-100 p-3">
+    <article className="relative grid gap-3 rounded-2xl border border-zinc-100 p-3 before:absolute before:left-[-17px] before:top-6 before:hidden before:h-px before:w-4 before:bg-zinc-200 [&_article]:ml-4 [&_article]:border-l-accent/20 [&_article]:before:block">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="truncate font-semibold text-zinc-950">{category.name}</h2>
@@ -83,12 +83,12 @@ function CategoryNode({ categories, category, onCreateChild, onDelete, onToggleV
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => onCreateChild(category.id)}><Plus aria-hidden size={14} />Subcategoría</Button>
-          <Button variant="secondary" size="sm" onClick={() => onToggleVisibility(category.id)}><EyeOff aria-hidden size={14} />{category.visibility === "visible" ? "Ocultar" : "Mostrar"}</Button>
-          <Link className="inline-flex h-9 items-center gap-2 rounded-button border border-border bg-surface px-3 text-sm font-semibold uppercase text-text" href={`/admin/productos/categorias/${category.id}`}><Pencil aria-hidden size={14} />Editar</Link>
-          <Button variant="danger" size="sm" onClick={() => onDelete(category)}><Trash2 aria-hidden size={14} />Eliminar</Button>
+          <Button aria-label={category.visibility === "visible" ? `Ocultar ${category.name}` : `Mostrar ${category.name}`} variant="secondary" size="icon" onClick={() => onToggleVisibility(category.id)}><EyeOff aria-hidden size={16} /></Button>
+          <LinkButton aria-label={`Editar ${category.name}`} variant="secondary" size="icon" href={`/admin/productos/categorias/${category.id}`}><Pencil aria-hidden size={16} /></LinkButton>
+          <Button aria-label={`Eliminar ${category.name}`} variant="danger" size="icon" onClick={() => onDelete(category)}><Trash2 aria-hidden size={16} /></Button>
         </div>
       </div>
-      {children.length > 0 ? <div className="ml-4 grid gap-2 border-l border-zinc-100 pl-4">{children.map((child) => <CategoryNode key={child.id} category={child} categories={categories} onCreateChild={onCreateChild} onDelete={onDelete} onToggleVisibility={onToggleVisibility} />)}</div> : null}
+      {children.length > 0 ? <div className="relative ml-2 grid gap-2 border-l border-zinc-200 pl-4">{children.map((child) => <CategoryNode key={child.id} category={child} categories={categories} onCreateChild={onCreateChild} onDelete={onDelete} onToggleVisibility={onToggleVisibility} />)}</div> : null}
     </article>
   );
 }
