@@ -72,7 +72,11 @@ export const productCreateSchema = z
     seoTitle: z.string().trim().max(70, "El título SEO no puede superar 70 caracteres").optional().transform((value) => value || undefined),
     seoDescription: z.string().trim().max(160, "La descripción SEO no puede superar 160 caracteres").optional().transform((value) => value || undefined),
     highlightSections: z.array(z.string()).default([]),
-    variantProperties: z.array(productVariantPropertySchema).default([]),
+    variantProperties: z
+      .array(productVariantPropertySchema)
+      .max(2, "Solo se permiten una Variante y una Subvariante")
+      .refine((properties) => new Set(properties.map((property) => property.name.trim().toLowerCase())).size === properties.length, "No se permiten variantes duplicadas")
+      .default([]),
     variantCombinations: z.array(productVariantCombinationSchema).default([]),
   })
   .refine(
