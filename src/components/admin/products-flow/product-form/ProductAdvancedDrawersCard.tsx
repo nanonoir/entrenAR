@@ -23,6 +23,13 @@ const highlightOptions = [
   { id: "seasonal", label: "Temporada" },
 ];
 
+const variantPresetCatalog: Record<string, string[]> = {
+  Sabor: ["Chocolate", "Vainilla", "Frutilla"],
+  Color: ["Negro", "Blanco", "Rojo", "Azul"],
+  Talle: ["S", "M", "L", "XL"],
+  Tamaño: ["Chico", "Mediano", "Grande"],
+};
+
 function buildCombinations(properties: Array<{ name: string; values: string[] }>) {
   if (properties.length === 0) return [];
   const combos = properties.reduce<string[][]>((acc, property) => {
@@ -39,30 +46,53 @@ function buildCombinations(properties: Array<{ name: string; values: string[] }>
 
 export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawersCardProps) {
   const [openDrawer, setOpenDrawer] = useState<DrawerType>(null);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const { register, setValue } = useFormContext<ProductCreateInput>();
   const categoryId = useWatch<ProductCreateInput, "categoryId">({ name: "categoryId" });
   const tags = useWatch<ProductCreateInput, "tags">({ name: "tags" });
   const brand = useWatch<ProductCreateInput, "brand">({ name: "brand" });
   const highlightSections = useWatch<ProductCreateInput, "highlightSections">({ name: "highlightSections" }) ?? [];
   const variantProperties = useWatch<ProductCreateInput, "variantProperties">({ name: "variantProperties" }) ?? [];
-  const variantCombinations = useWatch<ProductCreateInput, "variantCombinations">({ name: "variantCombinations" }) ?? [];
   const selectedCategory = categories.find((category) => category.id === categoryId);
 
-  function updateVariantProperty(index: number, field: "name" | "values", value: string) {
-    const next = [...variantProperties];
-    next[index] = {
-      ...next[index],
-      [field]: field === "values" ? value.split(",").map((item) => item.trim()).filter(Boolean) : value,
-    };
+  function syncVariantProperties(next: Array<{ name: string; values: string[] }>) {
     setValue("variantProperties", next, { shouldDirty: true, shouldValidate: true });
     setValue("variantCombinations", buildCombinations(next), { shouldDirty: true, shouldValidate: true });
+  }
+
+  function ensureVariantProperty(name: string) {
+    if (variantProperties.some((property) => property.name === name)) return;
+    syncVariantProperties([...variantProperties, { name, values: [] }]);
+  }
+
+  function toggleVariantValue(propertyName: string, option: string) {
+    const next = variantProperties.map((property) => {
+      if (property.name !== propertyName) return property;
+      return {
+        ...property,
+        values: property.values.includes(option)
+          ? property.values.filter((value) => value !== option)
+          : [...property.values, option],
+      };
+    });
+    syncVariantProperties(next);
+  }
+
+  function addCustomVariantValue(propertyName: string) {
+    const value = customValues[propertyName]?.trim();
+    if (!value) return;
+    const next = variantProperties.map((property) => property.name === propertyName && !property.values.includes(value)
+      ? { ...property, values: [...property.values, value] }
+      : property);
+    syncVariantProperties(next);
+    setCustomValues((current) => ({ ...current, [propertyName]: "" }));
   }
 
   return (
     <ProductFormCard id="product-drawers-section" title="Opciones avanzadas" description="Usá paneles para categoría, variantes, etiquetas, SEO y destacados.">
       <div className="grid gap-3 md:grid-cols-2">
         <DrawerButton icon={<FolderTree aria-hidden size={18} />} label="Categoría" value={selectedCategory?.name ?? "Sin categoría"} onClick={() => setOpenDrawer("category")} />
-        <DrawerButton icon={<Layers3 aria-hidden size={18} />} label="Variantes" value={`${variantCombinations.length} combinaciones`} onClick={() => setOpenDrawer("variants")} />
+        <DrawerButton icon={<Layers3 aria-hidden size={18} />} label="Variantes" value={variantProperties.length ? `${variantProperties.length} propiedades` : "Sin variantes"} onClick={() => setOpenDrawer("variants")} />
         <DrawerButton icon={<Tags aria-hidden size={18} />} label="Marca y etiquetas" value={[brand, tags].filter(Boolean).join(" · ") || "Sin datos"} onClick={() => setOpenDrawer("metadata")} />
         <DrawerButton icon={<Sparkles aria-hidden size={18} />} label="Destacados" value={highlightSections.length ? `${highlightSections.length} secciones` : "Sin destacar"} onClick={() => setOpenDrawer("highlights")} />
       </div>
@@ -82,17 +112,47 @@ export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawer
       <Drawer open={openDrawer === "variants"} title="Variantes" className="flex flex-col h-full min-h-0" onClose={() => setOpenDrawer(null)}>
         <DrawerBody footer={<Button onClick={() => setOpenDrawer(null)}>Listo</Button>}>
           <div className="grid gap-4">
-            {variantProperties.map((property, index) => (
-              <div key={index} className="grid gap-3 rounded-2xl border border-zinc-200 p-3">
-                <Input id={`variant-name-${index}`} label="Propiedad" helperText="Ejemplo: Color, Talle o Sabor." value={property.name} onChange={(event) => updateVariantProperty(index, "name", event.target.value)} />
-                <Input id={`variant-values-${index}`} label="Valores" helperText="Separá valores personalizados con coma." value={property.values.join(", ")} onChange={(event) => updateVariantProperty(index, "values", event.target.value)} />
+            <fieldset className="grid gap-2">
+              <legend className="text-sm font-semibold text-zinc-950">Propiedades</legend>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(variantPresetCatalog).map((propertyName) => (
+                  <button
+                    key={propertyName}
+                    type="button"
+                    onClick={() => ensureVariantProperty(propertyName)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${variantProperties.some((property) => property.name === propertyName) ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent"}`}
+                  >
+                    {propertyName}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            {variantProperties.map((property) => (
+              <div key={property.name} className="grid gap-3 rounded-2xl border border-zinc-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-zinc-950">{property.name}</h3>
+                  <button type="button" className="text-sm font-semibold text-sale" onClick={() => syncVariantProperties(variantProperties.filter((item) => item.name !== property.name))}>Quitar</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(variantPresetCatalog[property.name] ?? []).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => toggleVariantValue(property.name, option)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${property.values.includes(option) ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent"}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {property.values.length > 0 ? <div className="flex flex-wrap gap-2">{property.values.map((value) => <span key={value} className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">{value}</span>)}</div> : null}
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <Input id={`custom-${property.name}`} label="Valor personalizado" helperText="Ejemplo: Pistacho" value={customValues[property.name] ?? ""} onChange={(event) => setCustomValues((current) => ({ ...current, [property.name]: event.target.value }))} />
+                  <Button className="self-end" type="button" variant="secondary" onClick={() => addCustomVariantValue(property.name)}>Agregar valor personalizado</Button>
+                </div>
               </div>
             ))}
-            <Button type="button" variant="secondary" onClick={() => setValue("variantProperties", [...variantProperties, { name: "", values: [] }], { shouldDirty: true, shouldValidate: true })}>Agregar propiedad</Button>
-            <div className="grid gap-2">
-              <h3 className="text-sm font-semibold text-zinc-950">Combinaciones generadas</h3>
-              {variantCombinations.length ? variantCombinations.map((combo) => <p key={combo.id} className="rounded-xl bg-zinc-50 px-3 py-2 text-sm text-zinc-700">{combo.name} · {combo.sku}</p>) : <p className="text-sm text-zinc-500">Agregá propiedades y valores para generar combinaciones.</p>}
-            </div>
+            <p className="text-sm text-zinc-500">Las combinaciones se preparan automáticamente para inventario y edición, sin mostrarse en este panel.</p>
           </div>
         </DrawerBody>
       </Drawer>

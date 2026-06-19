@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useId, useRef, useState, useEffect } from "react";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,17 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
   const updateInventoryStock = useAdminProductsStore((state) => state.updateInventoryStock);
   const [stockType, setStockType] = useState<"limited" | "infinite">(initialStock === "infinite" ? "infinite" : "limited");
   const [value, setValue] = useState(initialStock === "infinite" ? "" : String(initialStock));
+  const [operation, setOperation] = useState<"add" | "subtract" | "replace">("replace");
   const [reason, setReason] = useState("");
+  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const currentStock = initialStock === "infinite" ? 0 : Number(initialStock);
+  const displayStock = initialStock === "infinite" ? "∞" : `${initialStock} unidades`;
 
   async function saveStock(nextType = stockType) {
     const parsed = Number(value);
@@ -36,8 +41,10 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
     setStatus("saving");
     setError("");
     try {
-      await updateInventoryStock({ productId, variantId, stock: nextType === "infinite" ? "infinite" : parsed, reason: reason || undefined });
+      const computedStock = operation === "add" ? currentStock + parsed : operation === "subtract" ? Math.max(0, currentStock - parsed) : parsed;
+      await updateInventoryStock({ productId, variantId, stock: nextType === "infinite" ? "infinite" : computedStock, reason: reason || undefined });
       setStatus("success");
+      setOpen(false);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setStatus("idle"), 1200);
     } catch {
@@ -47,41 +54,64 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
   }
 
   return (
-    <div className="grid min-w-0 gap-2">
-      <label className="sr-only" htmlFor={id}>Stock de {productName}</label>
-      <div className="flex min-w-0 gap-2">
-        <select
-          aria-label={`Tipo de stock de ${productName}`}
-          className="h-9 shrink-0 rounded-xl border border-zinc-200 bg-white px-2 text-base outline-none md:text-sm"
-          value={stockType}
-          onChange={(event) => { const next = event.target.value as "limited" | "infinite"; setStockType(next); saveStock(next); }}
-        >
-          <option value="limited">Limitado</option>
-          <option value="infinite">∞</option>
-        </select>
-        <div className="relative min-w-0 flex-1">
+    <div className="relative min-w-0 overflow-visible">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`Editar stock de ${productName}`}
+        onClick={() => setOpen((current) => !current)}
+        className={cn("inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-800 transition hover:border-accent", status === "success" && "border-green-500", status === "error" && "border-sale")}
+      >
+        <span className="truncate">{displayStock}</span>
+        <span className="flex shrink-0 items-center gap-1">
+          {status === "saving" ? <Loader2 className="animate-spin text-zinc-400" size={15} /> : null}
+          {status === "success" ? <Check className="text-green-600" size={15} /> : null}
+          {status === "error" ? <X className="text-sale" size={15} /> : null}
+          <Pencil aria-hidden size={14} />
+        </span>
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-11 z-30 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl">
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-semibold text-zinc-950">Tipo de stock</legend>
+            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" checked={stockType === "infinite"} onChange={() => setStockType("infinite")} /> Infinito</label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" checked={stockType === "limited"} onChange={() => setStockType("limited")} /> Limitado</label>
+          </fieldset>
+          {stockType === "limited" ? (
+            <div className="grid gap-3">
+              <div className="grid grid-cols-3 gap-2">
+                <StockOperationButton active={operation === "add"} onClick={() => setOperation("add")}>Agregar</StockOperationButton>
+                <StockOperationButton active={operation === "subtract"} onClick={() => setOperation("subtract")}>Descontar</StockOperationButton>
+                <StockOperationButton active={operation === "replace"} onClick={() => setOperation("replace")}>Reemplazar</StockOperationButton>
+              </div>
+              <label className="grid gap-1 text-sm font-medium text-zinc-700" htmlFor={id}>
+                Cantidad
           <input
             id={id}
             inputMode="numeric"
-            disabled={stockType === "infinite"}
-            value={stockType === "infinite" ? "∞" : value}
-            onBlur={() => saveStock()}
+            value={value}
             onChange={(event) => { setValue(event.target.value); if (status === "error") setStatus("idle"); }}
-            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+            onKeyDown={(event) => { if (event.key === "Enter") saveStock(); }}
             aria-invalid={status === "error"}
             aria-describedby={status === "error" ? `${id}-error` : `${id}-helper`}
-            className={cn("h-9 w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 pr-9 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm", status === "success" && "border-green-500", status === "error" && "border-sale")}
+            className={cn("h-10 w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm", status === "error" && "border-sale")}
           />
-          <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-            {status === "saving" ? <Loader2 className="animate-spin text-zinc-400" size={15} /> : null}
-            {status === "success" ? <Check className="text-green-600" size={15} /> : null}
-            {status === "error" ? <X className="text-sale" size={15} /> : null}
-          </span>
+              </label>
+            </div>
+          ) : null}
+          <input className="h-10 rounded-xl border border-zinc-200 px-3 text-base outline-none md:text-sm" placeholder="Motivo opcional" value={reason} onChange={(event) => setReason(event.target.value)} aria-label={`Motivo de ajuste de ${productName}`} />
+          <span id={`${id}-helper`} className="sr-only">Guardá el ajuste para actualizar stock.</span>
+          {status === "error" ? <span id={`${id}-error`} className="text-xs font-medium text-sale">{error}</span> : null}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="h-10 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-700" onClick={() => setOpen(false)}>Cancelar</button>
+            <button type="button" className="h-10 rounded-xl bg-accent text-sm font-semibold text-on-accent" onClick={() => saveStock()}>{status === "saving" ? "Guardando…" : "Guardar"}</button>
+          </div>
         </div>
-      </div>
-      <input className="h-9 rounded-xl border border-zinc-200 px-3 text-base outline-none md:text-sm" placeholder="Motivo opcional" value={reason} onChange={(event) => setReason(event.target.value)} aria-label={`Motivo de ajuste de ${productName}`} />
-      <span id={`${id}-helper`} className="sr-only">Presioná Enter o salí del campo para guardar.</span>
-      {status === "error" ? <span id={`${id}-error`} className="text-xs font-medium text-sale">{error}</span> : null}
+      ) : null}
     </div>
   );
+}
+
+function StockOperationButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={cn("h-9 rounded-xl border px-2 text-xs font-semibold transition", active ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent")}>{children}</button>;
 }

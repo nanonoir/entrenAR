@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeOff, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -83,7 +83,7 @@ function CategoryNode({ categories, category, onCreateChild, onDelete, onToggleV
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => onCreateChild(category.id)}><Plus aria-hidden size={14} />Subcategoría</Button>
-          <Button aria-label={category.visibility === "visible" ? `Ocultar ${category.name}` : `Mostrar ${category.name}`} variant="secondary" size="icon" onClick={() => onToggleVisibility(category.id)}><EyeOff aria-hidden size={16} /></Button>
+          <Button aria-label={category.visibility === "visible" ? `Ocultar ${category.name}` : `Mostrar ${category.name}`} variant="secondary" size="icon" onClick={() => onToggleVisibility(category.id)}>{category.visibility === "visible" ? <Eye aria-hidden size={16} /> : <EyeOff aria-hidden size={16} />}</Button>
           <LinkButton aria-label={`Editar ${category.name}`} variant="secondary" size="icon" href={`/admin/productos/categorias/${category.id}`}><Pencil aria-hidden size={16} /></LinkButton>
           <Button aria-label={`Eliminar ${category.name}`} variant="danger" size="icon" onClick={() => onDelete(category)}><Trash2 aria-hidden size={16} /></Button>
         </div>
