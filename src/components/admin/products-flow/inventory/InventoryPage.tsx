@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { History, PackageOpen } from "lucide-react";
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { InlineStockCell } from "@/components/admin/products-flow/inventory/InlineStockCell";
 import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 
 type InventoryPageProps = { products: AdminProduct[] };
-type InventoryRowItem = { product: AdminProduct; variant?: AdminProduct["variantCombinations"][number] };
 
 export function InventoryPage({ products: initialProducts }: InventoryPageProps) {
   const products = useAdminProductsStore((state) => state.products);
@@ -18,10 +17,6 @@ export function InventoryPage({ products: initialProducts }: InventoryPageProps)
   useEffect(() => { initializeProducts(initialProducts); }, [initialProducts, initializeProducts]);
 
   const sourceProducts = (products.length > 0 ? products : initialProducts).toSorted((a, b) => a.name.localeCompare(b.name));
-  const inventoryRows: InventoryRowItem[] = sourceProducts.flatMap((product) => {
-    if (product.variantCombinations.length === 0) return [{ product }];
-    return product.variantCombinations.map((variant) => ({ product, variant }));
-  });
 
   return (
     <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-5">
@@ -44,9 +39,12 @@ export function InventoryPage({ products: initialProducts }: InventoryPageProps)
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {inventoryRows.map(({ product, variant }) => (
-                  <InventoryTableRow key={`${product.id}-${variant?.id ?? "main"}`} product={product} variant={variant} />
-                ))}
+                {sourceProducts.map((product) => product.variantCombinations.length > 0 ? (
+                  <Fragment key={product.id}>
+                    <InventoryParentRow product={product} />
+                    {product.variantCombinations.map((variant) => <InventoryTableRow key={`${product.id}-${variant.id}`} product={product} variant={variant} />)}
+                  </Fragment>
+                ) : <InventoryTableRow key={product.id} product={product} />)}
               </tbody>
             </table>
           </div>
@@ -88,7 +86,7 @@ function InventoryTableRow({ product, variant }: { product: AdminProduct; varian
   return (
     <tr className="transition hover:bg-zinc-50/80">
       <td className="px-3 py-4">
-        <ProductIdentity product={product} />
+        {variant ? <div className="ml-8 border-l border-zinc-200 pl-4 text-sm font-semibold text-zinc-800">{variant.name}</div> : <ProductIdentity product={product} />}
       </td>
       <td className="px-3 py-4">
         <InlineStockCell productId={product.id} productName={variant?.name ?? product.name} variantId={variant?.id} initialStock={stock} />
@@ -103,6 +101,23 @@ function InventoryTableRow({ product, variant }: { product: AdminProduct; varian
       <td className="px-3 py-4 text-right">
         <HistoryLink productId={product.id} />
       </td>
+    </tr>
+  );
+}
+
+function InventoryParentRow({ product }: { product: AdminProduct }) {
+  const stock = getInventoryStock(product);
+  return (
+    <tr className="bg-zinc-50/70">
+      <td className="px-3 py-4">
+        <ProductIdentity product={product} />
+      </td>
+      <td className="px-3 py-4">
+        <Badge tone={stock === "infinite" ? "success" : Number(stock) === 0 ? "sale" : "neutral"}>{stock === "infinite" ? "∞" : `${stock} unidades`}</Badge>
+      </td>
+      <td className="px-3 py-4 font-semibold text-zinc-800">{product.variantCombinations.length} variantes</td>
+      <td className="px-3 py-4 font-medium text-zinc-700">{product.sku}</td>
+      <td className="px-3 py-4 text-right"><HistoryLink productId={product.id} /></td>
     </tr>
   );
 }

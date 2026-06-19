@@ -2,6 +2,7 @@
 
 import { PackageSearch } from "lucide-react";
 import { useEffect, useMemo } from "react";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 
@@ -14,11 +15,7 @@ export function InventoryHistoryPage({ product }: { product: AdminProduct }) {
 
   return (
     <div className="mx-auto grid w-full max-w-4xl min-w-0 gap-5">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Inventario</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950">Historial de stock</h1>
-        <p className="mt-1 text-sm text-zinc-500">{product.name} · movimientos en memoria para preparación backend.</p>
-      </header>
+      <AdminPageHeader title="Historial de stock" tag="Inventario" description={`${product.name} · movimientos en memoria para preparación backend.`} backLink={{ href: "/admin/productos/inventario", label: "Volver" }} />
       {history.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
           <PackageSearch className="text-zinc-300" size={36} />

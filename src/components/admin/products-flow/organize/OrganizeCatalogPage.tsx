@@ -3,6 +3,7 @@
 import { EyeOff, GripVertical, Layers3 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { useAdminCatalogOrganizationStore } from "@/stores/admin-catalog-organization-store";
 
 const initialCategoryRules = ["Suplementos", "Proteínas", "Entrenamiento", "Accesorios"];
@@ -12,6 +13,8 @@ export function OrganizeCatalogPage() {
   const saveCategoryOrder = useAdminCatalogOrganizationStore((state) => state.saveCategoryOrder);
   const [categoryRules, setCategoryRules] = useState(savedCategoryOrder.length > 0 ? savedCategoryOrder : initialCategoryRules);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [touchIndex, setTouchIndex] = useState<number | null>(null);
+  const [touchOverIndex, setTouchOverIndex] = useState<number | null>(null);
   const [showOutOfStock, setShowOutOfStock] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -24,16 +27,24 @@ export function OrganizeCatalogPage() {
     });
   }
 
+  function handleTouchMove(event: React.TouchEvent) {
+    const touch = event.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>("[data-category-index]");
+    if (!element?.dataset.categoryIndex) return;
+    setTouchOverIndex(Number(element.dataset.categoryIndex));
+  }
+
+  function handleTouchEnd() {
+    if (touchIndex !== null && touchOverIndex !== null && touchIndex !== touchOverIndex) moveCategory(touchIndex, touchOverIndex);
+    setTouchIndex(null);
+    setTouchOverIndex(null);
+  }
+
   return (
     <div className="mx-auto grid w-full max-w-5xl min-w-0 gap-5">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Productos</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950">Organizar catálogo</h1>
-          <p className="mt-1 text-sm text-zinc-500">Prepará el orden de categorías y reglas de productos sin stock.</p>
-        </div>
+      <AdminPageHeader title="Organizar catálogo" description="Prepará el orden de categorías y reglas de productos sin stock." backLink={{ href: "/admin/productos", label: "Volver" }}>
         <Button onClick={() => { saveCategoryOrder(categoryRules); setMessage("Orden confirmado en memoria. La persistencia real queda para backend."); }}>Confirmar</Button>
-      </header>
+      </AdminPageHeader>
 
       {message ? <div className="rounded-2xl border border-green-200 bg-white p-3 text-sm font-medium text-green-700">{message}</div> : null}
 
@@ -43,11 +54,15 @@ export function OrganizeCatalogPage() {
           {categoryRules.map((category, index) => (
             <div
               key={category}
+              data-category-index={index}
               draggable
               onDragStart={() => setDraggedIndex(index)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => { if (draggedIndex !== null && draggedIndex !== index) moveCategory(draggedIndex, index); setDraggedIndex(null); }}
-              className="flex min-w-0 cursor-grab items-center gap-3 rounded-2xl border border-zinc-100 p-3 active:cursor-grabbing"
+              onTouchStart={() => setTouchIndex(index)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="flex min-w-0 cursor-grab touch-none items-center gap-3 rounded-2xl border border-zinc-100 p-3 active:cursor-grabbing"
             >
               <GripVertical aria-hidden className="shrink-0 text-zinc-300" size={18} />
               <span className="shrink-0 text-sm font-semibold text-zinc-400">{index + 1}</span>

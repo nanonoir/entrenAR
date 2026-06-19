@@ -2,6 +2,7 @@
 
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useId, useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 import { cn } from "@/lib/utils";
 
@@ -17,16 +18,40 @@ type Status = "idle" | "saving" | "success" | "error";
 export function InlineStockCell({ initialStock, productId, productName, variantId }: InlineStockCellProps) {
   const id = useId();
   const updateInventoryStock = useAdminProductsStore((state) => state.updateInventoryStock);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [stockType, setStockType] = useState<"limited" | "infinite">(initialStock === "infinite" ? "infinite" : "limited");
   const [value, setValue] = useState(initialStock === "infinite" ? "" : String(initialStock));
   const [operation, setOperation] = useState<"add" | "subtract" | "replace">("replace");
   const [reason, setReason] = useState("");
   const [open, setOpen] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function updatePosition() {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const popoverWidth = Math.min(320, window.innerWidth - 32);
+      setPopoverPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left: Math.min(Math.max(16, rect.right + window.scrollX - popoverWidth), window.scrollX + window.innerWidth - popoverWidth - 16),
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
 
   const currentStock = initialStock === "infinite" ? 0 : Number(initialStock);
   const displayStock = initialStock === "infinite" ? "∞" : `${initialStock} unidades`;
@@ -56,6 +81,7 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
   return (
     <div className="relative min-w-0 overflow-visible">
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={open}
         aria-label={`Editar stock de ${productName}`}
@@ -70,8 +96,8 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
           <Pencil aria-hidden size={14} />
         </span>
       </button>
-      {open ? (
-        <div className="absolute right-0 top-11 z-30 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl">
+      {open && typeof document !== "undefined" ? createPortal(
+        <div className="z-50 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" style={{ position: "absolute", top: popoverPosition.top, left: popoverPosition.left }}>
           <fieldset className="grid gap-2">
             <legend className="text-sm font-semibold text-zinc-950">Tipo de stock</legend>
             <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" checked={stockType === "infinite"} onChange={() => setStockType("infinite")} /> Infinito</label>
@@ -106,7 +132,8 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
             <button type="button" className="h-10 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-700" onClick={() => setOpen(false)}>Cancelar</button>
             <button type="button" className="h-10 rounded-xl bg-accent text-sm font-semibold text-on-accent" onClick={() => saveStock()}>{status === "saving" ? "Guardando…" : "Guardar"}</button>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

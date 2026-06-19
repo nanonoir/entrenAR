@@ -3,6 +3,7 @@
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 
 const preparedActions = [
   { id: "products", label: "Productos", description: "Campos base, precios, stock y visibilidad." },
@@ -19,11 +20,7 @@ export function ImportExportPreparedPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-5xl min-w-0 gap-5">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Productos</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950">Importar y exportar</h1>
-        <p className="mt-1 text-sm text-zinc-500">Interfaz preparada para integración futura. No ejecuta CSV real ni persistencia masiva.</p>
-      </header>
+      <AdminPageHeader title="Importar y exportar" description="Interfaz preparada para integración futura. No ejecuta CSV real ni persistencia masiva." backLink={{ href: "/admin/productos", label: "Volver" }} />
 
       {message ? <div className="rounded-2xl border border-green-200 bg-white p-3 text-sm font-medium text-green-700">{message}</div> : null}
 
