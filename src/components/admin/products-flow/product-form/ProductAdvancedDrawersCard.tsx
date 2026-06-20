@@ -10,11 +10,17 @@ import { Textarea } from "@/components/ui/Textarea";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import type { ProductCreateInput } from "@/schemas/admin/product-schemas";
 import { ProductFormCard } from "@/components/admin/products-flow/product-form/ProductFormField";
+import { ProductCategoryList } from "@/components/admin/products-flow/product-form/ProductCategoryList";
+import { ProductVariantSelector } from "@/components/admin/products-flow/product-form/ProductVariantSelector";
+import { buildCombinations, getActiveVariantProperties, type ProductVariantPropertyDraft } from "@/lib/data/admin/product-variant-utils";
 
-type DrawerType = "category" | "variants" | "metadata" | "highlights" | null;
+export type ProductAdvancedDrawerType = "category" | "variants" | "metadata" | "highlights" | null;
 
 type ProductAdvancedDrawersCardProps = {
   categories: AdminProductCategory[];
+  openDrawer: ProductAdvancedDrawerType;
+  onCreateCategory: (name: string) => AdminProductCategory;
+  onOpenDrawerChange: (drawer: ProductAdvancedDrawerType) => void;
 };
 
 const highlightOptions = [
@@ -23,51 +29,59 @@ const highlightOptions = [
   { id: "seasonal", label: "Temporada" },
 ];
 
-const variantPresetCatalog: Record<string, string[]> = {
-  Sabor: ["Chocolate", "Vainilla", "Frutilla"],
-  Color: ["Negro", "Blanco", "Rojo", "Azul"],
-  Talle: ["S", "M", "L", "XL"],
-  Tamaño: ["Chico", "Mediano", "Grande"],
-};
-
-function buildCombinations(properties: Array<{ name: string; values: string[] }>) {
-  if (properties.length === 0) return [];
-  const combos = properties.reduce<string[][]>((acc, property) => {
-    if (acc.length === 0) return property.values.map((value) => [value]);
-    return acc.flatMap((combo) => property.values.map((value) => [...combo, value]));
-  }, []);
-  return combos.map((combo, index) => ({
-    id: `combo-${index + 1}`,
-    name: combo.join(" / "),
-    sku: `VAR-${String(index + 1).padStart(3, "0")}`,
-    stock: 0,
-  }));
-}
-
-export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawersCardProps) {
-  const [openDrawer, setOpenDrawer] = useState<DrawerType>(null);
+export function ProductAdvancedDrawersCard({ categories, onCreateCategory, onOpenDrawerChange, openDrawer }: ProductAdvancedDrawersCardProps) {
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [customPropertyDrafts, setCustomPropertyDrafts] = useState<Record<string, boolean>>({});
   const { register, setValue } = useFormContext<ProductCreateInput>();
-  const categoryId = useWatch<ProductCreateInput, "categoryId">({ name: "categoryId" });
+  const categoryIds = useWatch<ProductCreateInput, "categoryIds">({ name: "categoryIds" }) ?? [];
   const tags = useWatch<ProductCreateInput, "tags">({ name: "tags" });
   const brand = useWatch<ProductCreateInput, "brand">({ name: "brand" });
   const highlightSections = useWatch<ProductCreateInput, "highlightSections">({ name: "highlightSections" }) ?? [];
   const variantProperties = useWatch<ProductCreateInput, "variantProperties">({ name: "variantProperties" }) ?? [];
-  const selectedCategory = categories.find((category) => category.id === categoryId);
+  const activeVariantProperties = getActiveVariantProperties(variantProperties);
+  const selectedCategoryNames = categories.filter((category) => categoryIds.includes(category.id)).map((category) => category.name);
 
-  function syncVariantProperties(next: Array<{ name: string; values: string[] }>) {
-    setValue("variantProperties", next, { shouldDirty: true, shouldValidate: true });
-    setValue("variantCombinations", buildCombinations(next), { shouldDirty: true, shouldValidate: true });
+  function syncVariantProperties(next: ProductVariantPropertyDraft[]) {
+    const namedProperties = next.filter((property) => property.name.trim() !== "").slice(0, 2);
+    setValue("variantProperties", namedProperties, { shouldDirty: true, shouldValidate: true });
+    setValue("variantCombinations", buildCombinations(namedProperties), { shouldDirty: true, shouldValidate: true });
   }
 
-  function ensureVariantProperty(name: string) {
-    if (variantProperties.some((property) => property.name === name)) return;
-    syncVariantProperties([...variantProperties, { name, values: [] }]);
+  function replaceVariantPropertyAtIndex(properties: ProductVariantPropertyDraft[], index: number, property: ProductVariantPropertyDraft) {
+    if (index === 0) return [property, ...properties.slice(1)].slice(0, 2);
+    return properties[0] ? [properties[0], property].slice(0, 2) : [property];
   }
 
-  function toggleVariantValue(propertyName: string, option: string) {
-    const next = variantProperties.map((property) => {
-      if (property.name !== propertyName) return property;
+  function setVariantProperty(index: number, name: string) {
+    setCustomPropertyDrafts((current) => ({ ...current, [index]: name === "__custom__" }));
+    let next = [...variantProperties];
+    if (!name || name === "__custom__") {
+      next.splice(index, 1);
+      syncVariantProperties(next);
+      return;
+    }
+    next = replaceVariantPropertyAtIndex(next, index, { name, values: [] });
+    next = next.filter((property, propertyIndex) => propertyIndex === index || property.name.trim().toLowerCase() !== name.trim().toLowerCase());
+    syncVariantProperties(next);
+  }
+
+  function updateCustomPropertyName(index: number, name: string) {
+    let next = [...variantProperties];
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      next.splice(index, 1);
+      syncVariantProperties(next);
+      return;
+    }
+    next = replaceVariantPropertyAtIndex(next, index, { ...(next[index] ?? { values: [] }), name: trimmedName });
+    const normalizedName = name.trim().toLowerCase();
+    if (normalizedName) next = next.filter((property, propertyIndex) => propertyIndex === index || property.name.trim().toLowerCase() !== normalizedName);
+    syncVariantProperties(next);
+  }
+
+  function toggleVariantValue(index: number, option: string) {
+    const next = variantProperties.map((property, propertyIndex) => {
+      if (propertyIndex !== index) return property;
       return {
         ...property,
         values: property.values.includes(option)
@@ -78,87 +92,43 @@ export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawer
     syncVariantProperties(next);
   }
 
-  function addCustomVariantValue(propertyName: string) {
-    const value = customValues[propertyName]?.trim();
+  function addCustomVariantValue(index: number) {
+    const key = String(index);
+    const value = customValues[key]?.trim();
     if (!value) return;
-    const next = variantProperties.map((property) => property.name === propertyName && !property.values.includes(value)
+    const next = variantProperties.map((property, propertyIndex) => propertyIndex === index && !property.values.includes(value)
       ? { ...property, values: [...property.values, value] }
       : property);
     syncVariantProperties(next);
-    setCustomValues((current) => ({ ...current, [propertyName]: "" }));
+    setCustomValues((current) => ({ ...current, [key]: "" }));
   }
 
   return (
     <ProductFormCard id="product-drawers-section" title="Opciones avanzadas" description="Usá paneles para categoría, variantes, etiquetas, SEO y destacados.">
       <div className="grid gap-3 md:grid-cols-2">
-        <DrawerButton icon={<FolderTree aria-hidden size={18} />} label="Categoría" value={selectedCategory?.name ?? "Sin categoría"} onClick={() => setOpenDrawer("category")} />
-        <DrawerButton icon={<Layers3 aria-hidden size={18} />} label="Variantes" value={variantProperties.length ? `${variantProperties.length} propiedades` : "Sin variantes"} onClick={() => setOpenDrawer("variants")} />
-        <DrawerButton icon={<Tags aria-hidden size={18} />} label="Marca y etiquetas" value={[brand, tags].filter(Boolean).join(" · ") || "Sin datos"} onClick={() => setOpenDrawer("metadata")} />
-        <DrawerButton icon={<Sparkles aria-hidden size={18} />} label="Destacados" value={highlightSections.length ? `${highlightSections.length} secciones` : "Sin destacar"} onClick={() => setOpenDrawer("highlights")} />
+        <DrawerButton icon={<FolderTree aria-hidden size={18} />} label="Categoría" value={selectedCategoryNames.length ? selectedCategoryNames.join(", ") : "Sin categoría"} onClick={() => onOpenDrawerChange("category")} />
+        <DrawerButton icon={<Layers3 aria-hidden size={18} />} label="Variantes" value={activeVariantProperties.length ? `${activeVariantProperties.length} propiedades` : "Sin variantes"} onClick={() => onOpenDrawerChange("variants")} />
+        <DrawerButton icon={<Tags aria-hidden size={18} />} label="Marca y etiquetas" value={[brand, tags].filter(Boolean).join(" · ") || "Sin datos"} onClick={() => onOpenDrawerChange("metadata")} />
+        <DrawerButton icon={<Sparkles aria-hidden size={18} />} label="Destacados" value={highlightSections.length ? `${highlightSections.length} secciones` : "Sin destacar"} onClick={() => onOpenDrawerChange("highlights")} />
       </div>
 
-      <Drawer open={openDrawer === "category"} title="Seleccionar categoría" className="flex flex-col h-full min-h-0" onClose={() => setOpenDrawer(null)}>
+      <Drawer open={openDrawer === "category"} title="Seleccionar categoría" className="flex flex-col h-full min-h-0" onClose={() => onOpenDrawerChange(null)}>
         <DrawerBody>
-          <div className="grid gap-2">
-            {categories.map((category) => (
-              <button key={category.id} type="button" onClick={() => { setValue("categoryId", category.id, { shouldDirty: true, shouldValidate: true }); setOpenDrawer(null); }} className="rounded-2xl border border-zinc-200 p-3 text-left text-sm font-semibold text-zinc-700 hover:border-accent">
-                {category.name}
-              </button>
-            ))}
-          </div>
+          <ProductCategoryList categories={categories} selectedIds={categoryIds} onCreateCategory={onCreateCategory} onChange={(ids) => setValue("categoryIds", ids, { shouldDirty: true, shouldValidate: true })} />
         </DrawerBody>
       </Drawer>
 
-      <Drawer open={openDrawer === "variants"} title="Variantes" className="flex flex-col h-full min-h-0" onClose={() => setOpenDrawer(null)}>
-        <DrawerBody footer={<Button onClick={() => setOpenDrawer(null)}>Listo</Button>}>
+      <Drawer open={openDrawer === "variants"} title="Variantes" className="flex flex-col h-full min-h-0" onClose={() => onOpenDrawerChange(null)}>
+        <DrawerBody footer={<Button onClick={() => onOpenDrawerChange(null)}>Listo</Button>}>
           <div className="grid gap-4">
-            <fieldset className="grid gap-2">
-              <legend className="text-sm font-semibold text-zinc-950">Propiedades</legend>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(variantPresetCatalog).map((propertyName) => (
-                  <button
-                    key={propertyName}
-                    type="button"
-                    onClick={() => ensureVariantProperty(propertyName)}
-                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${variantProperties.some((property) => property.name === propertyName) ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent"}`}
-                  >
-                    {propertyName}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            {variantProperties.map((property) => (
-              <div key={property.name} className="grid gap-3 rounded-2xl border border-zinc-200 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-zinc-950">{property.name}</h3>
-                  <button type="button" className="text-sm font-semibold text-sale" onClick={() => syncVariantProperties(variantProperties.filter((item) => item.name !== property.name))}>Quitar</button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(variantPresetCatalog[property.name] ?? []).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => toggleVariantValue(property.name, option)}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${property.values.includes(option) ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent"}`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-                {property.values.length > 0 ? <div className="flex flex-wrap gap-2">{property.values.map((value) => <span key={value} className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">{value}</span>)}</div> : null}
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                  <Input id={`custom-${property.name}`} label="Valor personalizado" helperText="Ejemplo: Pistacho" value={customValues[property.name] ?? ""} onChange={(event) => setCustomValues((current) => ({ ...current, [property.name]: event.target.value }))} />
-                  <Button className="self-end" type="button" variant="secondary" onClick={() => addCustomVariantValue(property.name)}>Agregar valor personalizado</Button>
-                </div>
-              </div>
-            ))}
-            <p className="text-sm text-zinc-500">Las combinaciones se preparan automáticamente para inventario y edición, sin mostrarse en este panel.</p>
+            <ProductVariantSelector label="Variante" property={variantProperties[0]} blockedName={variantProperties[1]?.name} customValue={customValues["0"] ?? ""} isCustomDraft={customPropertyDrafts["0"]} onCustomNameChange={(value) => updateCustomPropertyName(0, value)} onCustomValueChange={(value) => setCustomValues((current) => ({ ...current, 0: value }))} onNameChange={(value) => setVariantProperty(0, value)} onToggleValue={(value) => toggleVariantValue(0, value)} onAddCustomValue={() => addCustomVariantValue(0)} />
+            <ProductVariantSelector label="Subvariante" property={variantProperties[1]} blockedName={variantProperties[0]?.name} customValue={customValues["1"] ?? ""} isCustomDraft={customPropertyDrafts["1"]} onCustomNameChange={(value) => updateCustomPropertyName(1, value)} onCustomValueChange={(value) => setCustomValues((current) => ({ ...current, 1: value }))} onNameChange={(value) => setVariantProperty(1, value)} onToggleValue={(value) => toggleVariantValue(1, value)} onAddCustomValue={() => addCustomVariantValue(1)} />
           </div>
         </DrawerBody>
       </Drawer>
 
-      <Drawer open={openDrawer === "metadata"} title="Marca, etiquetas y SEO" className="flex flex-col h-full min-h-0" onClose={() => setOpenDrawer(null)}>
-        <DrawerBody footer={<Button onClick={() => setOpenDrawer(null)}>Guardar panel</Button>}>
+      <Drawer open={openDrawer === "metadata"} title="Marca, etiquetas y SEO" className="flex flex-col h-full min-h-0" onClose={() => onOpenDrawerChange(null)}>
+        <DrawerBody footer={<Button onClick={() => onOpenDrawerChange(null)}>Guardar panel</Button>}>
           <Input id="drawer-brand" label="Marca" helperText="Opcional para filtros y edición futura." {...register("brand")} />
           <Input id="drawer-tags" label="Etiquetas" helperText="Separá etiquetas con coma." {...register("tags")} />
           <Input id="drawer-slug" label="Slug público" helperText="Opcional. Si lo dejás vacío se genera desde el nombre." {...register("slug")} />
@@ -167,8 +137,8 @@ export function ProductAdvancedDrawersCard({ categories }: ProductAdvancedDrawer
         </DrawerBody>
       </Drawer>
 
-      <Drawer open={openDrawer === "highlights"} title="Secciones destacadas" className="flex flex-col h-full min-h-0" onClose={() => setOpenDrawer(null)}>
-        <DrawerBody footer={<Button onClick={() => setOpenDrawer(null)}>Aplicar</Button>}>
+      <Drawer open={openDrawer === "highlights"} title="Secciones destacadas" className="flex flex-col h-full min-h-0" onClose={() => onOpenDrawerChange(null)}>
+        <DrawerBody footer={<Button onClick={() => onOpenDrawerChange(null)}>Aplicar</Button>}>
           {highlightOptions.map((option) => {
             const checked = highlightSections.includes(option.id);
             return (
@@ -189,5 +159,5 @@ function DrawerButton({ icon, label, onClick, value }: { icon: React.ReactNode; 
 }
 
 function DrawerBody({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
-  return <div className="flex flex-col h-full min-h-0"><div className="grid flex-1 gap-4 overflow-y-auto p-4">{children}</div><div className="shrink-0 border-t border-zinc-200 p-4">{footer}</div></div>;
+  return <div className="flex flex-col h-full min-h-0"><div className="flex-1 overflow-y-auto p-4">{children}</div>{footer ? <div className="shrink-0 border-t border-zinc-200 p-4">{footer}</div> : null}</div>;
 }
