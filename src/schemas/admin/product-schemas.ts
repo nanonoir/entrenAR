@@ -59,7 +59,7 @@ export const productCreateSchema = z
     name: z.string().trim().min(3, "Ingresá al menos 3 caracteres"),
     slug: optionalTextSchema,
     sku: optionalTextSchema,
-    categoryId: z.string().trim().min(1, "Seleccioná una categoría"),
+    categoryIds: z.array(z.string()).min(1, "Seleccioná al menos una categoría"),
     description: z.string().trim().min(10, "Agregá una descripción más completa"),
     imageUrl: optionalTextSchema,
     salePrice: priceTextSchema,

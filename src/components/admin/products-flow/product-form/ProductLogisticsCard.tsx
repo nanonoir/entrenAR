@@ -1,27 +1,32 @@
 "use client";
 
 import { useFormContext, useWatch } from "react-hook-form";
+import { Button } from "@/components/ui/Button";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import type { ProductCreateInput } from "@/schemas/admin/product-schemas";
-import { ProductFormCard, ProductFormInput, ProductFormSelect } from "@/components/admin/products-flow/product-form/ProductFormField";
+import { ProductFormCard, ProductFormInput } from "@/components/admin/products-flow/product-form/ProductFormField";
 import { ImageDropZone } from "@/components/admin/products-flow/product-form/ImageDropZone";
 
 type ProductLogisticsCardProps = {
   categories: AdminProductCategory[];
+  onOpenCategoryDrawer: () => void;
 };
 
-export function ProductLogisticsCard({ categories }: ProductLogisticsCardProps) {
+export function ProductLogisticsCard({ categories, onOpenCategoryDrawer }: ProductLogisticsCardProps) {
   const { control, formState: { errors }, register, setValue } = useFormContext<ProductCreateInput>();
   const stockMode = useWatch({ control, name: "stockMode" });
   const visibility = useWatch({ control, name: "visibility" });
   const imageUrl = useWatch({ control, name: "imageUrl" });
+  const categoryIds = useWatch({ control, name: "categoryIds" }) ?? [];
+  const selectedCategories = categories.filter((category) => categoryIds.includes(category.id));
 
   return (
     <ProductFormCard id="product-logistics-section" title="Catálogo y logística" description="Completá categoría, stock y datos operativos básicos.">
-      <ProductFormSelect<ProductCreateInput> name="categoryId" label="Categoría" helperText="Seleccioná dónde se agrupa el producto.">
-        <option value="">Seleccionar categoría</option>
-        {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-      </ProductFormSelect>
+      <div className="grid gap-2 text-sm text-text">
+        <span className="font-medium">Categorías seleccionadas</span>
+        <p className="text-text-muted">{selectedCategories.length ? selectedCategories.map((category) => category.name).join(", ") : "Seleccioná una o más categorías para clasificar el producto."}</p>
+        <Button type="button" size="sm" variant="secondary" className="w-fit" onClick={onOpenCategoryDrawer}>Seleccionar categorías</Button>
+      </div>
       <fieldset className="grid gap-2">
         <legend className="text-sm font-medium text-text">Tipo de stock</legend>
         <div className="flex flex-wrap gap-3 text-sm text-zinc-700">

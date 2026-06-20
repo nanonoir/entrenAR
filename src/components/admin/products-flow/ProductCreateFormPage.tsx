@@ -10,7 +10,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { ProductIdentityCard } from "@/components/admin/products-flow/product-form/ProductIdentityCard";
 import { ProductLogisticsCard } from "@/components/admin/products-flow/product-form/ProductLogisticsCard";
 import { ProductPricingCard } from "@/components/admin/products-flow/product-form/ProductPricingCard";
-import { ProductAdvancedDrawersCard } from "@/components/admin/products-flow/product-form/ProductAdvancedDrawersCard";
+import { ProductAdvancedDrawersCard, type ProductAdvancedDrawerType } from "@/components/admin/products-flow/product-form/ProductAdvancedDrawersCard";
 import { getProductHref } from "@/lib/routes";
 import type { AdminProduct, AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { productCreateSchema, type ProductCreateInput, type ProductCreateValues } from "@/schemas/admin/product-schemas";
@@ -26,7 +26,7 @@ const defaultValues: ProductCreateInput = {
   name: "",
   slug: "",
   sku: "",
-  categoryId: "",
+  categoryIds: [],
   description: "",
   imageUrl: "",
   salePrice: "",
@@ -43,13 +43,23 @@ const defaultValues: ProductCreateInput = {
   variantCombinations: [],
 };
 
+function slugifyCategory(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
   if (!product) return defaultValues;
   return {
     name: product.name,
     slug: product.slug,
     sku: product.sku,
-    categoryId: product.categoryId,
+    categoryIds: product.categoryIds ?? [product.categoryId],
     description: `${product.name} listo para completar con descripción comercial.`,
     imageUrl: product.imageUrl ?? "",
     salePrice: String(product.salePrice),
@@ -79,6 +89,8 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localCategories, setLocalCategories] = useState<AdminProductCategory[]>(() => categories);
+  const [advancedDrawer, setAdvancedDrawer] = useState<ProductAdvancedDrawerType>(null);
   const methods = useForm<ProductCreateInput, unknown, ProductCreateValues>({
     resolver: zodResolver(productCreateSchema),
     defaultValues: buildProductDefaultValues(product),
@@ -91,18 +103,30 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
     if (product) initializeProducts([product]);
   }, [initializeProducts, product]);
 
+  function createLocalCategory(name: string) {
+    const slug = slugifyCategory(name) || `categoria-${Date.now()}`;
+    const category: AdminProductCategory = {
+      id: `cat-local-${slug}-${Date.now()}`,
+      name,
+      slug,
+      visibility: "visible",
+    };
+    setLocalCategories((current) => [...current, category]);
+    return category;
+  }
+
   async function onSubmit(data: ProductCreateValues) {
     setSubmitError(null);
     setMediaWarning(data.imageUrl ? null : "El producto se guardará sin imagen principal. Podés agregarla más adelante.");
     setIsSubmitting(true);
     try {
-      const category = categories.find((item) => item.id === data.categoryId);
+      const categoryNames = localCategories.filter((item) => data.categoryIds.includes(item.id)).map((item) => item.name).join(", ");
       if (mode === "edit" && product) {
-        const updated = await updateProduct(product.id, { ...data, categoryName: category?.name ?? "Sin categoría" });
+        const updated = await updateProduct(product.id, { ...data, categoryName: categoryNames || "Sin categoría" });
         reset(buildProductDefaultValues(updated));
         setStatusMessage("Cambios guardados.");
       } else {
-        await createProduct({ ...data, categoryName: category?.name ?? "Sin categoría" });
+        await createProduct({ ...data, categoryName: categoryNames || "Sin categoría" });
         router.push("/admin/productos");
       }
     } finally {
@@ -121,7 +145,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
     if (errors.name) setFocus("name");
     else if (errors.sku) setFocus("sku");
     else if (errors.salePrice) setFocus("salePrice");
-    else if (errors.categoryId) setFocus("categoryId");
+    else if (errors.categoryIds) setFocus("name");
   }
 
   const submitForm = handleSubmit(onSubmit, onInvalid);
@@ -170,8 +194,8 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
         <form onSubmit={submitForm} noValidate className="grid gap-5">
           <ProductIdentityCard />
           <ProductPricingCard />
-          <ProductLogisticsCard categories={categories} />
-          <ProductAdvancedDrawersCard categories={categories} />
+          <ProductLogisticsCard categories={localCategories} onOpenCategoryDrawer={() => setAdvancedDrawer("category")} />
+          <ProductAdvancedDrawersCard categories={localCategories} openDrawer={advancedDrawer} onOpenDrawerChange={setAdvancedDrawer} onCreateCategory={createLocalCategory} />
           <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-between">
             {product ? <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={handleDuplicate}>Duplicar</Button><Button type="button" variant="danger" onClick={() => setDeleteOpen(true)}><Trash2 aria-hidden size={16} />Borrar</Button></div> : <span />}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

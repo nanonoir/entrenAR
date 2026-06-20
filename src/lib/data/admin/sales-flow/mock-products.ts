@@ -25,6 +25,7 @@ export type AdminProduct = {
   sku: string;
   imageUrl?: string;
   categoryId: string;
+  categoryIds: string[];
   categoryName: string;
   stock: AdminProductStock;
   salePrice: number;
@@ -60,6 +61,7 @@ export const mockAdminProducts: AdminProduct[] = [
     name: "Whey Protein Performance",
     sku: "SUP-WHEY-001",
     categoryId: "cat-protein",
+    categoryIds: ["cat-protein"],
     categoryName: "Proteínas",
     stock: { type: "limited", quantity: 42 },
     salePrice: 52900,
@@ -87,6 +89,7 @@ export const mockAdminProducts: AdminProduct[] = [
     name: "Creatina Monohidrato 300g",
     sku: "SUP-CREA-300",
     categoryId: "cat-supplements",
+    categoryIds: ["cat-supplements"],
     categoryName: "Suplementos",
     stock: { type: "limited", quantity: 8 },
     salePrice: 28900,
@@ -110,6 +113,7 @@ export const mockAdminProducts: AdminProduct[] = [
     name: "Set de Bandas de Entrenamiento",
     sku: "ACC-BAND-SET",
     categoryId: "cat-accessories",
+    categoryIds: ["cat-accessories"],
     categoryName: "Accesorios",
     stock: { type: "infinite" },
     salePrice: 18900,
@@ -137,6 +141,7 @@ export const mockAdminProducts: AdminProduct[] = [
     name: "Guantes Training Pro",
     sku: "ACC-GLOV-PRO",
     categoryId: "cat-training",
+    categoryIds: ["cat-training"],
     categoryName: "Entrenamiento",
     stock: { type: "limited", quantity: 0 },
     salePrice: 21900,
