@@ -32,7 +32,7 @@ const highlightOptions = [
 export function ProductAdvancedDrawersCard({ categories, onCreateCategory, onOpenDrawerChange, openDrawer }: ProductAdvancedDrawersCardProps) {
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [customPropertyDrafts, setCustomPropertyDrafts] = useState<Record<string, boolean>>({});
-  const { register, setValue } = useFormContext<ProductCreateInput>();
+  const { getValues, register, setValue } = useFormContext<ProductCreateInput>();
   const categoryIds = useWatch<ProductCreateInput, "categoryIds">({ name: "categoryIds" }) ?? [];
   const tags = useWatch<ProductCreateInput, "tags">({ name: "tags" });
   const brand = useWatch<ProductCreateInput, "brand">({ name: "brand" });
@@ -44,7 +44,7 @@ export function ProductAdvancedDrawersCard({ categories, onCreateCategory, onOpe
   function syncVariantProperties(next: ProductVariantPropertyDraft[]) {
     const namedProperties = next.filter((property) => property.name.trim() !== "").slice(0, 2);
     setValue("variantProperties", namedProperties, { shouldDirty: true, shouldValidate: true });
-    setValue("variantCombinations", buildCombinations(namedProperties), { shouldDirty: true, shouldValidate: true });
+    setValue("variantCombinations", buildCombinations(namedProperties, getValues("variantCombinations") ?? []), { shouldDirty: true, shouldValidate: true });
   }
 
   function replaceVariantPropertyAtIndex(properties: ProductVariantPropertyDraft[], index: number, property: ProductVariantPropertyDraft) {

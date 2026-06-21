@@ -3,6 +3,14 @@ export type ProductVariantPropertyDraft = {
   values: string[];
 };
 
+export type AdminProductVariantCombination = {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number | "infinite";
+  price?: number;
+};
+
 export function getActiveVariantProperties(properties: ProductVariantPropertyDraft[]) {
   return properties
     .map((property) => ({
@@ -13,7 +21,7 @@ export function getActiveVariantProperties(properties: ProductVariantPropertyDra
     .slice(0, 2);
 }
 
-export function buildCombinations(properties: ProductVariantPropertyDraft[]) {
+export function buildCombinations(properties: ProductVariantPropertyDraft[], existingCombinations: AdminProductVariantCombination[] = []) {
   const activeProperties = getActiveVariantProperties(properties);
   if (activeProperties.length === 0) return [];
 
@@ -22,10 +30,17 @@ export function buildCombinations(properties: ProductVariantPropertyDraft[]) {
     return acc.flatMap((combo) => property.values.map((value) => [...combo, value]));
   }, []);
 
-  return combos.map((combo, index) => ({
-    id: `combo-${index + 1}`,
-    name: combo.join(" / "),
-    sku: `VAR-${String(index + 1).padStart(3, "0")}`,
-    stock: 0,
-  }));
+  return combos.map((combo, index) => {
+    const name = combo.join(" / ");
+    const existingCombination = existingCombinations.find((combination) => combination.name === name);
+
+    if (existingCombination) return { ...existingCombination, name };
+
+    return {
+      id: `combo-${index + 1}`,
+      name,
+      sku: `VAR-${String(index + 1).padStart(3, "0")}`,
+      stock: 0,
+    };
+  });
 }
