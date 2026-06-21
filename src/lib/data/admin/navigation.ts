@@ -1,4 +1,4 @@
-import { Archive, BadgePercent, BarChart3, Boxes, CreditCard, Home, LogOut, Megaphone, Menu, Settings, ShoppingBag, TicketPercent, Truck, Users } from "lucide-react";
+import { Archive, BadgePercent, BarChart3, Boxes, CreditCard, FolderTree, Home, LogOut, Megaphone, Menu, PackageSearch, Settings, ShoppingBag, TicketPercent, Truck, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type AdminNavItem = {
@@ -66,7 +66,17 @@ export const adminNavGroups: AdminNavGroup[] = [
           { label: "Archivados", href: "/admin/ventas/archivados" },
         ],
       },
-      { type: "link", label: "Productos", href: "/admin/productos", icon: Boxes },
+      {
+        type: "accordion",
+        label: "Productos",
+        href: "/admin/productos",
+        icon: Boxes,
+        children: [
+          { label: "Listado", href: "/admin/productos", icon: Boxes },
+          { label: "Inventario", href: "/admin/productos/inventario", icon: PackageSearch },
+          { label: "Categorías", href: "/admin/productos/categorias", icon: FolderTree },
+        ],
+      },
       { type: "link", label: "Medios de Pago", href: "/admin/medios-de-pago", icon: CreditCard },
       { type: "link", label: "Envíos", href: "/admin/envios", icon: Truck },
       { type: "link", label: "Clientes", href: "/admin/clientes", icon: Users },

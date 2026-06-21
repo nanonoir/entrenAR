@@ -7,7 +7,7 @@ import { useState, useCallback } from "react";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { adminFooterActions, adminNavGroups } from "@/lib/data/admin/navigation";
 import type { AdminNavEntry } from "@/lib/data/admin/navigation";
-import { isAdminAccordionActive, isAdminPathActive } from "@/components/admin/layout/admin-nav-matching";
+import { isAdminAccordionActive, isAdminAccordionChildActive, isAdminPathActive } from "@/components/admin/layout/admin-nav-matching";
 import { cn } from "@/lib/utils";
 
 type AccordionEntryProps = {
@@ -84,7 +84,7 @@ function AccordionEntry({ entry, pathname, collapsed }: AccordionEntryProps) {
       {visibleOpen && (
         <div className="mt-1 ml-7 grid gap-0.5 border-l border-zinc-200 pl-3">
           {entry.children.map((child) => {
-            const childActive = isAdminPathActive(pathname, child.href);
+            const childActive = isAdminAccordionChildActive(pathname, entry.href, child.href);
             const ChildIcon = child.icon;
             return (
               <Link
