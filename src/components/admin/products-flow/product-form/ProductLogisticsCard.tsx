@@ -38,7 +38,7 @@ export function ProductLogisticsCard({ categories, onOpenCategoryDrawer }: Produ
       <ProductFormInput<ProductCreateInput> name="brand" label="Marca" helperText="Opcional para búsquedas y edición futura." />
       <ImageDropZone label="Imagen principal" value={imageUrl} errorText={errors.imageUrl?.message} onChange={(value) => setValue("imageUrl", value, { shouldDirty: true, shouldValidate: true })} />
       <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-        <label className="flex items-start gap-2"><input className="mt-1 shrink-0" type="checkbox" checked={visibility === "visible"} onChange={(event) => setValue("visibility", event.target.checked ? "visible" : "hidden", { shouldDirty: true, shouldValidate: true })} /> Mostrar en la tienda (si no marcas esta casilla el producto estara oculto, puedes editarlo en cualquier momento)</label>
+        <label className="flex items-start gap-2"><input className="mt-1 shrink-0" type="checkbox" checked={visibility === "visible"} onChange={(event) => setValue("visibility", event.target.checked ? "visible" : "hidden", { shouldDirty: true, shouldValidate: true })} /> Mostrar en la tienda. Si desmarcás esta opción, el producto queda oculto y podés volver a editarlo cuando quieras.</label>
       </div>
     </ProductFormCard>
   );

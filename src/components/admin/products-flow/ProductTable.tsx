@@ -21,15 +21,10 @@ type ProductTableProps = {
 
 export function ProductTable({ products: initialProducts }: ProductTableProps) {
   const selectedProductIds = useAdminProductsStore((state) => state.selectedProductIds);
-  const initializeProducts = useAdminProductsStore((state) => state.initializeProducts);
   const toggleProductSelection = useAdminProductsStore((state) => state.toggleProductSelection);
   const toggleAllProducts = useAdminProductsStore((state) => state.toggleAllProducts);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  useEffect(() => {
-    initializeProducts(initialProducts);
-  }, [initialProducts, initializeProducts]);
 
   const visibleProducts = initialProducts;
   const visibleIds = visibleProducts.map((product) => product.id);

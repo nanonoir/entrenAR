@@ -19,6 +19,7 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
   const id = useId();
   const updateInventoryStock = useAdminProductsStore((state) => state.updateInventoryStock);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const [stockType, setStockType] = useState<"limited" | "infinite">(initialStock === "infinite" ? "infinite" : "limited");
   const [value, setValue] = useState(initialStock === "infinite" ? "" : String(initialStock));
   const [operation, setOperation] = useState<"add" | "subtract" | "replace">("replace");
@@ -53,11 +54,25 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
   const currentStock = initialStock === "infinite" ? 0 : Number(initialStock);
   const displayStock = initialStock === "infinite" ? "∞" : `${initialStock} unidades`;
 
   async function saveStock(nextType = stockType) {
     const parsed = Number(value);
+    const effectiveOperation = initialStock === "infinite" && nextType === "limited" ? "replace" : operation;
     if (nextType === "limited" && (!Number.isInteger(parsed) || parsed < 0)) {
       setStatus("error");
       setError("Ingresá un entero positivo o 0");
@@ -66,7 +81,7 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
     setStatus("saving");
     setError("");
     try {
-      const computedStock = operation === "add" ? currentStock + parsed : operation === "subtract" ? Math.max(0, currentStock - parsed) : parsed;
+      const computedStock = effectiveOperation === "add" ? currentStock + parsed : effectiveOperation === "subtract" ? Math.max(0, currentStock - parsed) : parsed;
       await updateInventoryStock({ productId, variantId, stock: nextType === "infinite" ? "infinite" : computedStock, reason: reason || undefined });
       setStatus("success");
       setOpen(false);
@@ -97,17 +112,17 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
         </span>
       </button>
       {open && typeof document !== "undefined" ? createPortal(
-        <div className="z-50 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" style={{ position: "absolute", top: popoverPosition.top, left: popoverPosition.left }}>
+        <div ref={popoverRef} className="z-50 grid w-[min(20rem,calc(100vw-2rem))] gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" style={{ position: "absolute", top: popoverPosition.top, left: popoverPosition.left }}>
           <fieldset className="grid gap-2">
             <legend className="text-sm font-semibold text-zinc-950">Tipo de stock</legend>
-            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" checked={stockType === "infinite"} onChange={() => setStockType("infinite")} /> Infinito</label>
-            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" checked={stockType === "limited"} onChange={() => setStockType("limited")} /> Limitado</label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" name={`${id}-stock-type`} checked={stockType === "infinite"} onChange={() => setStockType("infinite")} /> Infinito</label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="radio" name={`${id}-stock-type`} checked={stockType === "limited"} onChange={() => { setStockType("limited"); if (initialStock === "infinite") setOperation("replace"); }} /> Limitado</label>
           </fieldset>
           {stockType === "limited" ? (
             <div className="grid gap-3">
               <div className="grid grid-cols-3 gap-2">
-                <StockOperationButton active={operation === "add"} onClick={() => setOperation("add")}>Agregar</StockOperationButton>
-                <StockOperationButton active={operation === "subtract"} onClick={() => setOperation("subtract")}>Descontar</StockOperationButton>
+                <StockOperationButton disabled={initialStock === "infinite"} active={operation === "add"} onClick={() => setOperation("add")}>Agregar</StockOperationButton>
+                <StockOperationButton disabled={initialStock === "infinite"} active={operation === "subtract"} onClick={() => setOperation("subtract")}>Descontar</StockOperationButton>
                 <StockOperationButton active={operation === "replace"} onClick={() => setOperation("replace")}>Reemplazar</StockOperationButton>
               </div>
               <label className="grid gap-1 text-sm font-medium text-zinc-700" htmlFor={id}>
@@ -139,6 +154,6 @@ export function InlineStockCell({ initialStock, productId, productName, variantI
   );
 }
 
-function StockOperationButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={cn("h-9 rounded-xl border px-2 text-xs font-semibold transition", active ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent")}>{children}</button>;
+function StockOperationButton({ active, children, disabled = false, onClick }: { active: boolean; children: React.ReactNode; disabled?: boolean; onClick: () => void }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className={cn("h-9 rounded-xl border px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50", active ? "border-accent bg-accent text-on-accent" : "border-zinc-200 text-zinc-700 hover:border-accent")}>{children}</button>;
 }

@@ -30,6 +30,17 @@ function uniqueSlug(base: string, categories: AdminProductCategory[], ignoreId?:
   return slug;
 }
 
+function createsCategoryCycle(id: string, parentId: string | undefined, categories: AdminProductCategory[]) {
+  const visited = new Set<string>();
+  let currentParentId = parentId;
+  while (currentParentId) {
+    if (currentParentId === id || visited.has(currentParentId)) return true;
+    visited.add(currentParentId);
+    currentParentId = categories.find((category) => category.id === currentParentId)?.parentId;
+  }
+  return false;
+}
+
 export const useAdminCategoriesStore = create<AdminCategoriesState>()((set, get) => ({
   categories: [],
 
@@ -50,6 +61,9 @@ export const useAdminCategoriesStore = create<AdminCategoriesState>()((set, get)
 
   updateCategory: async (id, data) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
+    if (createsCategoryCycle(id, data.parentId, get().categories)) {
+      throw new Error("Una categoría no puede depender de sí misma ni de sus subcategorías.");
+    }
     const updated: AdminProductCategory = { id, ...data, slug: uniqueSlug(data.slug || data.name, get().categories, id) };
     set((state) => ({ categories: state.categories.map((category) => (category.id === id ? updated : category)) }));
     return updated;

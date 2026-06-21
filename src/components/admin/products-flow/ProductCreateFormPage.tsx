@@ -60,7 +60,7 @@ function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
     slug: product.slug,
     sku: product.sku,
     categoryIds: product.categoryIds ?? [product.categoryId],
-    description: `${product.name} listo para completar con descripción comercial.`,
+    description: product.description ?? "",
     imageUrl: product.imageUrl ?? "",
     salePrice: String(product.salePrice),
     promotionalPrice: product.promotionalPrice ? String(product.promotionalPrice) : "",
@@ -129,6 +129,8 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
         await createProduct({ ...data, categoryName: categoryNames || "Sin categoría" });
         router.push("/admin/productos");
       }
+    } catch {
+      setSubmitError(mode === "edit" ? "No se pudieron guardar los cambios. Intentá nuevamente." : "No se pudo crear el producto. Intentá nuevamente.");
     } finally {
       setIsSubmitting(false);
     }

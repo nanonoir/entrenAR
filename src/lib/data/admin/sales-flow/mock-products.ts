@@ -22,6 +22,7 @@ export type AdminProduct = {
   slug: string;
   publicSlug: string;
   name: string;
+  description?: string;
   sku: string;
   imageUrl?: string;
   categoryId: string;

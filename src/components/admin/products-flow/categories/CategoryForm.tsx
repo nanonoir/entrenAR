@@ -34,21 +34,40 @@ function defaultValues(category?: AdminProductCategory, parentId?: string): Cate
   };
 }
 
+function getDescendantCategoryIds(categoryId: string, categories: AdminProductCategory[]) {
+  const descendants = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    categories.forEach((item) => {
+      if (item.parentId && (item.parentId === categoryId || descendants.has(item.parentId)) && !descendants.has(item.id)) {
+        descendants.add(item.id);
+        changed = true;
+      }
+    });
+  }
+  return descendants;
+}
+
 export function CategoryForm({ categories, category, onDone, parentId }: CategoryFormProps) {
   const router = useRouter();
   const createCategory = useAdminCategoriesStore((state) => state.createCategory);
   const updateCategory = useAdminCategoriesStore((state) => state.updateCategory);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const { control, formState: { errors }, handleSubmit, register, setValue } = useForm<CategoryFormInput, unknown, CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: defaultValues(category, parentId),
     mode: "onBlur",
   });
   const imageUrl = useWatch({ control, name: "imageUrl" });
+  const unavailableParentIds = category ? getDescendantCategoryIds(category.id, categories).add(category.id) : new Set<string>();
+  const parentOptions = categories.filter((item) => !unavailableParentIds.has(item.id));
 
   async function onSubmit(data: CategoryFormValues) {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       if (category) {
         await updateCategory(category.id, data);
@@ -59,6 +78,8 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
       }
       onDone?.();
       if (category) router.push("/admin/productos/categorias");
+    } catch {
+      setSubmitError(category ? "No se pudieron guardar los cambios. Intentá nuevamente." : "No se pudo crear la categoría. Intentá nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -67,6 +88,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
       {message ? <p className="rounded-2xl border border-green-200 p-3 text-sm font-medium text-green-700">{message}</p> : null}
+      {submitError ? <p className="rounded-2xl border border-sale/30 p-3 text-sm font-medium text-sale">{submitError}</p> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Input id="category-name" label="Nombre" helperText="Nombre visible de la categoría." errorText={errors.name?.message} {...register("name")} />
         <Input id="category-slug" label="URL slug" helperText="Se genera automáticamente desde el nombre si lo dejás en blanco" errorText={errors.slug?.message} {...register("slug")} />
@@ -85,7 +107,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
           Categoría padre
           <select id="category-parent" className="h-11 rounded-button border border-border bg-surface px-3 text-base outline-none md:text-sm" {...register("parentId")}>
             <option value="">Sin padre</option>
-            {categories.filter((item) => item.id !== category?.id).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {parentOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>
         <label className="grid gap-2 text-sm font-medium text-text" htmlFor="category-visibility">

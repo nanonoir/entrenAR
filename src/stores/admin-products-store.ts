@@ -55,6 +55,11 @@ function formatStockValue(stock: AdminProductStock | number | "infinite") {
   return stock.type === "infinite" ? "∞" : String(stock.quantity);
 }
 
+function createStableId(prefix: string) {
+  const id = globalThis.crypto?.randomUUID?.() ?? `${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${id}`;
+}
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -69,11 +74,12 @@ function buildProductFromForm(data: ProductCreateValues & { categoryName: string
   const now = new Date().toISOString();
   const slug = data.slug ?? slugify(data.name);
   return {
-    id: `prod-${Date.now()}`,
+    id: createStableId("prod"),
     slug,
     publicSlug: slug,
     name: data.name,
-    sku: data.sku ?? `PEND-${Date.now()}`,
+    sku: data.sku ?? createStableId("PEND"),
+    description: data.description,
     imageUrl: data.imageUrl,
     categoryId: data.categoryIds[0] ?? "",
     categoryIds: data.categoryIds,
@@ -138,7 +144,6 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
     set((state) => ({
       products: state.products.map((product) => (product.id === id ? { ...product, ...prices, updatedAt: new Date().toISOString() } : product)),
     }));
-    get().clearProductSelection();
   },
 
   createProduct: async (data) => {
@@ -171,13 +176,13 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
     const current = get().products.find((product) => product.id === id);
     if (!current) return undefined;
     const now = new Date().toISOString();
-    const slug = `${current.slug}-copia-${Date.now()}`;
+    const slug = `${current.slug}-copia-${createStableId("copy")}`;
     const duplicate: AdminProduct = {
       ...current,
-      id: `prod-${Date.now()}`,
+      id: createStableId("prod"),
       slug,
       publicSlug: slug,
-      sku: `PEND-${Date.now()}`,
+      sku: createStableId("PEND"),
       name: `${current.name} copia`,
       salesCount: 0,
       manualOrder: get().products.length + 1,
@@ -190,7 +195,10 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
 
   deleteProduct: async (id) => {
     await new Promise((resolve) => setTimeout(resolve, 250));
-    set((state) => ({ products: state.products.filter((product) => product.id !== id) }));
+    set((state) => ({
+      products: state.products.filter((product) => product.id !== id),
+      selectedProductIds: state.selectedProductIds.filter((productId) => productId !== id),
+    }));
   },
 
   updateInventoryStock: async ({ productId, reason, stock, variantId }) => {
@@ -202,7 +210,7 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
       const nextProducts = state.products.map((item) => {
         if (item.id !== productId) return item;
         if (variantId) {
-          const variantStock = typeof stock === "object" ? formatStockValue(stock) === "∞" ? "infinite" : Number(formatStockValue(stock)) : stock;
+          const variantStock = typeof stock === "object" ? stock.type === "infinite" ? "infinite" : stock.quantity : stock;
           return {
             ...item,
             variantCombinations: item.variantCombinations.map((combo) => (combo.id === variantId ? { ...combo, stock: variantStock } : combo)),
@@ -213,7 +221,7 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
         return { ...item, stock: nextStock, updatedAt: new Date().toISOString() };
       });
       const entry: StockHistoryEntry = {
-        id: `hist-${Date.now()}`,
+        id: createStableId("hist"),
         productId,
         variantId,
         productName: product.name,

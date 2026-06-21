@@ -60,22 +60,22 @@ export function ProductFilterDrawer({ categories, draftFilters, open, onApply, o
             </FilterSection>
 
             <FilterSection title="Stock">
-              <RadioOption label="Todos" checked={draftFilters.stock === "all"} onChange={() => onDraftChange({ ...draftFilters, stock: "all" })} />
-              <RadioOption label="Con stock" checked={draftFilters.stock === "available"} onChange={() => onDraftChange({ ...draftFilters, stock: "available" })} />
-              <RadioOption label="Sin stock" checked={draftFilters.stock === "out"} onChange={() => onDraftChange({ ...draftFilters, stock: "out" })} />
-              <RadioOption label="Stock infinito" checked={draftFilters.stock === "infinite"} onChange={() => onDraftChange({ ...draftFilters, stock: "infinite" })} />
+              <RadioOption name="product-stock-filter" label="Todos" checked={draftFilters.stock === "all"} onChange={() => onDraftChange({ ...draftFilters, stock: "all" })} />
+              <RadioOption name="product-stock-filter" label="Con stock" checked={draftFilters.stock === "available"} onChange={() => onDraftChange({ ...draftFilters, stock: "available" })} />
+              <RadioOption name="product-stock-filter" label="Sin stock" checked={draftFilters.stock === "out"} onChange={() => onDraftChange({ ...draftFilters, stock: "out" })} />
+              <RadioOption name="product-stock-filter" label="Stock infinito" checked={draftFilters.stock === "infinite"} onChange={() => onDraftChange({ ...draftFilters, stock: "infinite" })} />
             </FilterSection>
 
             <FilterSection title="Precio">
-              <RadioOption label="Todos" checked={draftFilters.priceType === "all"} onChange={() => onDraftChange({ ...draftFilters, priceType: "all" })} />
-              <RadioOption label="Con promocional" checked={draftFilters.priceType === "promotional"} onChange={() => onDraftChange({ ...draftFilters, priceType: "promotional" })} />
-              <RadioOption label="Sin promocional" checked={draftFilters.priceType === "regular"} onChange={() => onDraftChange({ ...draftFilters, priceType: "regular" })} />
+              <RadioOption name="product-price-filter" label="Todos" checked={draftFilters.priceType === "all"} onChange={() => onDraftChange({ ...draftFilters, priceType: "all" })} />
+              <RadioOption name="product-price-filter" label="Con promocional" checked={draftFilters.priceType === "promotional"} onChange={() => onDraftChange({ ...draftFilters, priceType: "promotional" })} />
+              <RadioOption name="product-price-filter" label="Sin promocional" checked={draftFilters.priceType === "regular"} onChange={() => onDraftChange({ ...draftFilters, priceType: "regular" })} />
             </FilterSection>
 
             <FilterSection title="Visibilidad">
-              <RadioOption label="Todas" checked={draftFilters.visibility === "all"} onChange={() => onDraftChange({ ...draftFilters, visibility: "all" })} />
-              <RadioOption label="Visible" checked={draftFilters.visibility === "visible"} onChange={() => onDraftChange({ ...draftFilters, visibility: "visible" })} />
-              <RadioOption label="Oculto" checked={draftFilters.visibility === "hidden"} onChange={() => onDraftChange({ ...draftFilters, visibility: "hidden" })} />
+              <RadioOption name="product-visibility-filter" label="Todas" checked={draftFilters.visibility === "all"} onChange={() => onDraftChange({ ...draftFilters, visibility: "all" })} />
+              <RadioOption name="product-visibility-filter" label="Visible" checked={draftFilters.visibility === "visible"} onChange={() => onDraftChange({ ...draftFilters, visibility: "visible" })} />
+              <RadioOption name="product-visibility-filter" label="Oculto" checked={draftFilters.visibility === "hidden"} onChange={() => onDraftChange({ ...draftFilters, visibility: "hidden" })} />
             </FilterSection>
           </div>
         </div>
@@ -102,10 +102,10 @@ function FilterSection({ children, title }: { children: React.ReactNode; title: 
   );
 }
 
-function RadioOption({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
+function RadioOption({ checked, label, name, onChange }: { checked: boolean; label: string; name: string; onChange: () => void }) {
   return (
     <label className="flex items-center gap-2 text-sm text-zinc-700">
-      <input type="radio" checked={checked} onChange={onChange} className="shrink-0" />
+      <input type="radio" name={name} checked={checked} onChange={onChange} className="shrink-0" />
       {label}
     </label>
   );

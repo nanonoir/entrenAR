@@ -33,7 +33,6 @@ function getEffectivePrice(product: AdminProduct) {
 
 function matchesFilters(product: AdminProduct, filters: ProductFilters) {
   if (filters.categoryIds.length > 0 && !filters.categoryIds.some((categoryId) => (product.categoryIds ?? [product.categoryId]).includes(categoryId))) return false;
-  if (filters.stock === "available" && product.stock.type === "limited" && product.stock.quantity <= 0) return false;
   if (filters.stock === "available" && product.stock.type !== "infinite" && product.stock.quantity <= 0) return false;
   if (filters.stock === "out" && (product.stock.type === "infinite" || product.stock.quantity > 0)) return false;
   if (filters.stock === "infinite" && product.stock.type !== "infinite") return false;
