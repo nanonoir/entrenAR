@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from "@/components/admin/ui/States";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { ShipmentFilterDrawer, defaultShipmentFilters, type ShipmentFilters } from "@/components/admin/shipping/tracking/ShipmentFilterDrawer";
 import { ShipmentTrackingCard } from "@/components/admin/shipping/tracking/ShipmentTrackingCard";
 import { ShipmentTrackingRow } from "@/components/admin/shipping/tracking/ShipmentTrackingRow";
@@ -42,7 +41,18 @@ export function ShipmentTrackingList({ records, state = "ready" }: ShipmentTrack
         <Button type="button" variant="secondary" size="sm" onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}><Filter aria-hidden size={16} />Filtros</Button>
       </AdminPageHeader>
       <div className="rounded-3xl border border-border bg-white p-4 shadow-sm">
-        <Input id="shipment-search" label="Buscar envíos" helperText="Buscá por ID, venta, destinatario o código de tracking." value={search} onChange={(event) => setSearch(event.target.value)} trailingIcon={<Search aria-hidden size={16} />} />
+        <div className="relative">
+          <input
+            id="shipment-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            placeholder="Buscar por ID, venta, destinatario o código de tracking"
+            aria-label="Buscar por ID, venta, destinatario o código de tracking"
+            className="h-11 w-full rounded-button border border-border bg-surface px-3 pr-10 text-base outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm"
+          />
+          <Search aria-hidden size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" />
+        </div>
       </div>
       {records.length === 0 ? (
         <AdminEmptyState title="Todavía no hay envíos para mostrar." description="Las ventas aparecerán acá cuando existan registros asociados." />

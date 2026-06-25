@@ -4,6 +4,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "101",
     number: "#101",
+    customerId: "cus_001",
     createdAt: "2026-06-10T08:07:00.000Z",
     source: "WhatsApp",
     customer: {
@@ -46,6 +47,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "102",
     number: "#102",
+    customerId: "cus_002",
     createdAt: "2026-06-11T14:22:00.000Z",
     source: "Facebook Marketplace",
     customer: {
@@ -101,6 +103,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "103",
     number: "#103",
+    customerId: "cus_003",
     createdAt: "2026-06-12T09:15:00.000Z",
     source: "WhatsApp",
     customer: {
@@ -138,6 +141,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "098",
     number: "#098",
+    customerId: "cus_004",
     createdAt: "2026-05-30T16:45:00.000Z",
     source: "Tienda online",
     customer: {
@@ -182,6 +186,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "099",
     number: "#099",
+    customerId: "cus_005",
     createdAt: "2026-06-01T12:10:00.000Z",
     source: "MercadoLibre",
     customer: {
@@ -228,6 +233,7 @@ export const mockSales: AdminSale[] = [
   {
     id: "100",
     number: "#100",
+    customerId: "cus_006",
     createdAt: "2026-06-03T10:05:00.000Z",
     source: "WhatsApp",
     customer: {
