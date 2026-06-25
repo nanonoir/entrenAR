@@ -40,6 +40,10 @@ export type AdminProduct = {
   variantCombinations: Array<{ id: string; name: string; sku: string; stock: number | "infinite"; price?: number }>;
   shippingRequired: boolean;
   missingLogistics: boolean;
+  weightGrams?: number;
+  heightCm?: number;
+  widthCm?: number;
+  lengthCm?: number;
   manualOrder: number;
   visibility: AdminProductVisibility;
   salesCount: number;
@@ -77,6 +81,10 @@ export const mockAdminProducts: AdminProduct[] = [
     ],
     shippingRequired: true,
     missingLogistics: false,
+    weightGrams: 900,
+    heightCm: 24,
+    widthCm: 14,
+    lengthCm: 14,
     manualOrder: 1,
     visibility: "visible",
     salesCount: 128,
@@ -101,6 +109,10 @@ export const mockAdminProducts: AdminProduct[] = [
     variantCombinations: [],
     shippingRequired: true,
     missingLogistics: false,
+    weightGrams: 300,
+    heightCm: 12,
+    widthCm: 9,
+    lengthCm: 9,
     manualOrder: 2,
     visibility: "visible",
     salesCount: 94,

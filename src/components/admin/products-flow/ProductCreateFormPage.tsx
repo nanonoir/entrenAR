@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { ProductIdentityCard } from "@/components/admin/products-flow/product-form/ProductIdentityCard";
 import { ProductLogisticsCard } from "@/components/admin/products-flow/product-form/ProductLogisticsCard";
+import { ProductShippingDataCard } from "@/components/admin/products-flow/product-form/ProductShippingDataCard";
 import { ProductPricingCard } from "@/components/admin/products-flow/product-form/ProductPricingCard";
 import { ProductAdvancedDrawersCard, type ProductAdvancedDrawerType } from "@/components/admin/products-flow/product-form/ProductAdvancedDrawersCard";
 import { getProductHref } from "@/lib/routes";
@@ -41,6 +42,10 @@ const defaultValues: ProductCreateInput = {
   highlightSections: [],
   variantProperties: [],
   variantCombinations: [],
+  weightGrams: "",
+  heightCm: "",
+  widthCm: "",
+  lengthCm: "",
 };
 
 function slugifyCategory(value: string) {
@@ -74,6 +79,10 @@ function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
     highlightSections: product.highlightSections,
     variantProperties: product.variantProperties,
     variantCombinations: product.variantCombinations,
+    weightGrams: product.weightGrams ? String(product.weightGrams) : "",
+    heightCm: product.heightCm ? String(product.heightCm) : "",
+    widthCm: product.widthCm ? String(product.widthCm) : "",
+    lengthCm: product.lengthCm ? String(product.lengthCm) : "",
   };
 }
 
@@ -142,6 +151,8 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
       ? "product-identity-section"
       : errors.salePrice || errors.promotionalPrice
         ? "product-pricing-section"
+        : errors.weightGrams || errors.heightCm || errors.widthCm || errors.lengthCm
+          ? "product-shipping-data-section"
         : "product-logistics-section";
     document.getElementById(firstInvalidSectionId)?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (errors.name) setFocus("name");
@@ -196,6 +207,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
         <form onSubmit={submitForm} noValidate className="grid gap-5">
           <ProductIdentityCard />
           <ProductPricingCard />
+          <ProductShippingDataCard />
           <ProductLogisticsCard categories={localCategories} onOpenCategoryDrawer={() => setAdvancedDrawer("category")} />
           <ProductAdvancedDrawersCard categories={localCategories} openDrawer={advancedDrawer} onOpenDrawerChange={setAdvancedDrawer} onCreateCategory={createLocalCategory} />
           <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-between">

@@ -41,6 +41,13 @@ export type InlineProductPrice = z.output<typeof inlineProductPriceSchema>;
 
 const optionalTextSchema = z.string().trim().optional().transform((value) => value || undefined);
 
+const optionalPositiveNumberTextSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value ? Number(value.replace(",", ".")) : undefined))
+  .refine((value) => value === undefined || (Number.isFinite(value) && value > 0), "Ingresá un número mayor a 0");
+
 export const productVariantPropertySchema = z.object({
   name: z.string().trim().min(1, "Ingresá el nombre de la propiedad"),
   values: z.array(z.string().trim().min(1)).min(1, "Agregá al menos un valor"),
@@ -78,6 +85,10 @@ export const productCreateSchema = z
       .refine((properties) => new Set(properties.map((property) => property.name.trim().toLowerCase())).size === properties.length, "No se permiten variantes duplicadas")
       .default([]),
     variantCombinations: z.array(productVariantCombinationSchema).default([]),
+    weightGrams: optionalPositiveNumberTextSchema,
+    heightCm: optionalPositiveNumberTextSchema,
+    widthCm: optionalPositiveNumberTextSchema,
+    lengthCm: optionalPositiveNumberTextSchema,
   })
   .refine(
     (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.salePrice,
