@@ -12,7 +12,7 @@ export function ShipmentDetailCard({ record }: { record: ShipmentTrackingRecord 
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Envíos</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-text">Envío {record.id}</h1>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-text">Envío {record.saleNumber ?? `#${record.id}`}</h1>
           <div className="mt-3 flex flex-wrap gap-2"><Badge tone={getShippingStatusTone(record.status)}>{getShippingStatusLabel(record.status)}</Badge><Badge tone={getPaymentStatusTone(record.paymentStatus)}>{getPaymentStatusLabel(record.paymentStatus)}</Badge></div>
         </div>
         <div className="flex flex-wrap gap-2"><LinkButton href="/admin/envios" variant="secondary" size="sm">Volver</LinkButton><LinkButton href={`/admin/ventas/${record.saleId}`} variant="primary" size="sm">Ver pedido</LinkButton></div>

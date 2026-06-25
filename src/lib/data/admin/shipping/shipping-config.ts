@@ -72,7 +72,7 @@ export const initialShippingProviders: ShippingProviderConfig[] = shippingProvid
   status: "not_configured",
   enabledModalities: [],
   origin: { senderName: "", phone: "", email: "", street: "", number: "", city: "", province: "", postalCode: "" },
-  weightRanges: [],
+  weightRanges: DEFAULT_WEIGHT_RANGES.map((range) => ({ ...range })),
 }));
 
 export const initialPickupPoints: PickupPoint[] = [
@@ -93,3 +93,4 @@ export const initialPickupPoints: PickupPoint[] = [
 export async function getShippingProviderDefinitions() {
   return shippingProviderDefinitions;
 }
+import { DEFAULT_WEIGHT_RANGES } from "@/schemas/admin/shipping-schemas";

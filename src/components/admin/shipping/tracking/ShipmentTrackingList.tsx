@@ -53,7 +53,7 @@ export function ShipmentTrackingList({ records, state = "ready" }: ShipmentTrack
           <div className="hidden overflow-hidden rounded-3xl border border-border bg-white shadow-sm lg:block">
             <table className="w-full table-fixed">
               <thead className="bg-surface text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                <tr><th className="px-4 py-3 w-24">Envío</th><th className="px-4 py-3">Destinatario</th><th className="px-4 py-3 w-40">Estado</th><th className="px-4 py-3 w-44">Tracking</th><th className="px-4 py-3 w-28">Costo</th><th className="px-4 py-3 w-32">Fecha</th><th className="px-4 py-3 w-36 text-right">Acción</th></tr>
+                <tr><th className="px-4 py-3 w-28">Envío</th><th className="px-4 py-3">Destinatario</th><th className="px-4 py-3 w-40">Estado</th><th className="px-4 py-3 w-44">Tracking</th><th className="px-4 py-3 w-28">Costo</th><th className="px-4 py-3 w-32">Fecha</th><th className="px-4 py-3 w-40 min-w-[10rem] text-right">Acción</th></tr>
               </thead>
               <tbody>{filteredRecords.map((record) => <ShipmentTrackingRow key={record.id} record={record} />)}</tbody>
             </table>
