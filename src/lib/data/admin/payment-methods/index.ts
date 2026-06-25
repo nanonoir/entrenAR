@@ -32,7 +32,7 @@ const paymentProviderDefinitions: PaymentProviderDefinition[] = [
     description: "Recibí pagos directos en una cuenta bancaria o billetera virtual.",
     logoSrc: "/transfer.svg",
     acceptedMethods: ["Transferencia bancaria"],
-    options: [{ id: "direct-transfer", salesIn: "Transferencia bancaria", receiveIn: "Inmediato / 1 día", fee: "0%" }],
+    options: [{ id: "direct-transfer", salesIn: "En el momento", receiveIn: "En el momento", fee: "0%" }],
   },
   {
     id: "mercado-pago",
@@ -53,8 +53,7 @@ const paymentProviderDefinitions: PaymentProviderDefinition[] = [
     logoSrc: "/stripeLogo.svg",
     acceptedMethods: ["Tarjetas internacionales"],
     options: [
-      { id: "stripe-eea-standard", salesIn: "Tarjetas estándar del Espacio Económico Europeo", receiveIn: "Inmediato", fee: "1,5 % + 0,25 €" },
-      { id: "stripe-uk", salesIn: "Tarjetas del Reino Unido", receiveIn: "Inmediato", fee: "2,5 % + 0,25 €" },
+      { id: "stripe-eea-standard", salesIn: "En el momento", receiveIn: "En el momento", fee: "2.9% + USD0.30" },
     ],
   },
   {
@@ -64,8 +63,8 @@ const paymentProviderDefinitions: PaymentProviderDefinition[] = [
     logoSrc: "/payway.svg",
     acceptedMethods: ["Tarjetas de crédito", "Tarjetas de débito", "Tarjetas prepagas", "QR", "Billeteras virtuales"],
     options: [
-      { id: "payway-debit", salesIn: "Débito", receiveIn: "Débito", fee: "1.20% + IVA" },
-      { id: "payway-credit-instant", salesIn: "Crédito inmediato", receiveIn: "Crédito inmediato", fee: "6.30% + IVA" },
+      { id: "payway-debit", salesIn: "En el momento", receiveIn: "En el momento", fee: "1.20% + IVA" },
+      { id: "payway-credit-instant", salesIn: "En el momento (crédito)", receiveIn: "En el momento (crédito)", fee: "6.30% + IVA" },
       { id: "payway-credit-8-business-days", salesIn: "Crédito a 8 días hábiles", receiveIn: "Crédito a 8 días hábiles", fee: "2.00% + IVA" },
     ],
   },

@@ -62,7 +62,6 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
                 type="radio"
               />
               <span className="grid min-w-0 gap-1 text-sm sm:grid-cols-3 sm:gap-3">
-                <span className="min-w-0"><strong className="block text-xs uppercase text-text-muted">Ventas en</strong>{option.salesIn}</span>
                 <span className="min-w-0"><strong className="block text-xs uppercase text-text-muted">Recibí en</strong>{option.receiveIn}</span>
                 <span className="min-w-0"><strong className="block text-xs uppercase text-text-muted">Comisión</strong>{option.fee}</span>
               </span>

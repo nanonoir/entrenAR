@@ -51,3 +51,6 @@ AGENTS.md
 
 #docs
 /openspec
+
+#tests
+.playwright-mcp
