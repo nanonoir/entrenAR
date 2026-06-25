@@ -1,5 +1,5 @@
-import { ComingSoonPage } from "@/components/admin/ui/ComingSoonPage";
+import { CustomerListClient } from "@/components/admin/customers/CustomerListClient";
 
 export default function CustomersPage() {
-  return <ComingSoonPage title="Clientes" />;
+  return <CustomerListClient />;
 }
