@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
+import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { formatARS, formatShortDate } from "@/lib/data/admin/sales-flow/helpers";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { Badge } from "@/components/ui/Badge";
@@ -35,7 +36,8 @@ const EVENT_LABELS: Record<SaleHistoryEventType, string> = {
 export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const order = useAdminSalesStore((s) => s.purchaseOrders.find((o) => o.id === id));
-  const { convertOrderToSale, addToast } = useAdminSalesStore();
+  const convertOrderToSale = useAdminSalesStore((s) => s.convertOrderToSale);
+  const addToast = useAdminToastStore((s) => s.addToast);
   const [copied, setCopied] = useState(false);
   const [converting, setConverting] = useState(false);
   const router = useRouter();

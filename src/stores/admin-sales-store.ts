@@ -9,6 +9,7 @@ import {
   generatePurchaseOrderId,
 } from "@/lib/data/admin/sales-flow/helpers";
 import { isSaleArchivable } from "@/lib/data/admin/sales-flow/archive";
+import { useAdminToastStore } from "@/stores/admin-toast-store";
 import type {
   AdminPurchaseOrder,
   AdminSale,
@@ -19,12 +20,6 @@ import type {
   DiscountType,
   SalePaymentStatus,
 } from "@/lib/data/admin/sales-flow/types";
-
-export type Toast = {
-  id: string;
-  message: string;
-  tone: "success" | "error" | "info";
-};
 
 type CreateSaleInput = {
   customer: SaleCustomer;
@@ -60,7 +55,6 @@ type UpdateSaleInput = Partial<
 type AdminSalesState = {
   sales: AdminSale[];
   purchaseOrders: AdminPurchaseOrder[];
-  toasts: Toast[];
   isInitializing: boolean;
   error: string | null;
 
@@ -91,10 +85,7 @@ type AdminSalesState = {
   convertOrderToSale: (orderId: string) => string;
   deletePurchaseOrder: (orderId: string) => void;
 
-  // Toast
   retryLoad: () => void;
-  addToast: (message: string, tone?: Toast["tone"]) => void;
-  dismissToast: (id: string) => void;
 };
 
 function now(): string {
@@ -105,10 +96,13 @@ function makeEvent(type: SaleHistoryEvent["type"], note?: string): SaleHistoryEv
   return { id: generateEventId(), type, date: now(), actor: "Admin", note };
 }
 
+function addAdminToast(message: string, tone: "success" | "error" | "info" = "success") {
+  useAdminToastStore.getState().addToast(message, tone);
+}
+
 export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
   sales: mockSales,
   purchaseOrders: mockPurchaseOrders,
-  toasts: [],
   isInitializing: false,
   error: null,
 
@@ -139,7 +133,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
       ],
     };
     set((state) => ({ sales: [...state.sales, sale] }));
-    get().addToast("Venta registrada", "success");
+    addAdminToast("Venta registrada", "success");
     return newId;
   },
 
@@ -158,7 +152,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Venta actualizada", "success");
+    addAdminToast("Venta actualizada", "success");
   },
 
   cancelSale: (id, reason, opts) => {
@@ -184,7 +178,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
         };
       }),
     }));
-    get().addToast("Venta cancelada", "info");
+    addAdminToast("Venta cancelada", "info");
   },
 
   reopenSale: (id) => {
@@ -202,14 +196,14 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
         };
       }),
     }));
-    get().addToast("Venta re-abierta", "success");
+    addAdminToast("Venta re-abierta", "success");
   },
 
   archiveSale: (id) => {
     const sale = get().sales.find((item) => item.id === id);
     if (!sale || sale.archived) return;
     if (!isSaleArchivable(sale)) {
-      get().addToast("Sólo podés archivar ventas canceladas, reintegradas o entregadas con pago recibido.", "error");
+      addAdminToast("Sólo podés archivar ventas canceladas, reintegradas o entregadas con pago recibido.", "error");
       return;
     }
 
@@ -224,7 +218,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Venta archivada", "info");
+    addAdminToast("Venta archivada", "info");
   },
 
   markPaymentReceived: (id) => {
@@ -239,7 +233,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Pago marcado como recibido", "success");
+    addAdminToast("Pago marcado como recibido", "success");
   },
 
   markPacked: (id) => {
@@ -254,7 +248,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Pedido empaquetado", "success");
+    addAdminToast("Pedido empaquetado", "success");
   },
 
   markUnpacked: (id) => {
@@ -269,7 +263,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Pedido desempaquetado", "info");
+    addAdminToast("Pedido desempaquetado", "info");
   },
 
   markShipped: (id) => {
@@ -288,7 +282,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Envío notificado", "success");
+    addAdminToast("Envío notificado", "success");
   },
 
   updateShippingAddress: (id, address) => {
@@ -303,7 +297,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
             },
       ),
     }));
-    get().addToast("Dirección actualizada", "success");
+    addAdminToast("Dirección actualizada", "success");
   },
 
   createPurchaseOrder: (input) => {
@@ -325,7 +319,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
       history: [makeEvent("sale_created", "Orden de compra creada.")],
     };
     set((state) => ({ purchaseOrders: [...state.purchaseOrders, order] }));
-    get().addToast("Orden de compra creada", "success");
+    addAdminToast("Orden de compra creada", "success");
     return newId;
   },
 
@@ -368,21 +362,11 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
 
   deletePurchaseOrder: (orderId) => {
     set((state) => ({ purchaseOrders: state.purchaseOrders.filter((order) => order.id !== orderId) }));
-    get().addToast("Orden eliminada", "info");
+    addAdminToast("Orden eliminada", "info");
   },
 
   retryLoad: () => {
     set({ error: null, isInitializing: false });
-    get().addToast("Ventas actualizadas", "success");
-  },
-
-  addToast: (message, tone = "success") => {
-    const id = generateEventId();
-    set((state) => ({ toasts: [...state.toasts, { id, message, tone }] }));
-    setTimeout(() => get().dismissToast(id), 4000);
-  },
-
-  dismissToast: (id) => {
-    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
+    addAdminToast("Ventas actualizadas", "success");
   },
 }));
