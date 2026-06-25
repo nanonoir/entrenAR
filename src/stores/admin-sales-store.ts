@@ -22,6 +22,7 @@ import type {
 } from "@/lib/data/admin/sales-flow/types";
 
 type CreateSaleInput = {
+  customerId?: string;
   customer: SaleCustomer;
   shippingAddress?: SaleAddress;
   products: SaleProduct[];
@@ -79,6 +80,7 @@ type AdminSalesState = {
 
   // Shipping address update
   updateShippingAddress: (id: string, address: SaleAddress) => void;
+  anonymizeCustomerSales: (customerId: string) => void;
 
   // Purchase order mutations
   createPurchaseOrder: (input: CreatePurchaseOrderInput) => string;
@@ -112,6 +114,7 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
     const sale: AdminSale = {
       id: newId,
       number: `#${newId}`,
+      customerId: input.customerId,
       createdAt: now(),
       source: input.source,
       customer: input.customer,
@@ -298,6 +301,25 @@ export const useAdminSalesStore = create<AdminSalesState>()((set, get) => ({
       ),
     }));
     addAdminToast("Dirección actualizada", "success");
+  },
+
+  anonymizeCustomerSales: (customerId) => {
+    const anonymizedName = `Cliente eliminado (${customerId})`;
+    set((state) => ({
+      sales: state.sales.map((sale) =>
+        sale.customerId !== customerId
+          ? sale
+          : {
+              ...sale,
+              customer: {
+                firstName: anonymizedName,
+                lastName: "",
+              },
+              shippingAddress: undefined,
+              history: [...sale.history, makeEvent("sale_updated", "Datos personales del cliente eliminados.")],
+            },
+      ),
+    }));
   },
 
   createPurchaseOrder: (input) => {

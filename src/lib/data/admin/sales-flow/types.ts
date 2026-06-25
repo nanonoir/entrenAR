@@ -63,6 +63,7 @@ export type SaleProduct = {
 export type AdminSale = {
   id: string; // e.g. "101"
   number: string; // e.g. "#101"
+  customerId?: string;
   createdAt: string; // ISO 8601
   source?: string;
   customer: SaleCustomer;
