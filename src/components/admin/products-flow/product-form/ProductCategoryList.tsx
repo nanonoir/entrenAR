@@ -62,7 +62,7 @@ export function ProductCategoryList({ categories, onChange, onCreateCategory, se
       <Input id="category-search" label="Buscar categoría" helperText="Busca por nombre o ruta completa de jerarquía." value={search} onChange={(event) => setSearch(event.target.value)} />
       {isCreating ? (
         <div className="grid gap-2 border-y border-border py-2">
-          <Input id="new-category-name" label="Nueva categoría" helperText="Se crea solo en esta edición mock y queda seleccionada." value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} />
+          <Input id="new-category-name" label="Nueva categoría" helperText="Se crea y queda seleccionada para continuar la edición." value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} />
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={createCategory}><Check aria-hidden size={16} />Crear</Button>
             <Button type="button" size="sm" variant="secondary" onClick={() => { setIsCreating(false); setNewCategoryName(""); }}><X aria-hidden size={16} />Cancelar</Button>
