@@ -1,5 +1,8 @@
-import { ComingSoonPage } from "@/components/admin/ui/ComingSoonPage";
+import { PaymentMethodsClient } from "@/components/admin/payment-methods/PaymentMethodsClient";
+import { getPaymentProviderDefinitions } from "@/lib/data/admin/payment-methods";
 
-export default function PaymentMethodsPage() {
-  return <ComingSoonPage title="Medios de Pago" />;
+export default async function PaymentMethodsPage() {
+  const providers = await getPaymentProviderDefinitions();
+
+  return <PaymentMethodsClient providers={providers} />;
 }
