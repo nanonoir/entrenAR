@@ -78,7 +78,16 @@ export const adminNavGroups: AdminNavGroup[] = [
         ],
       },
       { type: "link", label: "Medios de Pago", href: "/admin/medios-de-pago", icon: CreditCard },
-      { type: "link", label: "Envíos", href: "/admin/envios", icon: Truck },
+      {
+        type: "accordion",
+        label: "Envíos",
+        href: "/admin/envios",
+        icon: Truck,
+        children: [
+          { label: "Seguimiento de Envíos", href: "/admin/envios", icon: Truck },
+          { label: "Medios de Envío", href: "/admin/envios/medios-de-envio", icon: Settings },
+        ],
+      },
       { type: "link", label: "Clientes", href: "/admin/clientes", icon: Users },
       { type: "link", label: "Descuentos", href: "/admin/descuentos", icon: BadgePercent },
       { type: "link", label: "Marketing", href: "/admin/marketing", icon: Megaphone },

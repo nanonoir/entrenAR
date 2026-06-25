@@ -1,5 +1,8 @@
-import { ComingSoonPage } from "@/components/admin/ui/ComingSoonPage";
+import { ShipmentTrackingList } from "@/components/admin/shipping/tracking/ShipmentTrackingList";
+import { getShipmentTrackingRecords } from "@/lib/data/admin/shipping/tracking";
 
-export default function ShippingPage() {
-  return <ComingSoonPage title="Envíos" />;
+export default async function ShippingPage() {
+  const records = await getShipmentTrackingRecords();
+
+  return <ShipmentTrackingList records={records} />;
 }
