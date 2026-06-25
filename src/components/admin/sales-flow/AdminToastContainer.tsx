@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Info, XCircle, X } from "lucide-react";
-import { useAdminSalesStore } from "@/stores/admin-sales-store";
+import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { cn } from "@/lib/utils";
 
 const toneConfig = {
@@ -23,8 +23,7 @@ const toneConfig = {
 };
 
 export function AdminToastContainer() {
-  const toasts = useAdminSalesStore((s) => s.toasts);
-  const dismissToast = useAdminSalesStore((s) => s.dismissToast);
+  const { dismissToast, toasts } = useAdminToastStore();
 
   if (toasts.length === 0) return null;
 

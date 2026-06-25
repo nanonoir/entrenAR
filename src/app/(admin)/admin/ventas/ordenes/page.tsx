@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Copy, Eye, Link as LinkIcon, Package, Plus, Trash2 } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
+import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { formatARS, formatShortDate } from "@/lib/data/admin/sales-flow/helpers";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -12,7 +13,7 @@ const MOCK_PAYMENT_LINK = "https://pagos.entrenar.ar/link/placeholder";
 export default function PurchaseOrdersPage() {
   const purchaseOrders = useAdminSalesStore((s) => s.purchaseOrders);
   const deletePurchaseOrder = useAdminSalesStore((s) => s.deletePurchaseOrder);
-  const addToast = useAdminSalesStore((s) => s.addToast);
+  const addToast = useAdminToastStore((s) => s.addToast);
 
   const pendingOrders = purchaseOrders.filter((o) => o.status === "pending");
 
