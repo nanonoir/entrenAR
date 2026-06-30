@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import {
   formatARS,
   formatShortDate,
@@ -122,6 +123,9 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
   const editable = isSaleEditable(sale);
   const archivedFinalStatus = isReadOnly ? getArchivedFinalStatus(sale) : null;
   const archivable = isSaleArchivable(sale);
+  const detailBackLink = isReadOnly
+    ? { href: "/admin/ventas/archivados", label: "Volver a archivados" }
+    : { href: "/admin/ventas", label: "Volver a ventas" };
 
   function handleCancel() {
     setCancelSubmitAttempted(true);
@@ -188,44 +192,23 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-zinc-500">
-            <Link href="/admin/ventas" className="hover:text-accent">Ventas</Link>
-            <span>/</span>
-            <span className="font-semibold text-zinc-900">{isReadOnly ? "Archivado" : sale.number}</span>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-950">{isReadOnly ? "Archivado" : sale.number}</h1>
-            {isReadOnly ? (
-              <>
-                <Badge tone="neutral">{sale.number}</Badge>
-                {archivedFinalStatus && <Badge tone={archivedFinalStatus.tone}>{archivedFinalStatus.label}</Badge>}
-              </>
-            ) : (
-              <>
-                <Badge tone={getPaymentStatusTone(sale.paymentStatus)}>
-                  {getPaymentStatusLabel(sale.paymentStatus)}
-                </Badge>
-                <Badge tone={getShippingStatusTone(sale.shippingStatus)}>
-                  {getShippingStatusLabel(sale.shippingStatus)}
-                </Badge>
-              </>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-zinc-400">{formatShortDate(sale.createdAt)}</p>
-          {sale.sourceOrderId && (
-            <p className="mt-0.5 text-xs text-zinc-400">
-              Origen:{" "}
-              <Link href={`/admin/ventas/ordenes/${sale.sourceOrderId}`} className="text-accent hover:underline">
-                {sale.sourceOrderId}
-              </Link>
-            </p>
+      <div className="mb-6 grid gap-2">
+        <AdminPageHeader title={isReadOnly ? "Venta archivada" : sale.number} description={formatShortDate(sale.createdAt)} tag={isReadOnly ? "Ventas archivadas" : "Ventas"} backLink={detailBackLink}>
+          {isReadOnly ? (
+            <>
+              <Badge tone="neutral">{sale.number}</Badge>
+              {archivedFinalStatus && <Badge tone={archivedFinalStatus.tone}>{archivedFinalStatus.label}</Badge>}
+            </>
+          ) : (
+            <>
+              <Badge tone={getPaymentStatusTone(sale.paymentStatus)}>
+                {getPaymentStatusLabel(sale.paymentStatus)}
+              </Badge>
+              <Badge tone={getShippingStatusTone(sale.shippingStatus)}>
+                {getShippingStatusLabel(sale.shippingStatus)}
+              </Badge>
+            </>
           )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
           {isReadOnly ? (
             <Button variant="ghost" size="icon" aria-label="Imprimir resumen">
               <Printer aria-hidden size={16} />
@@ -297,7 +280,15 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
               </Button>
             </>
           )}
-        </div>
+        </AdminPageHeader>
+        {sale.sourceOrderId && (
+          <p className="text-xs text-zinc-400">
+            Origen:{" "}
+            <Link href={`/admin/ventas/ordenes/${sale.sourceOrderId}`} className="text-accent hover:underline">
+              {sale.sourceOrderId}
+            </Link>
+          </p>
+        )}
       </div>
 
       {/* Two-column layout */}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { formatARS, formatShortDate } from "@/lib/data/admin/sales-flow/helpers";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { Badge } from "@/components/ui/Badge";
@@ -88,29 +89,19 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-4xl">
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-zinc-500">
-            <Link href="/admin/ventas/ordenes" className="hover:text-accent">Órdenes de Compra</Link>
-            <span>/</span>
-            <span className="font-mono text-xs font-semibold text-zinc-900">{order.id}</span>
-          </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">Detalle de la Orden</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <Badge tone="warning">Pendiente</Badge>
-            <span className="text-xs text-zinc-400">{formatShortDate(order.createdAt)}</span>
-          </div>
-        </div>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={converting}
-          onClick={handleConvert}
-        >
-          <Check aria-hidden size={14} />
-          {converting ? "Procesando…" : "Marcar como recibido"}
-        </Button>
+      <div className="mb-6">
+        <AdminPageHeader title="Detalle de la orden" description={`${order.id} · ${formatShortDate(order.createdAt)}`} tag="Órdenes de compra" backLink={{ href: "/admin/ventas/ordenes", label: "Volver a órdenes" }}>
+          <Badge tone="warning">Pendiente</Badge>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={converting}
+            onClick={handleConvert}
+          >
+            <Check aria-hidden size={14} />
+            {converting ? "Procesando…" : "Marcar como recibido"}
+          </Button>
+        </AdminPageHeader>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
