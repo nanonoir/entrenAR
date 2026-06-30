@@ -1,5 +1,5 @@
-import { ComingSoonPage } from "@/components/admin/ui/ComingSoonPage";
+import { redirect } from "next/navigation";
 
 export default function DiscountsPage() {
-  return <ComingSoonPage title="Descuentos" />;
+  redirect("/admin/descuentos/cupones");
 }
