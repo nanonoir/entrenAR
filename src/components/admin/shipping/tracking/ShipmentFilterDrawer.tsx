@@ -1,10 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Drawer } from "@/components/ui/Drawer";
+import { AdminFilterDrawer } from "@/components/admin/filters";
 import type { SaleShippingStatus } from "@/lib/data/admin/sales-flow/types";
 import { getShippingStatusLabel } from "@/lib/data/admin/sales-flow/helpers";
+import { cn } from "@/lib/utils";
 
 export type ShipmentFilters = { statuses: SaleShippingStatus[] };
 export const defaultShipmentFilters: ShipmentFilters = { statuses: [] };
@@ -25,28 +24,28 @@ export function ShipmentFilterDrawer({ draftFilters, onApply, onClear, onClose, 
   }
 
   return (
-    <Drawer open={open} onClose={onClose} title="Filtros" className="flex flex-col h-full min-h-0">
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <fieldset className="grid gap-3">
-            <legend className="text-sm font-semibold uppercase tracking-wide text-text-muted">Estado</legend>
-            <div className="grid gap-2">
-              {statuses.map((status) => (
-                <label key={status} className="flex items-center gap-2 text-sm text-text">
-                  <input type="checkbox" checked={draftFilters.statuses.includes(status)} onChange={() => toggleStatus(status)} className="shrink-0" />
-                  {getShippingStatusLabel(status)}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-        <div className="shrink-0 border-t border-border p-4">
-          <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="secondary" onClick={onClear}><X aria-hidden size={16} />Limpiar</Button>
-            <Button type="button" onClick={onApply}>Aplicar</Button>
-          </div>
-        </div>
-      </div>
-    </Drawer>
+    <AdminFilterDrawer open={open} title="Filtros" onApply={onApply} onClear={onClear} onClose={onClose}>
+      <fieldset className="grid gap-2">
+        <legend className="mb-2 text-sm font-semibold text-text">Estado</legend>
+        {statuses.map((status) => {
+          const selected = draftFilters.statuses.includes(status);
+
+          return (
+            <label
+              key={status}
+              className={cn(
+                "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-sm transition",
+                selected
+                  ? "border-accent bg-accent-soft text-accent-hover"
+                  : "border-border bg-white text-text hover:border-accent/50 hover:bg-surface",
+              )}
+            >
+              <span className="min-w-0 truncate">{getShippingStatusLabel(status)}</span>
+              <input type="checkbox" checked={selected} onChange={() => toggleStatus(status)} className="size-4 shrink-0 rounded border-border accent-accent focus:ring-2 focus:ring-accent/20" />
+            </label>
+          );
+        })}
+      </fieldset>
+    </AdminFilterDrawer>
   );
 }
