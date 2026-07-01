@@ -89,7 +89,16 @@ export const adminNavGroups: AdminNavGroup[] = [
         ],
       },
       { type: "link", label: "Clientes", href: "/admin/clientes", icon: Users },
-      { type: "link", label: "Descuentos", href: "/admin/descuentos", icon: BadgePercent },
+      {
+        type: "accordion",
+        label: "Descuentos",
+        href: "/admin/descuentos",
+        icon: BadgePercent,
+        children: [
+          { label: "Cupones", href: "/admin/descuentos/cupones", icon: TicketPercent },
+          { label: "Envío gratis", href: "/admin/descuentos/envio-gratis", icon: Truck },
+        ],
+      },
       { type: "link", label: "Marketing", href: "/admin/marketing", icon: Megaphone },
     ],
   },

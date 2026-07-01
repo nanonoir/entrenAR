@@ -7,6 +7,9 @@ export function isAdminPathActive(pathname: string, href: string) {
 }
 
 export function isAdminAccordionChildActive(pathname: string, parentHref: string, childHref: string) {
+  if (parentHref === "/admin/descuentos" && childHref === "/admin/descuentos/cupones") {
+    return pathname === parentHref || isAdminPathActive(pathname, childHref);
+  }
   if (childHref === parentHref) return pathname === childHref;
   return isAdminPathActive(pathname, childHref);
 }
@@ -17,6 +20,9 @@ export function isAdminAccordionActive(pathname: string, href: string, children:
   }
   if (href === "/admin/envios") {
     return pathname === href || pathname.startsWith("/admin/envios/");
+  }
+  if (href === "/admin/descuentos") {
+    return pathname === "/admin/descuentos" || pathname.startsWith("/admin/descuentos/");
   }
 
   return children.some((child) => isAdminPathActive(pathname, child.href));
