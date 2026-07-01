@@ -1,8 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Drawer } from "@/components/ui/Drawer";
+import { AdminFilterDrawer, FilterOptionGroup, type FilterOption } from "@/components/admin/filters";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 
 export type ProductFilters = {
@@ -29,62 +27,34 @@ type ProductFilterDrawerProps = {
   onDraftChange: (filters: ProductFilters) => void;
 };
 
+const stockOptions = [
+  { value: "all", label: "Todos" },
+  { value: "available", label: "Con stock" },
+  { value: "out", label: "Sin stock" },
+  { value: "infinite", label: "Stock infinito" },
+] satisfies readonly FilterOption[];
+
+const priceOptions = [
+  { value: "all", label: "Todos" },
+  { value: "promotional", label: "Con promocional" },
+  { value: "regular", label: "Sin promocional" },
+] satisfies readonly FilterOption[];
+
+const visibilityOptions = [
+  { value: "all", label: "Todas" },
+  { value: "visible", label: "Visible" },
+  { value: "hidden", label: "Oculto" },
+] satisfies readonly FilterOption[];
+
 export function ProductFilterDrawer({ categories, draftFilters, open, onApply, onClear, onClose, onDraftChange }: ProductFilterDrawerProps) {
+  // Category filtering is intentionally out of scope for this normalization; keep the public prop stable.
   void categories;
 
   return (
-    <Drawer open={open} onClose={onClose} title="Filtros" className="flex flex-col h-full min-h-0">
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <div className="grid gap-6">
-            <FilterSection title="Stock">
-              <PlainOption name="product-stock-filter" label="Todos" checked={draftFilters.stock === "all"} onChange={() => onDraftChange({ ...draftFilters, stock: "all" })} />
-              <PlainOption name="product-stock-filter" label="Con stock" checked={draftFilters.stock === "available"} onChange={() => onDraftChange({ ...draftFilters, stock: "available" })} />
-              <PlainOption name="product-stock-filter" label="Sin stock" checked={draftFilters.stock === "out"} onChange={() => onDraftChange({ ...draftFilters, stock: "out" })} />
-              <PlainOption name="product-stock-filter" label="Stock infinito" checked={draftFilters.stock === "infinite"} onChange={() => onDraftChange({ ...draftFilters, stock: "infinite" })} />
-            </FilterSection>
-
-            <FilterSection title="Precio">
-              <PlainOption name="product-price-filter" label="Todos" checked={draftFilters.priceType === "all"} onChange={() => onDraftChange({ ...draftFilters, priceType: "all" })} />
-              <PlainOption name="product-price-filter" label="Con promocional" checked={draftFilters.priceType === "promotional"} onChange={() => onDraftChange({ ...draftFilters, priceType: "promotional" })} />
-              <PlainOption name="product-price-filter" label="Sin promocional" checked={draftFilters.priceType === "regular"} onChange={() => onDraftChange({ ...draftFilters, priceType: "regular" })} />
-            </FilterSection>
-
-            <FilterSection title="Visibilidad">
-              <PlainOption name="product-visibility-filter" label="Todas" checked={draftFilters.visibility === "all"} onChange={() => onDraftChange({ ...draftFilters, visibility: "all" })} />
-              <PlainOption name="product-visibility-filter" label="Visible" checked={draftFilters.visibility === "visible"} onChange={() => onDraftChange({ ...draftFilters, visibility: "visible" })} />
-              <PlainOption name="product-visibility-filter" label="Oculto" checked={draftFilters.visibility === "hidden"} onChange={() => onDraftChange({ ...draftFilters, visibility: "hidden" })} />
-            </FilterSection>
-          </div>
-        </div>
-        <div className="shrink-0 border-t border-border p-4">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={onClear}>
-              <X aria-hidden size={16} />
-              Limpiar
-            </Button>
-            <Button onClick={onApply}>Aplicar</Button>
-          </div>
-        </div>
-      </div>
-    </Drawer>
-  );
-}
-
-function FilterSection({ children, title }: { children: React.ReactNode; title: string }) {
-  return (
-    <fieldset className="grid gap-3">
-      <legend className="text-sm font-semibold uppercase tracking-wide text-text-muted">{title}</legend>
-      <div className="grid gap-2">{children}</div>
-    </fieldset>
-  );
-}
-
-function PlainOption({ checked, label, name, onChange }: { checked: boolean; label: string; name: string; onChange: () => void }) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-text">
-      <input type="checkbox" name={name} checked={checked} onChange={onChange} className="size-4 shrink-0 rounded border-border text-accent focus:ring-accent" />
-      <span>{label}</span>
-    </label>
+    <AdminFilterDrawer open={open} title="Filtros" onApply={onApply} onClear={onClear} onClose={onClose}>
+      <FilterOptionGroup label="Stock" name="product-stock-filter" value={draftFilters.stock} options={stockOptions} onChange={(stock) => onDraftChange({ ...draftFilters, stock })} />
+      <FilterOptionGroup label="Precio" name="product-price-filter" value={draftFilters.priceType} options={priceOptions} onChange={(priceType) => onDraftChange({ ...draftFilters, priceType })} />
+      <FilterOptionGroup label="Visibilidad" name="product-visibility-filter" value={draftFilters.visibility} options={visibilityOptions} onChange={(visibility) => onDraftChange({ ...draftFilters, visibility })} />
+    </AdminFilterDrawer>
   );
 }
