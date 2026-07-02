@@ -11,6 +11,7 @@ export const DEFAULT_WEIGHT_RANGES = [
 const nameLikePattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/;
 const streetPattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9' .-]+$/;
 const phonePattern = /^\+?[0-9 ()-]+$/;
+const postalCodePattern = /^[A-Za-z0-9 -]+$/;
 
 export function normalizeNameLike(value: string) {
   return value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]/g, "").replace(/\s+/g, " ");
@@ -24,6 +25,14 @@ export function normalizeDigitsOnly(value: string) {
   return value.replace(/\D/g, "");
 }
 
+export function normalizePostalCode(value: string) {
+  return value.replace(/[^A-Za-z0-9 -]/g, "").replace(/\s+/g, " ").toUpperCase();
+}
+
+export function normalizePhone(value: string) {
+  return value.replace(/[^0-9 ()+-]/g, "").replace(/\s+/g, " ");
+}
+
 export function normalizeDecimalInput(value: string) {
   const normalized = value.replace(/[^0-9,.]/g, "").replace(/,/g, ".");
   const [integer = "", ...decimalParts] = normalized.split(".");
@@ -34,7 +43,9 @@ const requiredNameLike = (message = "Completá este campo") => z.string().trim()
 const optionalNameLike = z.string().trim().optional().transform((value) => value || undefined).refine((value) => value === undefined || nameLikePattern.test(value), "Usá solo letras, espacios, apóstrofes o guiones");
 const requiredStreetLike = z.string().trim().min(1, "Completá este campo").regex(streetPattern, "Usá letras, números, espacios, puntos o guiones");
 const requiredDigits = z.string().trim().min(1, "Completá este campo").regex(/^\d+$/, "Usá solo números");
+const requiredPostalCode = z.string().trim().min(1, "Completá este campo").regex(postalCodePattern, "Usá letras, números, espacios o guiones");
 const requiredPhone = z.string().trim().min(1, "Completá este campo").regex(phonePattern, "Ingresá un teléfono válido");
+const optionalPhone = z.string().trim().optional().transform((value) => value || undefined).refine((value) => value === undefined || phonePattern.test(value), "Ingresá un teléfono válido");
 
 const optionalPositiveNumber = z
   .string()
@@ -100,7 +111,7 @@ export const providerFormSchema = z.object({
     number: requiredDigits,
     city: requiredNameLike(),
     province: requiredNameLike(),
-    postalCode: requiredDigits,
+    postalCode: requiredPostalCode,
   }),
   weightRanges: z.array(z.object({
     id: z.string(),
@@ -126,9 +137,9 @@ export const pickupPointFormSchema = z.object({
   name: requiredNameLike(),
   status: z.enum(["not_configured", "configured_inactive", "active"]),
   isMain: z.boolean(),
-  address: z.object({ street: requiredStreetLike, number: requiredDigits, city: requiredNameLike(), province: requiredNameLike(), postalCode: requiredDigits }),
+  address: z.object({ street: requiredStreetLike, number: requiredDigits, city: requiredNameLike(), province: requiredNameLike(), postalCode: requiredPostalCode }),
   contactName: optionalNameLike,
-  contactPhone: z.string().trim().optional().transform((value) => value || undefined),
+  contactPhone: optionalPhone,
   schedule: z.array(z.object({ id: z.string(), day: requiredText, from: requiredText, to: requiredText })).min(1, "Agregá al menos una franja"),
   preparationHours: requiredPositiveNumber,
   costType: z.enum(["free", "fixed"]),

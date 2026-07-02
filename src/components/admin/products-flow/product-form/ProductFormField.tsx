@@ -78,7 +78,7 @@ export function ProductFormSelect<T extends FieldValues>({ children, helperText,
 
 export function ProductFormCard({ children, description, id, title }: { children: React.ReactNode; description: string; id: string; title: string }) {
   return (
-    <section id={id} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <section id={id} tabIndex={-1} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
         <p className="mt-1 text-sm text-zinc-500">{description}</p>

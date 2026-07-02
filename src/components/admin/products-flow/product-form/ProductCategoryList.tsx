@@ -35,6 +35,7 @@ export function ProductCategoryList({ categories, onChange, onCreateCategory, se
   const [search, setSearch] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [createError, setCreateError] = useState("");
   const categoryPaths = useMemo(() => new Map(categories.map((category) => [category.id, getCategoryPath(category, categories)])), [categories]);
   const { matchedCategories, visibleCategories } = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -49,12 +50,16 @@ export function ProductCategoryList({ categories, onChange, onCreateCategory, se
 
   function createCategory() {
     const name = newCategoryName.trim();
-    if (!name) return;
+    if (!name) {
+      setCreateError("Ingresá un nombre para crear la categoría.");
+      return;
+    }
     const created = onCreateCategory(name);
     onChange(Array.from(new Set([...selectedIds, created.id])));
     setNewCategoryName("");
     setIsCreating(false);
     setSearch("");
+    setCreateError("");
   }
 
   return (
@@ -62,7 +67,7 @@ export function ProductCategoryList({ categories, onChange, onCreateCategory, se
       <Input id="category-search" label="Buscar categoría" helperText="Busca por nombre o ruta completa de jerarquía." value={search} onChange={(event) => setSearch(event.target.value)} />
       {isCreating ? (
         <div className="grid gap-2 border-y border-border py-2">
-          <Input id="new-category-name" label="Nueva categoría" helperText="Se crea y queda seleccionada para continuar la edición." value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} />
+          <Input id="new-category-name" label="Nueva categoría" helperText="Se crea y queda seleccionada para continuar la edición." errorText={createError} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setCreateError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} />
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={createCategory}><Check aria-hidden size={16} />Crear</Button>
             <Button type="button" size="sm" variant="secondary" onClick={() => { setIsCreating(false); setNewCategoryName(""); }}><X aria-hidden size={16} />Cancelar</Button>

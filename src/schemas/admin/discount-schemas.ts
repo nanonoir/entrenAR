@@ -37,9 +37,9 @@ export const couponSchema = z
     status: z.enum(["active", "inactive"]).default("active"),
   })
   .superRefine((value, ctx) => {
-    if (value.discountType === "percentage" && (value.discountValue === undefined || value.discountValue <= 0)) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Ingresá un porcentaje de descuento." });
+    if (value.discountType === "percentage" && (value.discountValue === undefined || value.discountValue < 1)) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Ingresá un porcentaje de al menos 1%." });
     if (value.discountType === "percentage" && value.discountValue !== undefined && value.discountValue > 100) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "El porcentaje no puede superar el 100%." });
-    if (value.discountType === "fixed" && (value.discountValue === undefined || value.discountValue <= 0)) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Ingresá un monto de descuento." });
+    if (value.discountType === "fixed" && (value.discountValue === undefined || value.discountValue < 1)) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Ingresá un monto de descuento de al menos $1." });
     if (value.discountType === "free_shipping" && value.discountValue !== undefined) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "El cupón de envío gratis no usa monto de descuento." });
     if (value.targetType === "categories" && value.categoryIds.length === 0) ctx.addIssue({ code: "custom", path: ["categoryIds"], message: "Seleccioná al menos una categoría." });
     if (value.targetType === "products" && value.productIds.length === 0) ctx.addIssue({ code: "custom", path: ["productIds"], message: "Seleccioná al menos un producto." });
