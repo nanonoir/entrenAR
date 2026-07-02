@@ -1,6 +1,6 @@
 import type { FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import { sanitizeDigits, sanitizeName, sanitizePhone, setSanitizedFormValue } from "@/components/admin/sales-flow/order-form/order-form-utils";
 
 type CustomerSectionProps = {

@@ -1,4 +1,4 @@
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
 
 export function buildDefaultValues(sale?: AdminSale): Partial<OrderFormInput> {

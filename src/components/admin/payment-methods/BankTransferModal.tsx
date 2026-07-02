@@ -7,6 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
 import type { BankTransferFormInput, BankTransferFormValues } from "@/schemas/admin/payment-method-schemas";
 import { bankTransferSchema, normalizeCbuCvu, normalizeCuitCuil, normalizeNameLike } from "@/schemas/admin/payment-method-schemas";
@@ -47,9 +48,9 @@ export function BankTransferModal({ initialValues, onClose, onSubmit, open }: Ba
     }
   }, [form, initialValues, open]);
 
-  function handleInvalidSubmit() {
+  function handleInvalidSubmit(formErrors: typeof errors) {
     addToast("Debes completar todos los campos obligatorios correctamente.", "error");
-    document.getElementById("bank-transfer-error-summary")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollToFirstError(formErrors);
   }
 
   return (

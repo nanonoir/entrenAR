@@ -1,9 +1,9 @@
 import { Minus, Plus, X } from "lucide-react";
 import type { FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import { formatARS } from "@/lib/data/admin/sales-flow/helpers";
 import { cn } from "@/lib/utils";
-import { parseFormNumber, sanitizeDecimal } from "@/components/admin/sales-flow/order-form/order-form-utils";
+import { safeFormNumber, sanitizeDecimal } from "@/components/admin/sales-flow/order-form/order-form-utils";
 
 type ProductLineItemProps = {
   fieldId: string;
@@ -20,7 +20,7 @@ type ProductLineItemProps = {
 export function ProductLineItem({ fieldId, index, name, quantity, unitPrice, register, setValue, errors, onRemove }: ProductLineItemProps) {
   const quantityError = Array.isArray(errors) ? errors[index]?.quantity?.message : undefined;
   const priceError = Array.isArray(errors) ? errors[index]?.unitPrice?.message : undefined;
-  const lineTotal = (quantity ?? 1) * parseFormNumber(unitPrice);
+  const lineTotal = (Number.isFinite(quantity) ? quantity : 1) * safeFormNumber(unitPrice);
   const unitPriceField = register(`products.${index}.unitPrice`);
   const quantityId = `${fieldId}-quantity`;
   const priceId = `${fieldId}-unit-price`;

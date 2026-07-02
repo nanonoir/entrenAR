@@ -8,8 +8,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
-import { orderFormSchema } from "@/components/admin/sales-flow/OrderFormSchema";
-import type { OrderFormInput, OrderFormValues } from "@/components/admin/sales-flow/OrderFormSchema";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
+import { orderFormSchema } from "@/schemas/admin/order-schema";
+import type { OrderFormInput, OrderFormValues } from "@/schemas/admin/order-schema";
 import { ProductSelectorDrawer } from "@/components/admin/sales-flow/ProductSelectorDrawer";
 import { CustomerSection } from "@/components/admin/sales-flow/order-form/CustomerSection";
 import { GlobalFormError } from "@/components/admin/sales-flow/order-form/GlobalFormError";
@@ -19,7 +20,7 @@ import { ProductsSection } from "@/components/admin/sales-flow/order-form/Produc
 import { ShippingSection } from "@/components/admin/sales-flow/order-form/ShippingSection";
 import { TotalsSummary } from "@/components/admin/sales-flow/order-form/TotalsSummary";
 import { buildDefaultValues } from "@/components/admin/sales-flow/order-form/order-form-defaults";
-import { getProductErrorMessage, parseFormNumber } from "@/components/admin/sales-flow/order-form/order-form-utils";
+import { getProductErrorMessage, safeFormNumber } from "@/components/admin/sales-flow/order-form/order-form-utils";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { calculateTotals } from "@/lib/data/admin/sales-flow/helpers";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
@@ -64,10 +65,10 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
   const currentDiscountType = watchedDiscountType === "percentage" || watchedDiscountType === "fixed" ? watchedDiscountType : undefined;
 
   const { subtotal, discount, total } = calculateTotals(
-    (watchedProducts ?? []).map((p) => ({ quantity: p.quantity ?? 1, unitPrice: parseFormNumber(p.unitPrice) })),
+    (watchedProducts ?? []).map((p) => ({ quantity: Number.isFinite(p.quantity) ? p.quantity : 1, unitPrice: safeFormNumber(p.unitPrice) })),
     currentDiscountType,
-    watchedDiscountValue === undefined || watchedDiscountValue === "" ? undefined : parseFormNumber(watchedDiscountValue),
-    parseFormNumber(watchedShippingCost),
+    watchedDiscountValue === undefined || watchedDiscountValue === "" ? undefined : safeFormNumber(watchedDiscountValue),
+    safeFormNumber(watchedShippingCost),
   );
 
   const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
@@ -127,7 +128,7 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
       const hasShippingErrors = Boolean(formErrors.shippingStreet || formErrors.shippingNumber || formErrors.shippingCity || formErrors.shippingProvince || formErrors.shippingPostalCode);
       const firstInvalidSectionId = hasCustomerErrors ? "customer-section" : hasProductErrors ? "products-section" : hasPaymentErrors ? "payment-section" : hasShippingErrors ? "shipping-section" : undefined;
 
-      if (firstInvalidSectionId) document.getElementById(firstInvalidSectionId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      scrollToFirstError(formErrors, [firstInvalidSectionId].filter(Boolean) as string[]);
       if (hasCustomerErrors) setFocus(formErrors.firstName ? "firstName" : formErrors.lastName ? "lastName" : formErrors.email ? "email" : formErrors.phone ? "phone" : "dniOrCuil");
 
       setSubmitError(hasProductErrors ? "Debés añadir un producto como mínimo." : "Debés completar todos los campos obligatorios correctamente.");
@@ -155,7 +156,7 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
         <ShippingSection open={shippingOpen} onToggle={() => { const nextOpen = !shippingOpen; setShippingOpen(nextOpen); setValue("shippingAddressEnabled", nextOpen, { shouldDirty: true, shouldValidate: false }); }} register={register} setValue={setValue} errors={errors} />
         <ProductsSection fields={productFields} watchedProducts={watchedProducts} errors={errors} productError={productError} register={register} setValue={setValue} remove={remove} onOpenDrawer={() => setProductDrawerOpen(true)} />
         <PaymentSection control={control} register={register} setValue={setValue} errors={errors} currentDiscountType={currentDiscountType} />
-        <TotalsSummary subtotal={subtotal} discount={discount} shippingCost={parseFormNumber(watchedShippingCost)} total={total} />
+        <TotalsSummary subtotal={subtotal} discount={discount} shippingCost={safeFormNumber(watchedShippingCost)} total={total} />
         <NotesSection register={register} errors={errors} />
 
         <FormActions>

@@ -3,12 +3,13 @@
 import { AlertTriangle, Copy, Eye, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { FormActions, FormActionsGroup } from "@/components/admin/form-actions/FormActions";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { ProductIdentityCard } from "@/components/admin/products-flow/product-form/ProductIdentityCard";
 import { ProductLogisticsCard } from "@/components/admin/products-flow/product-form/ProductLogisticsCard";
 import { ProductShippingDataCard } from "@/components/admin/products-flow/product-form/ProductShippingDataCard";
@@ -109,7 +110,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
     mode: "onBlur",
   });
 
-  const { formState: { errors, isDirty }, handleSubmit, reset, setFocus } = methods;
+  const { formState: { isDirty }, handleSubmit, reset, setFocus } = methods;
 
   useEffect(() => {
     if (product) initializeProducts([product]);
@@ -148,20 +149,20 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
     }
   }
 
-  function onInvalid() {
+  function onInvalid(formErrors: FieldErrors<ProductCreateInput>) {
     setSubmitError("Debés completar todos los campos obligatorios correctamente.");
-    const firstInvalidSectionId = errors.name || errors.sku || errors.slug || errors.description
+    const firstInvalidSectionId = formErrors.name || formErrors.sku || formErrors.slug || formErrors.description
       ? "product-identity-section"
-      : errors.salePrice || errors.promotionalPrice
+      : formErrors.salePrice || formErrors.promotionalPrice
         ? "product-pricing-section"
-        : errors.weightGrams || errors.heightCm || errors.widthCm || errors.lengthCm
+        : formErrors.weightGrams || formErrors.heightCm || formErrors.widthCm || formErrors.lengthCm
           ? "product-shipping-data-section"
         : "product-logistics-section";
-    document.getElementById(firstInvalidSectionId)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (errors.name) setFocus("name");
-    else if (errors.sku) setFocus("sku");
-    else if (errors.salePrice) setFocus("salePrice");
-    else if (errors.categoryIds) setFocus("name");
+    scrollToFirstError(formErrors, [firstInvalidSectionId]);
+    if (formErrors.name) setFocus("name");
+    else if (formErrors.sku) setFocus("sku");
+    else if (formErrors.salePrice) setFocus("salePrice");
+    else if (formErrors.categoryIds) setFocus("name");
   }
 
   const submitForm = handleSubmit(onSubmit, onInvalid);

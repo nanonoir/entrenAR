@@ -21,7 +21,7 @@ export function ShippingScopeSection({ categoryOptions }: ShippingScopeSectionPr
 
   return (
     <FormCard id="shipping-scope-section" title="Aplicar a" description="Elegí si el envío gratis aplica a toda la tienda o a categorías específicas.">
-      <fieldset className="grid gap-2">
+      <fieldset className="grid gap-2" aria-invalid={errors.targetType ? true : undefined} aria-describedby={errors.targetType ? "shipping-target-type-error" : undefined}>
         <legend className="text-sm font-semibold text-text">Alcance</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {[{ label: "Toda la tienda", value: "all_store" }, { label: "Categorías", value: "categories" }].map((option) => (
@@ -42,6 +42,7 @@ export function ShippingScopeSection({ categoryOptions }: ShippingScopeSectionPr
             </label>
           ))}
         </div>
+        {errors.targetType?.message ? <p id="shipping-target-type-error" className="text-xs font-medium text-sale">{errors.targetType.message}</p> : null}
       </fieldset>
       {targetType === "all_store" ? <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">El envío gratis se va a aplicar a todos los productos de todas las categorías de la tienda.</p> : null}
       {targetType === "categories" ? <SelectionSummary label="Categorías seleccionadas" names={categoryNames} error={errors.categoryIds?.message} onOpen={() => setDrawerOpen(true)} /> : null}
@@ -54,8 +55,10 @@ function SelectionSummary({ error, label, names, onOpen }: { error?: string; lab
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-text">{label}</p><Button variant="secondary" onClick={onOpen}>{names.length ? "Editar categorías" : "Seleccionar"}</Button></div>
-      {names.length ? <div className="flex flex-wrap gap-2">{names.map((name) => <span key={name} className="max-w-full truncate rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-hover">{name}</span>)}</div> : <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">Todavía no seleccionaste categorías.</p>}
-      {error ? <p className="text-xs font-medium text-sale">{error}</p> : null}
+      <div aria-describedby={error ? "shipping-categoryIds-error" : undefined} aria-invalid={error ? true : undefined} data-error-section="categoryIds">
+        {names.length ? <div className="flex flex-wrap gap-2">{names.map((name) => <span key={name} className="max-w-full truncate rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-hover">{name}</span>)}</div> : <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">Todavía no seleccionaste categorías.</p>}
+      </div>
+      {error ? <p id="shipping-categoryIds-error" className="text-xs font-medium text-sale">{error}</p> : null}
     </div>
   );
 }

@@ -33,12 +33,12 @@ export function AddressSection({ errors, mode, onToggle, open, register }: Addre
           <Input id="provinceOrState" label="Provincia / Estado" helperText="Provincia o estado." {...register("provinceOrState")} errorText={errors.provinceOrState?.message} />
           <label className="grid gap-2 text-sm font-medium text-text" htmlFor="country">
             <span>País</span>
-            <select id="country" className="h-11 w-full rounded-button border border-border bg-surface px-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm" {...register("country")}>
+            <select id="country" aria-describedby={errors.country ? "country-error" : "country-helper"} aria-invalid={errors.country ? true : undefined} className={cn("h-11 w-full rounded-button border border-border bg-surface px-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm", errors.country && "border-sale focus:border-sale focus:ring-sale/20")} {...register("country")}>
               <option value="Argentina">Argentina</option>
               <option value="Uruguay">Uruguay</option>
               <option value="Chile">Chile</option>
             </select>
-            {errors.country?.message ? <span className="text-xs font-medium text-sale">{errors.country.message}</span> : <span className="text-xs text-text-muted">Valor inicial: Argentina.</span>}
+            {errors.country?.message ? <span id="country-error" className="text-xs font-medium text-sale">{errors.country.message}</span> : <span id="country-helper" className="text-xs text-text-muted">Valor inicial: Argentina.</span>}
           </label>
           {mode === "edit" ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:col-span-2">En caso de modificación, la nueva dirección se usará solo en nuevos pedidos. Las ventas anteriores conservarán la dirección registrada al momento de la compra.</p> : null}
         </div>

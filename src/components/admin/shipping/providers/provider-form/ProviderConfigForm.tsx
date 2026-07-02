@@ -6,6 +6,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/Button";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { OriginSection } from "@/components/admin/shipping/providers/provider-form/OriginSection";
 import { ModalitiesSection } from "@/components/admin/shipping/providers/provider-form/ModalitiesSection";
 import { WeightRangesSection } from "@/components/admin/shipping/providers/provider-form/WeightRangesSection";
@@ -30,10 +31,7 @@ export function ProviderConfigForm({ interceptNavigation, onDirtyChange, onSubmi
   }, [isDirty, onDirtyChange]);
 
   function scrollToInvalidSection(invalidErrors: typeof errors) {
-    const targetId = invalidErrors.weightRanges ? "provider-weight-ranges-section" : "provider-form-error";
-    const target = document.getElementById(targetId);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
-    target?.focus({ preventScroll: true });
+    scrollToFirstError(invalidErrors, invalidErrors.weightRanges ? ["provider-weight-ranges-section"] : []);
   }
 
   function submit(status: "configured_inactive" | "active") {

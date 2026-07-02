@@ -10,7 +10,7 @@ export function PeriodFilter() {
     <label className="grid gap-2 text-sm font-medium text-zinc-700 sm:max-w-xs">
       Período
       <select
-        className="h-11 rounded-2xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+        className="h-11 rounded-2xl border border-zinc-200 bg-white px-3 text-base text-zinc-950 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm"
         value={period}
         onChange={(event) => setPeriod(event.target.value as AdminPeriodId)}
       >

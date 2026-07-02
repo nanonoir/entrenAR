@@ -110,17 +110,19 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium text-text" htmlFor="category-parent">
           Categoría padre
-          <select id="category-parent" className="h-11 rounded-button border border-border bg-surface px-3 text-base outline-none md:text-sm" {...register("parentId")}>
+          <select id="category-parent" aria-describedby={errors.parentId ? "category-parent-error" : "category-parent-helper"} aria-invalid={errors.parentId ? true : undefined} className={cn("h-11 rounded-button border border-border bg-surface px-3 text-base outline-none md:text-sm", errors.parentId && "border-sale")} {...register("parentId")}>
             <option value="">Sin padre</option>
             {parentOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
+          {errors.parentId?.message ? <span id="category-parent-error" className="text-xs font-medium text-sale">{errors.parentId.message}</span> : <span id="category-parent-helper" className="text-xs text-text-muted">Opcional. Dejalo vacío para una categoría principal.</span>}
         </label>
         <label className="grid gap-2 text-sm font-medium text-text" htmlFor="category-visibility">
           Visibilidad
-          <select id="category-visibility" className="h-11 rounded-button border border-border bg-surface px-3 text-base outline-none md:text-sm" {...register("visibility")}>
+          <select id="category-visibility" aria-describedby={errors.visibility ? "category-visibility-error" : "category-visibility-helper"} aria-invalid={errors.visibility ? true : undefined} className={cn("h-11 rounded-button border border-border bg-surface px-3 text-base outline-none md:text-sm", errors.visibility && "border-sale")} {...register("visibility")}>
             <option value="visible">Visible</option>
             <option value="hidden">Oculta</option>
           </select>
+          {errors.visibility?.message ? <span id="category-visibility-error" className="text-xs font-medium text-sale">{errors.visibility.message}</span> : <span id="category-visibility-helper" className="text-xs text-text-muted">Controla si la categoría aparece en la tienda.</span>}
         </label>
       </div>
       <FormActions className="pb-0">

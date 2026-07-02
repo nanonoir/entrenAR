@@ -7,6 +7,7 @@ import { FormProvider, useForm, type FieldErrors } from "react-hook-form";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { ShippingConditionsSection, ShippingMethodsSection } from "@/components/admin/discounts/ShippingConditionsSection";
 import { ShippingScopeSection } from "@/components/admin/discounts/ShippingScopeSection";
 import type { DiscountSelectOption, ShippingDiscount } from "@/lib/data/admin/discounts/types";
@@ -69,7 +70,7 @@ export function ShippingDiscountForm({ categoryOptions, interceptNavigation, mod
   const onInvalid = useCallback((formErrors: FieldErrors<ShippingDiscountFormInput>) => {
     setSubmitError("Debes completar todos los campos obligatorios correctamente.");
     const firstSection = formErrors.shippingMethodIds ? "shipping-methods-section" : formErrors.categoryIds ? "shipping-scope-section" : "shipping-conditions-section";
-    document.getElementById(firstSection)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollToFirstError(formErrors, [firstSection]);
   }, []);
 
   return (

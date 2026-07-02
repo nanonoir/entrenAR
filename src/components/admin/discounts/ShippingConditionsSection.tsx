@@ -41,7 +41,7 @@ export function ShippingConditionsSection({ zoneOptions }: Pick<ShippingConditio
   return (
     <FormCard id="shipping-conditions-section" title="Límites de uso" description="Definí las condiciones de tu oferta de envío gratis.">
       <Checkbox id="shipping-combine" label="Permitir combinar con otras promociones. Ej.: precio promocional, cupones y otras." {...register("canCombineWithPromotions")} />
-      <fieldset className="grid gap-2">
+      <fieldset className="grid gap-2" aria-invalid={errors.zoneTargetType ? true : undefined} aria-describedby={errors.zoneTargetType ? "shipping-zone-target-error" : undefined}>
         <legend className="text-sm font-semibold text-text">Zonas de envío</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {[{ label: "Todas", value: "all" }, { label: "Específicas", value: "specific" }].map((option) => (
@@ -62,6 +62,7 @@ export function ShippingConditionsSection({ zoneOptions }: Pick<ShippingConditio
             </label>
           ))}
         </div>
+        {errors.zoneTargetType?.message ? <p id="shipping-zone-target-error" className="text-xs font-medium text-sale">{errors.zoneTargetType.message}</p> : null}
       </fieldset>
       {zoneTargetType === "all" ? <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">El envío gratis se va a aplicar a todas las zonas.</p> : null}
       {zoneTargetType === "specific" ? <SelectionSummary label="Zonas seleccionadas" names={zoneNames} emptyText="Todavía no seleccionaste zonas." error={errors.zoneIds?.message} onOpen={() => setDrawerOpen(true)} /> : null}
@@ -75,8 +76,10 @@ function SelectionSummary({ emptyText, error, label, names, onOpen }: { emptyTex
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-text">{label}</p><Button variant="secondary" onClick={onOpen}>{names.length ? "Editar" : "Seleccionar"}</Button></div>
-      {names.length ? <div className="flex flex-wrap gap-2">{names.map((name) => <span key={name} className="max-w-full truncate rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-hover">{name}</span>)}</div> : <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">{emptyText}</p>}
-      {error ? <p className="text-xs font-medium text-sale">{error}</p> : null}
+      <div aria-describedby={error ? `${label}-error` : undefined} aria-invalid={error ? true : undefined} data-error-section={label}>
+        {names.length ? <div className="flex flex-wrap gap-2">{names.map((name) => <span key={name} className="max-w-full truncate rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-hover">{name}</span>)}</div> : <p className="rounded-2xl bg-surface p-3 text-sm text-text-muted">{emptyText}</p>}
+      </div>
+      {error ? <p id={`${label}-error`} className="text-xs font-medium text-sale">{error}</p> : null}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Package, Plus } from "lucide-react";
 import type { FieldArrayWithId, FieldErrors, UseFieldArrayRemove, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import { ProductLineItem } from "@/components/admin/sales-flow/order-form/ProductLineItem";
 import { cn } from "@/lib/utils";
 
