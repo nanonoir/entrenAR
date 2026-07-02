@@ -2,10 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FormProvider, useForm, type FieldErrors } from "react-hook-form";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { ShippingConditionsSection, ShippingMethodsSection } from "@/components/admin/discounts/ShippingConditionsSection";
 import { ShippingScopeSection } from "@/components/admin/discounts/ShippingScopeSection";
 import type { DiscountSelectOption, ShippingDiscount } from "@/lib/data/admin/discounts/types";
@@ -15,7 +16,9 @@ import { useAdminToastStore } from "@/stores/admin-toast-store";
 
 type ShippingDiscountFormProps = {
   categoryOptions: DiscountSelectOption[];
+  interceptNavigation: (href: string) => void;
   mode: "create" | "edit";
+  onDirtyChange?: (isDirty: boolean) => void;
   shippingDiscount?: ShippingDiscount;
   shippingMethodOptions: DiscountSelectOption[];
   zoneOptions: DiscountSelectOption[];
@@ -35,7 +38,7 @@ function shippingDiscountDefaults(shippingDiscount?: ShippingDiscount): Shipping
   };
 }
 
-export function ShippingDiscountForm({ categoryOptions, mode, shippingDiscount, shippingMethodOptions, zoneOptions }: ShippingDiscountFormProps) {
+export function ShippingDiscountForm({ categoryOptions, interceptNavigation, mode, onDirtyChange, shippingDiscount, shippingMethodOptions, zoneOptions }: ShippingDiscountFormProps) {
   const router = useRouter();
   const createShippingDiscount = useAdminDiscountsStore((state) => state.createShippingDiscount);
   const updateShippingDiscount = useAdminDiscountsStore((state) => state.updateShippingDiscount);
@@ -43,6 +46,11 @@ export function ShippingDiscountForm({ categoryOptions, mode, shippingDiscount, 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const form = useForm<ShippingDiscountFormInput, unknown, ShippingDiscountFormValues>({ resolver: zodResolver(shippingDiscountSchema), defaultValues: shippingDiscountDefaults(shippingDiscount), mode: "onBlur" });
   const { formState: { isDirty, isSubmitting }, handleSubmit, reset } = form;
+  const cancelHref = mode === "edit" && shippingDiscount ? `/admin/descuentos/envio-gratis/${shippingDiscount.id}` : "/admin/descuentos/envio-gratis";
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const onSubmit = useCallback((values: ShippingDiscountFormValues) => {
     setSubmitError(null);
@@ -71,10 +79,10 @@ export function ShippingDiscountForm({ categoryOptions, mode, shippingDiscount, 
         <ShippingMethodsSection shippingMethodOptions={shippingMethodOptions} />
         <ShippingScopeSection categoryOptions={categoryOptions} />
         <ShippingConditionsSection zoneOptions={zoneOptions} />
-        <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={() => router.push(mode === "edit" && shippingDiscount ? `/admin/descuentos/envio-gratis/${shippingDiscount.id}` : "/admin/descuentos/envio-gratis")}>Cancelar</Button>
-          <Button type="submit" disabled={isSubmitting || (mode === "edit" && !isDirty)}>{mode === "create" ? "Crear" : "Guardar"}</Button>
-        </div>
+        <FormActions>
+          <Button type="button" variant="secondary" onClick={() => interceptNavigation(cancelHref)}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting || (mode === "edit" && !isDirty)}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : mode === "create" ? "Crear" : "Guardar"}</Button>
+        </FormActions>
       </form>
     </FormProvider>
   );

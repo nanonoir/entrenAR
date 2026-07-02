@@ -2,11 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { CouponLimitsSection } from "@/components/admin/discounts/CouponLimitsSection";
 import { CouponScopeSection } from "@/components/admin/discounts/CouponScopeSection";
 import { CouponTypeSection } from "@/components/admin/discounts/CouponTypeSection";
@@ -19,7 +20,9 @@ import { useAdminToastStore } from "@/stores/admin-toast-store";
 type CouponFormProps = {
   categoryOptions: DiscountSelectOption[];
   coupon?: Coupon;
+  interceptNavigation: (href: string) => void;
   mode: "create" | "edit";
+  onDirtyChange?: (isDirty: boolean) => void;
   productOptions: DiscountSelectOption[];
 };
 
@@ -47,7 +50,7 @@ function couponDefaults(coupon?: Coupon): CouponFormInput {
   };
 }
 
-export function CouponForm({ categoryOptions, coupon, mode, productOptions }: CouponFormProps) {
+export function CouponForm({ categoryOptions, coupon, interceptNavigation, mode, onDirtyChange, productOptions }: CouponFormProps) {
   const router = useRouter();
   const coupons = useAdminDiscountsStore((state) => state.coupons);
   const createCoupon = useAdminDiscountsStore((state) => state.createCoupon);
@@ -57,6 +60,11 @@ export function CouponForm({ categoryOptions, coupon, mode, productOptions }: Co
   const schema = useMemo(() => createCouponSchema(coupons.map((item) => item.code), coupon?.code), [coupon?.code, coupons]);
   const form = useForm<CouponFormInput, unknown, CouponFormValues>({ resolver: zodResolver(schema), defaultValues: couponDefaults(coupon), mode: "onBlur" });
   const { formState: { errors, isDirty, isSubmitting }, handleSubmit, register, reset, setFocus, setValue } = form;
+  const cancelHref = mode === "edit" && coupon ? `/admin/descuentos/cupones/${coupon.id}` : "/admin/descuentos/cupones";
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const onSubmit = useCallback((values: CouponFormValues) => {
     setSubmitError(null);
@@ -93,10 +101,10 @@ export function CouponForm({ categoryOptions, coupon, mode, productOptions }: Co
         <CouponTypeSection />
         <CouponScopeSection categoryOptions={categoryOptions} productOptions={productOptions} />
         <CouponLimitsSection />
-        <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={() => router.push(mode === "edit" && coupon ? `/admin/descuentos/cupones/${coupon.id}` : "/admin/descuentos/cupones")}>Cancelar</Button>
-          <Button type="submit" disabled={isSubmitting || (mode === "edit" && !isDirty)}>{mode === "create" ? "Crear" : "Guardar"}</Button>
-        </div>
+        <FormActions>
+          <Button type="button" variant="secondary" onClick={() => interceptNavigation(cancelHref)}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting || (mode === "edit" && !isDirty)}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : mode === "create" ? "Crear" : "Guardar"}</Button>
+        </FormActions>
       </form>
     </FormProvider>
   );
