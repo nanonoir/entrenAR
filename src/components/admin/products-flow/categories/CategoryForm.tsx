@@ -4,14 +4,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { ImageDropZone } from "@/components/admin/products-flow/product-form/ImageDropZone";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { categoryFormSchema, type CategoryFormInput, type CategoryFormValues } from "@/schemas/admin/product-schemas";
 import { useAdminCategoriesStore } from "@/stores/admin-categories-store";
 import { cn } from "@/lib/utils";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type CategoryFormProps = {
   categories: AdminProductCategory[];
@@ -56,7 +59,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { control, formState: { errors }, handleSubmit, register, setValue } = useForm<CategoryFormInput, unknown, CategoryFormValues>({
+  const { control, formState: { errors, isDirty }, handleSubmit, register, setValue } = useForm<CategoryFormInput, unknown, CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: defaultValues(category, parentId),
     mode: "onBlur",
@@ -64,6 +67,8 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
   const imageUrl = useWatch({ control, name: "imageUrl" });
   const unavailableParentIds = category ? getDescendantCategoryIds(category.id, categories).add(category.id) : new Set<string>();
   const parentOptions = categories.filter((item) => !unavailableParentIds.has(item.id));
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
+  const handleCancel = () => onDone ? interceptNavigation(onDone) : interceptNavigation("/admin/productos/categorias");
 
   async function onSubmit(data: CategoryFormValues) {
     setIsSubmitting(true);
@@ -118,10 +123,11 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
           </select>
         </label>
       </div>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="secondary" onClick={() => onDone ? onDone() : router.push("/admin/productos/categorias")}>Cancelar</Button>
-        <Button type="submit" disabled={isSubmitting} className={cn(isSubmitting && "opacity-70")}>{isSubmitting ? "Guardando…" : category ? "Guardar cambios" : "Crear categoría"}</Button>
-      </div>
+      <FormActions className="pb-0">
+        <Button type="button" variant="secondary" onClick={handleCancel}>Cancelar</Button>
+        <Button type="submit" disabled={isSubmitting} className={cn(isSubmitting && "opacity-70")}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : category ? "Guardar cambios" : "Crear categoría"}</Button>
+      </FormActions>
+      {discardModal}
     </form>
   );
 }

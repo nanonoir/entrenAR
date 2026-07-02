@@ -1,12 +1,14 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, Copy, Eye, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, Eye, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
+import { FormActions, FormActionsGroup } from "@/components/admin/form-actions/FormActions";
 import { ProductIdentityCard } from "@/components/admin/products-flow/product-form/ProductIdentityCard";
 import { ProductLogisticsCard } from "@/components/admin/products-flow/product-form/ProductLogisticsCard";
 import { ProductShippingDataCard } from "@/components/admin/products-flow/product-form/ProductShippingDataCard";
@@ -16,6 +18,7 @@ import { getProductHref } from "@/lib/routes";
 import type { AdminProduct, AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { productCreateSchema, type ProductCreateInput, type ProductCreateValues } from "@/schemas/admin/product-schemas";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type ProductCreateFormPageProps = {
   categories: AdminProductCategory[];
@@ -164,6 +167,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
   const submitForm = handleSubmit(onSubmit, onInvalid);
   const title = mode === "edit" ? "Editar producto" : "Agregar producto";
   const description = mode === "edit" ? "Actualizá los datos principales del producto." : "Creá un producto base en el catálogo administrable.";
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
 
   async function handleDuplicate() {
     if (!product) return;
@@ -185,19 +189,11 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
 
   return (
     <div className="mx-auto grid w-full max-w-4xl min-w-0 gap-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Productos</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950">{title}</h1>
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
-          {mode === "edit" ? <p className="mt-2 text-sm font-medium text-zinc-600">{isDirty ? "Cambios sin guardar" : "Sin cambios pendientes"}</p> : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {product ? <LinkButton href={getProductHref(product.publicSlug)} target="_blank" variant="secondary" size="sm"><Eye aria-hidden size={16} />Vista tienda</LinkButton> : null}
-          {product ? <Button type="button" variant="secondary" size="sm" onClick={handleCopyId}><Copy aria-hidden size={16} />Copiar ID</Button> : null}
-          <LinkButton href="/admin/productos" variant="secondary" size="sm"><ArrowLeft aria-hidden size={16} />Volver</LinkButton>
-        </div>
-      </div>
+      <AdminPageHeader title={title} description={description} tag="Productos" backLink={{ href: "/admin/productos", label: "Volver", onNavigate: interceptNavigation }}>
+        {product ? <LinkButton href={getProductHref(product.publicSlug)} target="_blank" variant="secondary" size="sm"><Eye aria-hidden size={16} />Vista tienda</LinkButton> : null}
+        {product ? <Button type="button" variant="secondary" size="sm" onClick={handleCopyId}><Copy aria-hidden size={16} />Copiar ID</Button> : null}
+      </AdminPageHeader>
+      {mode === "edit" ? <p className="text-sm font-medium text-zinc-600">{isDirty ? "Cambios sin guardar" : "Sin cambios pendientes"}</p> : null}
 
       {submitError ? <FormAlert>{submitError}</FormAlert> : null}
       {mediaWarning ? <FormAlert>{mediaWarning}</FormAlert> : null}
@@ -210,16 +206,17 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
           <ProductShippingDataCard />
           <ProductLogisticsCard categories={localCategories} onOpenCategoryDrawer={() => setAdvancedDrawer("category")} />
           <ProductAdvancedDrawersCard categories={localCategories} openDrawer={advancedDrawer} onOpenDrawerChange={setAdvancedDrawer} onCreateCategory={createLocalCategory} />
-          <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-between">
-            {product ? <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={handleDuplicate}>Duplicar</Button><Button type="button" variant="danger" onClick={() => setDeleteOpen(true)}><Trash2 aria-hidden size={16} />Borrar</Button></div> : <span />}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <LinkButton href="/admin/productos" variant="secondary" size="md">Cancelar</LinkButton>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando…" : mode === "edit" ? "Guardar cambios" : "Guardar producto"}</Button>
-            </div>
-          </div>
+          <FormActions className="sm:justify-between">
+            {product ? <FormActionsGroup className="sm:justify-start"><Button type="button" variant="secondary" onClick={handleDuplicate}>Duplicar</Button><Button type="button" variant="danger" onClick={() => setDeleteOpen(true)}><Trash2 aria-hidden size={16} />Borrar</Button></FormActionsGroup> : <span />}
+            <FormActionsGroup>
+              <Button type="button" variant="secondary" size="md" onClick={() => interceptNavigation("/admin/productos")}>Cancelar</Button>
+              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : mode === "edit" ? "Guardar cambios" : "Guardar producto"}</Button>
+            </FormActionsGroup>
+          </FormActions>
         </form>
       </FormProvider>
       {deleteOpen ? <DeleteConfirmModal productName={product?.name ?? "producto"} onCancel={() => setDeleteOpen(false)} onConfirm={handleDelete} /> : null}
+      {discardModal}
     </div>
   );
 }

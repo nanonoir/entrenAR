@@ -4,12 +4,17 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
+import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { AddressSection } from "@/components/admin/customers/AddressSection";
 import { PersonalDataSection } from "@/components/admin/customers/PersonalDataSection";
 import type { Customer } from "@/lib/data/admin/customers/types";
 import { customerFormSchema, type CustomerFormInput, type CustomerFormValues } from "@/schemas/admin/customer-schema";
 import { useAdminCustomersStore } from "@/stores/admin-customers-store";
+import { getCustomerDisplayName } from "@/lib/formatting/customer";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type CustomerFormProps = {
   customer?: Customer;
@@ -41,7 +46,7 @@ export function CustomerForm({ customer, mode }: CustomerFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, setValue, setFocus, formState: { errors } } = useForm<CustomerFormInput, unknown, CustomerFormValues>({
+  const { register, handleSubmit, setValue, setFocus, formState: { errors, isDirty } } = useForm<CustomerFormInput, unknown, CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: defaults(customer),
     mode: "onBlur",
@@ -70,15 +75,22 @@ export function CustomerForm({ customer, mode }: CustomerFormProps) {
     else if (formErrors.email) setFocus("email");
   }, [setFocus]);
 
+  const cancelHref = customer ? `/admin/clientes/${customer.id}` : "/admin/clientes";
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
+
   return (
-    <form className="mx-auto grid max-w-4xl gap-5" noValidate onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
-      {submitError ? <div role="alert" className="rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale">{submitError}</div> : null}
-      <PersonalDataSection register={register} setValue={setValue} errors={errors} />
-      <AddressSection mode={mode} open={addressOpen} onToggle={() => setAddressOpen((current) => !current)} register={register} errors={errors} />
-      <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:justify-end">
-        <Button type="button" variant="secondary" onClick={() => router.push(customer ? `/admin/clientes/${customer.id}` : "/admin/clientes")}>Cancelar</Button>
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando…" : mode === "create" ? "Agregar" : "Guardar cambios"}</Button>
-      </div>
-    </form>
+    <div className="grid gap-5">
+      <AdminPageHeader title={mode === "create" ? "Agregar cliente" : "Editar cliente"} description={customer ? getCustomerDisplayName(customer) : "Cargá datos personales y dirección de envío opcional."} tag="Clientes" backLink={{ href: cancelHref, label: "Volver", onNavigate: interceptNavigation }} />
+      <form className="mx-auto grid w-full max-w-4xl gap-5" noValidate onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
+        {submitError ? <div role="alert" className="rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale">{submitError}</div> : null}
+        <PersonalDataSection register={register} setValue={setValue} errors={errors} />
+        <AddressSection mode={mode} open={addressOpen} onToggle={() => setAddressOpen((current) => !current)} register={register} errors={errors} />
+        <FormActions>
+          <Button type="button" variant="secondary" onClick={() => interceptNavigation(cancelHref)}>Cancelar</Button>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : mode === "create" ? "Agregar" : "Guardar cambios"}</Button>
+        </FormActions>
+      </form>
+      {discardModal}
+    </div>
   );
 }

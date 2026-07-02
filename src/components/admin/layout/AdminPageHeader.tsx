@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
-import { LinkButton } from "@/components/ui/LinkButton";
+import { AdminPageHeaderBackLink } from "@/components/admin/layout/AdminPageHeaderBackLink";
 
 type AdminPageHeaderProps = {
   title: string;
   description: string;
   tag?: string;
-  backLink?: { href: string; label: string };
+  backLink?: { href: string; label: string; onNavigate?: (href: string) => void };
   children?: ReactNode;
 };
 
@@ -20,12 +19,7 @@ export function AdminPageHeader({ backLink, children, description, tag = "Produc
       </div>
       <div className="flex flex-wrap gap-2">
         {children}
-        {backLink ? (
-          <LinkButton href={backLink.href} variant="secondary" size="sm">
-            <ArrowLeft aria-hidden size={16} />
-            {backLink.label}
-          </LinkButton>
-        ) : null}
+        {backLink ? <AdminPageHeaderBackLink href={backLink.href} label={backLink.label} onNavigate={backLink.onNavigate} /> : null}
       </div>
     </header>
   );

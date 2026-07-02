@@ -13,7 +13,7 @@ export function DiscardChangesModal({ open, onClose, onConfirm }: DiscardChanges
       <div className="p-6">
         <h3 className="text-lg font-semibold text-zinc-950">¿Descartás los cambios?</h3>
         <p className="mt-2 text-sm text-zinc-500">Tenés cambios sin guardar. Si salís ahora, se perderán.</p>
-        <div className="mt-5 flex justify-end gap-3">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>Continuar editando</Button>
           <Button type="button" variant="danger" size="sm" onClick={onConfirm}>Descartar</Button>
         </div>

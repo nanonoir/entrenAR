@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import type { DiscountSelectOption } from "@/lib/data/admin/discounts/types";
 import { useAdminDiscountsStore } from "@/stores/admin-discounts-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type ShippingDiscountFormPageClientProps = {
   categoryOptions: DiscountSelectOption[];
@@ -28,8 +29,10 @@ export function ShippingDiscountFormPageClient({ categoryOptions, mode, shipping
   const deactivateShippingDiscount = useAdminDiscountsStore((state) => state.deactivateShippingDiscount);
   const deleteShippingDiscount = useAdminDiscountsStore((state) => state.deleteShippingDiscount);
   const addToast = useAdminToastStore((state) => state.addToast);
+  const [formDirty, setFormDirty] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty: formDirty });
 
   if (mode === "edit" && !shippingDiscount) {
     return (
@@ -63,14 +66,15 @@ export function ShippingDiscountFormPageClient({ categoryOptions, mode, shipping
 
   return (
     <div className="mx-auto grid w-full max-w-7xl min-w-0 gap-5 overflow-hidden">
-      <AdminPageHeader title={mode === "create" ? "Crear envío gratis" : "Editar envío gratis"} description={mode === "create" ? "Configurá medios, alcance, zonas y monto mínimo para la regla automática." : getShippingMethodsLabel(shippingDiscount!, shippingMethodOptions)} tag="Envío gratis" backLink={{ href: "/admin/descuentos/envio-gratis", label: "Volver a envío gratis" }}>
+      <AdminPageHeader title={mode === "create" ? "Crear envío gratis" : "Editar envío gratis"} description={mode === "create" ? "Configurá medios, alcance, zonas y monto mínimo para la regla automática." : getShippingMethodsLabel(shippingDiscount!, shippingMethodOptions)} tag="Envío gratis" backLink={{ href: "/admin/descuentos/envio-gratis", label: "Volver a envío gratis", onNavigate: interceptNavigation }}>
         {shippingDiscount ? <DiscountStatusBadge status={shippingDiscount.status} /> : null}
         {shippingDiscount ? <Button variant="secondary" size="sm" onClick={shippingDiscount.status === "active" ? () => setDeactivateOpen(true) : activate}>{shippingDiscount.status === "active" ? <PowerOff aria-hidden size={16} /> : <Power aria-hidden size={16} />}{shippingDiscount.status === "active" ? "Desactivar" : "Activar"}</Button> : null}
         {shippingDiscount ? <Button variant="secondary" size="sm" onClick={() => setDeleteOpen(true)}><Trash2 aria-hidden size={16} className="text-sale" />Eliminar</Button> : null}
       </AdminPageHeader>
-      <ShippingDiscountForm mode={mode} shippingDiscount={shippingDiscount} categoryOptions={categoryOptions} shippingMethodOptions={shippingMethodOptions} zoneOptions={zoneOptions} />
+      <ShippingDiscountForm mode={mode} shippingDiscount={shippingDiscount} categoryOptions={categoryOptions} shippingMethodOptions={shippingMethodOptions} zoneOptions={zoneOptions} onDirtyChange={setFormDirty} interceptNavigation={interceptNavigation} />
       <DeleteDiscountModal open={deleteOpen} title="¿Eliminar este envío gratis?" message="Recordá que podés desactivar el envío gratis sin eliminar esta configuración. Al eliminar, no podrás deshacer esta acción." confirmLabel="Eliminar" onClose={() => setDeleteOpen(false)} onConfirm={confirmDelete} />
       <DeleteDiscountModal open={deactivateOpen} title="¿Desactivar este envío gratis?" message="Al hacerlo, este descuento de envío dejará de estar disponible en la tienda." confirmLabel="Desactivar" onClose={() => setDeactivateOpen(false)} onConfirm={confirmDeactivate} />
+      {discardModal}
     </div>
   );
 }

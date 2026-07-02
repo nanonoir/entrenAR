@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { cn } from "@/lib/utils";
 import type { PaymentProviderDefinition } from "@/lib/data/admin/payment-methods";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type GatewayModalProps = {
   open: boolean;
@@ -19,6 +20,8 @@ type GatewayModalProps = {
 export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptionId }: GatewayModalProps) {
   const [currentOptionId, setCurrentOptionId] = useState(selectedOptionId ?? "");
   const addToast = useAdminToastStore((state) => state.addToast);
+  const isDirty = currentOptionId !== (selectedOptionId ?? "");
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
 
   if (!provider) return null;
 
@@ -30,8 +33,12 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
     onConfirm(currentOptionId);
   }
 
+  function requestClose() {
+    interceptNavigation(onClose);
+  }
+
   return (
-    <Modal className="max-w-2xl" onClose={onClose} open={open} title={`Configurar ${provider.name}`}>
+    <Modal className="max-w-2xl" onClose={requestClose} open={open} title={`Configurar ${provider.name}`}>
       <div className="grid gap-5 p-5 sm:p-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface p-2">
@@ -70,10 +77,11 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
         </fieldset>
 
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button onClick={onClose} type="button" variant="secondary">Cancelar</Button>
+          <Button onClick={requestClose} type="button" variant="secondary">Cancelar</Button>
           <Button onClick={handleConfirm} type="button">Confirmar</Button>
         </div>
       </div>
+      {discardModal}
     </Modal>
   );
 }

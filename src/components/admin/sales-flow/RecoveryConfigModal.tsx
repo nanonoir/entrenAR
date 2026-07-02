@@ -9,6 +9,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { useAdminAbandonedCartsStore } from "@/stores/admin-abandoned-carts-store";
 import { cn } from "@/lib/utils";
 import type { RecoveryTiming } from "@/lib/data/admin/sales-flow/types";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 const TIMING_OPTIONS: { value: RecoveryTiming; label: string; helper: string }[] = [
   { value: "6hs", label: "a las 6 horas", helper: "Primer recordatorio rápido para carritos recientes." },
@@ -25,12 +26,18 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
   const [timing, setTiming] = useState<RecoveryTiming>(config.timing);
   const [isActive, setIsActive] = useState(config.isActive);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const isDirty = timing !== config.timing || isActive !== config.isActive;
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
 
   function handleClose() {
     setTiming(config.timing);
     setIsActive(config.isActive);
     setSubmitAttempted(false);
     onClose();
+  }
+
+  function requestClose() {
+    interceptNavigation(handleClose);
   }
 
   function handleSave() {
@@ -41,7 +48,7 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Configuración de recuperación" className="max-w-2xl">
+    <Modal open={open} onClose={requestClose} title="Configuración de recuperación" className="max-w-2xl">
       <div className="grid gap-5 p-5 sm:p-6">
         <div>
           <div className="flex items-center gap-2 text-accent">
@@ -49,7 +56,7 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
             <p className="text-sm font-semibold uppercase tracking-[0.2em]">Carritos abandonados</p>
           </div>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">Configuración</h2>
-          <p className="mt-1 text-sm text-zinc-500">Definí si el recupero será automático o manual. Todo queda guardado solo en el mock local.</p>
+          <p className="mt-1 text-sm text-zinc-500">Definí si el recupero será automático o manual. Los cambios quedan disponibles para esta sesión administrativa.</p>
         </div>
 
         {submitAttempted && !timing && (
@@ -106,10 +113,11 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
         </LinkButton>
 
         <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
-          <Button variant="ghost" size="md" onClick={handleClose}>Cancelar</Button>
+          <Button variant="ghost" size="md" onClick={requestClose}>Cancelar</Button>
           <Button variant="primary" size="md" onClick={handleSave}>Guardar configuración</Button>
         </div>
       </div>
+      {discardModal}
     </Modal>
   );
 }
