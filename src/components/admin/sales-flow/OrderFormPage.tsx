@@ -4,15 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
+import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { orderFormSchema } from "@/components/admin/sales-flow/OrderFormSchema";
 import type { OrderFormInput, OrderFormValues } from "@/components/admin/sales-flow/OrderFormSchema";
 import { ProductSelectorDrawer } from "@/components/admin/sales-flow/ProductSelectorDrawer";
 import { CustomerSection } from "@/components/admin/sales-flow/order-form/CustomerSection";
-import { DiscardChangesModal } from "@/components/admin/sales-flow/order-form/DiscardChangesModal";
 import { GlobalFormError } from "@/components/admin/sales-flow/order-form/GlobalFormError";
 import { NotesSection } from "@/components/admin/sales-flow/order-form/NotesSection";
-import { OrderFormHeader } from "@/components/admin/sales-flow/order-form/OrderFormHeader";
 import { PaymentSection } from "@/components/admin/sales-flow/order-form/PaymentSection";
 import { ProductsSection } from "@/components/admin/sales-flow/order-form/ProductsSection";
 import { ShippingSection } from "@/components/admin/sales-flow/order-form/ShippingSection";
@@ -22,6 +23,7 @@ import { getProductErrorMessage, parseFormNumber } from "@/components/admin/sale
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { calculateTotals } from "@/lib/data/admin/sales-flow/helpers";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 type OrderFormPageProps = {
   mode: "create" | "edit";
@@ -32,7 +34,6 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
   const router = useRouter();
   const { createSale, createPurchaseOrder, updateSale } = useAdminSalesStore();
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingOpen, setShippingOpen] = useState(Boolean(existingSale?.shippingAddress));
@@ -69,23 +70,8 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
     parseFormNumber(watchedShippingCost),
   );
 
-  useEffect(() => {
-    function handleBeforeUnload(e: BeforeUnloadEvent) {
-      if (isDirty) e.preventDefault();
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
-
-  const handleCancel = useCallback(() => {
-    if (isDirty) setDiscardDialogOpen(true);
-    else router.back();
-  }, [isDirty, router]);
-
-  const handleConfirmDiscard = useCallback(() => {
-    setDiscardDialogOpen(false);
-    router.back();
-  }, [router]);
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
+  const handleCancel = useCallback(() => interceptNavigation(() => router.back()), [interceptNavigation, router]);
 
   const onSubmit = useCallback(
     async (data: OrderFormValues) => {
@@ -156,7 +142,12 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <OrderFormHeader mode={mode} saleNumber={existingSale?.number} isSubmitting={isSubmitting} submitLabel={submitLabel} onCancel={handleCancel} onSubmitClick={submitForm} />
+      <AdminPageHeader
+        title={mode === "create" ? "Nueva orden de compra" : `Editar venta ${existingSale?.number}`}
+        description="Cargá cliente, productos, envío y condiciones de pago."
+        tag="Ventas"
+        backLink={{ href: mode === "edit" && existingSale ? `/admin/ventas/${existingSale.id}` : "/admin/ventas", label: "Volver", onNavigate: () => handleCancel() }}
+      />
       <GlobalFormError message={submitError ?? (hasErrors ? "Revisá los campos marcados en rojo antes de continuar." : null)} />
 
       <form onSubmit={submitForm} noValidate className="grid gap-6">
@@ -167,14 +158,14 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
         <TotalsSummary subtotal={subtotal} discount={discount} shippingCost={parseFormNumber(watchedShippingCost)} total={total} />
         <NotesSection register={register} errors={errors} />
 
-        <div className="flex justify-end gap-3 pb-4">
+        <FormActions>
           <Button type="button" variant="secondary" size="md" onClick={handleCancel}>Cancelar</Button>
-          <Button type="submit" variant="primary" size="md" disabled={isSubmitting}>{isSubmitting ? "Guardando…" : submitLabel}</Button>
-        </div>
+          <Button type="submit" variant="primary" size="md" disabled={isSubmitting}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : submitLabel}</Button>
+        </FormActions>
       </form>
 
       <ProductSelectorDrawer open={productDrawerOpen} onClose={() => setProductDrawerOpen(false)} selectedProductIds={productFields.map((f) => f.productId)} onAdd={(products) => append(products)} />
-      <DiscardChangesModal open={discardDialogOpen} onClose={() => setDiscardDialogOpen(false)} onConfirm={handleConfirmDiscard} />
+      {discardModal}
     </div>
   );
 }
