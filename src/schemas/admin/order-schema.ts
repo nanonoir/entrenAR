@@ -72,6 +72,22 @@ export const orderFormSchema = z
       });
     }
 
+    if (data.discountType === "percentage" && (data.discountValue === undefined || data.discountValue < 1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discountValue"],
+        message: "Ingresá un descuento de al menos 1%",
+      });
+    }
+
+    if (data.discountType === "fixed" && (data.discountValue === undefined || data.discountValue < 1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discountValue"],
+        message: "Ingresá un descuento de al menos $1",
+      });
+    }
+
     if (data.discountType === "fixed" && data.discountValue !== undefined && data.discountValue > subtotal) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -19,6 +19,7 @@ type GatewayModalProps = {
 
 export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptionId }: GatewayModalProps) {
   const [currentOptionId, setCurrentOptionId] = useState(selectedOptionId ?? "");
+  const [selectionError, setSelectionError] = useState("");
   const addToast = useAdminToastStore((state) => state.addToast);
   const isDirty = currentOptionId !== (selectedOptionId ?? "");
   const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
@@ -27,9 +28,11 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
 
   function handleConfirm() {
     if (!currentOptionId) {
+      setSelectionError("Seleccioná un plazo de acreditación para continuar.");
       addToast("Debes seleccionar un plazo para activar este medio de pago.", "error");
       return;
     }
+    setSelectionError("");
     onConfirm(currentOptionId);
   }
 
@@ -50,13 +53,16 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
           </div>
         </div>
 
-        <fieldset className="grid gap-3">
+        <fieldset className="grid gap-3" aria-invalid={selectionError ? true : undefined} aria-describedby={selectionError ? "gateway-option-error" : "gateway-option-helper"}>
           <legend className="text-sm font-semibold text-text">Seleccioná un plazo de acreditación</legend>
+          <p id="gateway-option-helper" className="text-xs text-text-muted">El plazo define cuándo se acredita el pago en la cuenta de la tienda.</p>
+          {selectionError ? <p id="gateway-option-error" className="text-xs font-medium text-sale">{selectionError}</p> : null}
           {provider.options.map((option) => (
             <label
               className={cn(
                 "flex cursor-pointer gap-3 rounded-2xl border border-border p-4 transition hover:border-accent",
                 currentOptionId === option.id && "border-accent bg-accent-soft",
+                selectionError && "border-sale",
               )}
               key={option.id}
             >
@@ -65,7 +71,7 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
                 className="mt-1 h-4 w-4 shrink-0 accent-accent"
                 name="gateway-option"
                 onBlur={() => undefined}
-                onChange={() => setCurrentOptionId(option.id)}
+                onChange={() => { setCurrentOptionId(option.id); setSelectionError(""); }}
                 type="radio"
               />
               <span className="grid min-w-0 gap-1 text-sm sm:grid-cols-3 sm:gap-3">

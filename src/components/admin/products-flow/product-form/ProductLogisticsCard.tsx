@@ -26,7 +26,7 @@ export function ProductLogisticsCard({ categories, onOpenCategoryDrawer }: Produ
         <span className="font-medium">Categorías seleccionadas</span>
         <p id="product-categoryIds-helper" className="text-text-muted">{selectedCategories.length ? selectedCategories.map((category) => category.name).join(", ") : "Seleccioná una o más categorías para clasificar el producto."}</p>
         <Button type="button" size="sm" variant="secondary" className="w-fit" onClick={onOpenCategoryDrawer}>Seleccionar categorías</Button>
-        <div aria-invalid={errors.categoryIds ? true : undefined} aria-describedby={errors.categoryIds ? "product-categoryIds-error" : "product-categoryIds-helper"} data-error-section="categoryIds" />
+        <div aria-invalid={errors.categoryIds ? true : undefined} aria-describedby={errors.categoryIds ? "product-categoryIds-error" : "product-categoryIds-helper"} data-error-section="categoryIds" tabIndex={-1} />
         {errors.categoryIds?.message ? <p id="product-categoryIds-error" className="text-xs font-medium text-sale">{errors.categoryIds.message}</p> : null}
       </div>
       <fieldset className="grid gap-2" aria-describedby={errors.stockMode ? "product-stockMode-error" : undefined} aria-invalid={errors.stockMode ? true : undefined}>

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import { Mail, Settings } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { useAdminAbandonedCartsStore } from "@/stores/admin-abandoned-carts-store";
 import { cn } from "@/lib/utils";
 import type { RecoveryTiming } from "@/lib/data/admin/sales-flow/types";
@@ -20,19 +24,33 @@ const TIMING_OPTIONS: { value: RecoveryTiming; label: string; helper: string }[]
   { value: "manual", label: "Manual", helper: "No se programa envío automático; el admin decide cuándo contactar." },
 ];
 
+const recoveryConfigSchema = z.object({
+  isActive: z.boolean(),
+  timing: z.enum(["6hs", "24hs", "3_days", "7_days", "14_days", "manual"], { error: "Seleccioná un tiempo de envío" }),
+});
+
+type RecoveryConfigInput = z.input<typeof recoveryConfigSchema>;
+type RecoveryConfigValues = z.infer<typeof recoveryConfigSchema>;
+
 export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const config = useAdminAbandonedCartsStore((state) => state.config);
   const updateConfig = useAdminAbandonedCartsStore((state) => state.updateConfig);
-  const [timing, setTiming] = useState<RecoveryTiming>(config.timing);
-  const [isActive, setIsActive] = useState(config.isActive);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-  const isDirty = timing !== config.timing || isActive !== config.isActive;
+  const form = useForm<RecoveryConfigInput, unknown, RecoveryConfigValues>({
+    defaultValues: config,
+    mode: "onBlur",
+    resolver: zodResolver(recoveryConfigSchema),
+  });
+  const { errors, isDirty, isSubmitted, isSubmitting } = form.formState;
+  const timing = useWatch({ control: form.control, name: "timing" });
+  const isActive = useWatch({ control: form.control, name: "isActive" });
   const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
 
+  useEffect(() => {
+    if (open) form.reset(config);
+  }, [config, form, open]);
+
   function handleClose() {
-    setTiming(config.timing);
-    setIsActive(config.isActive);
-    setSubmitAttempted(false);
+    form.reset(config);
     onClose();
   }
 
@@ -40,16 +58,18 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
     interceptNavigation(handleClose);
   }
 
-  function handleSave() {
-    setSubmitAttempted(true);
-    if (!timing) return;
-    updateConfig({ timing, isActive });
+  function handleSave(values: RecoveryConfigValues) {
+    updateConfig(values);
     onClose();
+  }
+
+  function handleInvalidSubmit(formErrors: typeof errors) {
+    scrollToFirstError(formErrors, ["recovery-timing-section"]);
   }
 
   return (
     <Modal open={open} onClose={requestClose} title="Configuración de recuperación" className="max-w-2xl">
-      <div className="grid gap-5 p-5 sm:p-6">
+      <form className="grid gap-5 p-5 sm:p-6" noValidate onSubmit={form.handleSubmit(handleSave, handleInvalidSubmit)}>
         <div>
           <div className="flex items-center gap-2 text-accent">
             <Settings aria-hidden size={18} />
@@ -59,22 +79,23 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
           <p className="mt-1 text-sm text-zinc-500">Definí si el recupero será automático o manual. Los cambios quedan disponibles para esta sesión administrativa.</p>
         </div>
 
-        {submitAttempted && !timing && (
+        {isSubmitted && errors.timing ? (
           <div role="alert" className="rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale">
             Debes seleccionar un tiempo de envío para guardar la configuración.
           </div>
-        )}
+        ) : null}
 
         <Checkbox
           id="recovery-active"
           label="Activar envío automático"
           checked={isActive}
-          onChange={(event) => setIsActive(event.target.checked)}
+          {...form.register("isActive")}
         />
 
-        <fieldset className="grid gap-3">
+        <fieldset id="recovery-timing-section" className="grid gap-3" aria-invalid={errors.timing ? true : undefined} aria-describedby={errors.timing ? "recovery-timing-error" : "recovery-timing-helper"}>
           <legend className="text-sm font-semibold text-zinc-900">Tiempo de envío *</legend>
-          <p className="text-xs text-zinc-500">Elegí cuándo se prepara el mensaje de recuperación después de abandonar el carrito.</p>
+          <p id="recovery-timing-helper" className="text-xs text-zinc-500">Elegí cuándo se prepara el mensaje de recuperación después de abandonar el carrito.</p>
+          {errors.timing ? <p id="recovery-timing-error" className="text-xs font-medium text-sale">{errors.timing.message}</p> : null}
           <div className="grid gap-2 sm:grid-cols-2">
             {TIMING_OPTIONS.map((option) => {
               const checked = timing === option.value;
@@ -84,18 +105,16 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
                   className={cn(
                     "flex cursor-pointer gap-3 rounded-2xl border bg-white p-3 text-sm transition",
                     checked ? "border-accent bg-accent-soft/60" : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50",
-                    submitAttempted && !timing && "border-sale",
+                    errors.timing && "border-sale",
                   )}
                 >
                   <input
                     type="radio"
-                    name="recovery-timing"
                     value={option.value}
                     checked={checked}
-                    onChange={() => setTiming(option.value)}
                     aria-describedby={`timing-${option.value}-helper`}
-                    aria-invalid={submitAttempted && !timing ? true : undefined}
                     className="mt-1 rounded-full border-zinc-300 text-accent focus:ring-accent"
+                    {...form.register("timing")}
                   />
                   <span>
                     <span className="block font-semibold text-zinc-900">{option.label}</span>
@@ -113,10 +132,10 @@ export function RecoveryConfigModal({ open, onClose }: { open: boolean; onClose:
         </LinkButton>
 
         <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
-          <Button variant="ghost" size="md" onClick={requestClose}>Cancelar</Button>
-          <Button variant="primary" size="md" onClick={handleSave}>Guardar configuración</Button>
+          <Button variant="ghost" size="md" type="button" onClick={requestClose}>Cancelar</Button>
+          <Button variant="primary" size="md" type="submit" disabled={isSubmitting}>Guardar configuración</Button>
         </div>
-      </div>
+      </form>
       {discardModal}
     </Modal>
   );

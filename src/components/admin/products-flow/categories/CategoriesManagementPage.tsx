@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -36,7 +36,6 @@ export function CategoriesManagementPage({ categories: initialCategories }: Cate
           <p className="mt-1 text-sm text-zinc-500">Administrá categorías y subcategorías sin sincronización pública garantizada.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm"><HelpCircle aria-hidden size={16} />Ayuda</Button>
           <Button size="sm" onClick={() => setCreatingParentId("")}><Plus aria-hidden size={16} />Crear categoría</Button>
         </div>
       </header>

@@ -22,10 +22,10 @@ export function CouponTypeSection() {
         }}
       />
       {discountType === "percentage" ? (
-        <Input id="coupon-percentage" label="¿Cuál es el porcentaje de descuento?" trailingLabel="%" type="number" inputMode="decimal" helperText="Debe ser mayor a 0 y no superar el 100%." errorText={errors.discountValue?.message} {...register("discountValue", { valueAsNumber: true })} />
+        <Input id="coupon-percentage" label="¿Cuál es el porcentaje de descuento?" trailingLabel="%" type="number" inputMode="decimal" helperText="Debe ser al menos 1% y no superar el 100%." errorText={errors.discountValue?.message} {...register("discountValue", { valueAsNumber: true })} />
       ) : null}
       {discountType === "fixed" ? (
-        <Input id="coupon-fixed" label="Monto fijo" trailingLabel="$" type="number" inputMode="decimal" helperText="Ingresá el monto de descuento en pesos." errorText={errors.discountValue?.message} {...register("discountValue", { valueAsNumber: true })} />
+        <Input id="coupon-fixed" label="Monto fijo" trailingLabel="$" type="number" inputMode="decimal" helperText="Ingresá un monto de al menos $1." errorText={errors.discountValue?.message} {...register("discountValue", { valueAsNumber: true })} />
       ) : null}
       {discountType === "free_shipping" ? <p className="rounded-2xl bg-accent-soft p-3 text-sm text-accent-hover">El cupón de envío gratis usa código y conserva las reglas generales de cupón. No solicita monto, porcentaje ni medios de envío.</p> : null}
       {discountType !== "free_shipping" ? <Checkbox id="include-shipping" label="Incluir el costo de envío en el descuento" {...register("includeShippingCost")} /> : null}

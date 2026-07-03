@@ -162,7 +162,6 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
     if (formErrors.name) setFocus("name");
     else if (formErrors.sku) setFocus("sku");
     else if (formErrors.salePrice) setFocus("salePrice");
-    else if (formErrors.categoryIds) setFocus("name");
   }
 
   const submitForm = handleSubmit(onSubmit, onInvalid);
