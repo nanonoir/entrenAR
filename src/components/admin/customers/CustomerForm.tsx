@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { AddressSection } from "@/components/admin/customers/AddressSection";
 import { PersonalDataSection } from "@/components/admin/customers/PersonalDataSection";
 import type { Customer } from "@/lib/data/admin/customers/types";
@@ -69,7 +70,7 @@ export function CustomerForm({ customer, mode }: CustomerFormProps) {
     const hasPersonalErrors = Boolean(formErrors.fullName || formErrors.email || formErrors.phone || formErrors.dniOrCuil);
     const firstSectionId = hasPersonalErrors ? "customer-personal-section" : "customer-address-section";
     if (!hasPersonalErrors) setAddressOpen(true);
-    document.getElementById(firstSectionId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollToFirstError(formErrors, [firstSectionId]);
     setSubmitError("Debes completar todos los campos obligatorios correctamente.");
     if (formErrors.fullName) setFocus("fullName");
     else if (formErrors.email) setFocus("email");

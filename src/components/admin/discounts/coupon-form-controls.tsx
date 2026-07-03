@@ -20,10 +20,12 @@ export function CouponTextInput({ helperText, label, name, type = "text", inputM
 }
 
 export function RadioPillGroup({ label, name, options, onChange }: { label: string; name: FieldPath<CouponFormInput>; options: { label: string; value: string }[]; onChange?: (value: string) => void }) {
-  const { register } = useFormContext<CouponFormInput>();
+  const { formState: { errors }, register } = useFormContext<CouponFormInput>();
   const id = useId();
+  const error = (errors as Record<string, { message?: unknown }>)[name]?.message;
+  const errorId = `${id}-error`;
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid gap-2" aria-describedby={typeof error === "string" ? errorId : undefined} aria-invalid={typeof error === "string" ? true : undefined}>
       <legend className="text-sm font-semibold text-text">{label}</legend>
       <div className="grid gap-2 sm:grid-cols-3">
         {options.map((option) => (
@@ -33,6 +35,7 @@ export function RadioPillGroup({ label, name, options, onChange }: { label: stri
           </label>
         ))}
       </div>
+      {typeof error === "string" ? <p id={errorId} className="text-xs font-medium text-sale">{error}</p> : null}
     </fieldset>
   );
 }

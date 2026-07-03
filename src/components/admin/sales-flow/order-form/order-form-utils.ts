@@ -1,11 +1,19 @@
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import type { Path, PathValue, UseFormSetValue } from "react-hook-form";
 
 export function parseFormNumber(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value !== "string") return 0;
-  const parsed = Number(value.replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return Number.NaN;
+
+  const normalized = value.trim().replace(",", ".");
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return Number.NaN;
+
+  return Number(normalized);
+}
+
+export function safeFormNumber(value: unknown, fallback = 0): number {
+  const parsed = parseFormNumber(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 export function sanitizeName(value: string): string {

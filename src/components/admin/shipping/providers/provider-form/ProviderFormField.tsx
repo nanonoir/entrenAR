@@ -29,6 +29,10 @@ export function FieldError({ message }: { message?: string }) {
 
 export function SelectField({ children, label, name }: { name: FieldPath<ProviderFormInput>; label: string; children: React.ReactNode }) {
   const id = useId();
-  const { register } = useFormContext<ProviderFormInput>();
-  return <label className="grid gap-2 text-sm font-medium text-text" htmlFor={id}><span>{label}</span><select id={id} className={cn("h-11 w-full rounded-button border border-border bg-surface px-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm")} {...register(name)}>{children}</select></label>;
+  const { formState: { errors }, register } = useFormContext<ProviderFormInput>();
+  const error = name.split(".").reduce<unknown>((current, key) => current && typeof current === "object" ? (current as Record<string, unknown>)[key] : undefined, errors);
+  const message = typeof error === "object" && error && "message" in error ? String((error as { message?: string }).message) : undefined;
+  const helperId = `${id}-helper`;
+  const errorId = `${id}-error`;
+  return <label className="grid gap-2 text-sm font-medium text-text" htmlFor={id}><span>{label}</span><select id={id} aria-describedby={message ? errorId : helperId} aria-invalid={message ? true : undefined} className={cn("h-11 w-full rounded-button border border-border bg-surface px-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm", message && "border-sale focus:border-sale focus:ring-sale/20")} {...register(name)}>{children}</select>{message ? <span id={errorId} className="text-xs font-medium text-sale">{message}</span> : <span id={helperId} className="text-xs text-text-muted">Seleccioná una opción.</span>}</label>;
 }

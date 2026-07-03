@@ -1,5 +1,5 @@
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
-import type { OrderFormInput } from "@/components/admin/sales-flow/OrderFormSchema";
+import type { OrderFormInput } from "@/schemas/admin/order-schema";
 import { Input } from "@/components/ui/Input";
 
 type NotesSectionProps = {

@@ -8,6 +8,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
+import { scrollToFirstError } from "@/components/admin/utils/scroll-to-error";
 import { CouponLimitsSection } from "@/components/admin/discounts/CouponLimitsSection";
 import { CouponScopeSection } from "@/components/admin/discounts/CouponScopeSection";
 import { CouponTypeSection } from "@/components/admin/discounts/CouponTypeSection";
@@ -83,12 +84,12 @@ export function CouponForm({ categoryOptions, coupon, interceptNavigation, mode,
   const onInvalid = useCallback((formErrors: typeof errors) => {
     setSubmitError("Debes completar todos los campos obligatorios correctamente.");
     if (formErrors.code) {
-      document.getElementById("coupon-code-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      scrollToFirstError(formErrors, ["coupon-code-section"]);
       setFocus("code");
       return;
     }
     const firstSection = formErrors.discountValue ? "coupon-type-section" : formErrors.categoryIds || formErrors.productIds ? "coupon-scope-section" : "coupon-limits-section";
-    document.getElementById(firstSection)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollToFirstError(formErrors, [firstSection]);
   }, [setFocus]);
 
   return (
