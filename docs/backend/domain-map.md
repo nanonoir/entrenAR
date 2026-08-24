@@ -23,7 +23,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - `slug` (Admin) and `publicSlug` (Public) must be globally unique.
 - A Category cannot be its own ancestor/descendant (cycle prevention).
 - Category deletion fails (`CATEGORY_IN_USE`) if any product references it or its descendants.
-**Cross-Domain Dependencies:** 
+**Cross-Domain Dependencies:**
 - Used by Checkout (Quote validation) and Inventory.
 
 ### 2.2 Inventory Module (`backend/src/modules/inventory/`)
