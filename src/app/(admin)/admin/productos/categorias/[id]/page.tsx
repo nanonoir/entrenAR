@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
 import { CategoryEditPage } from "@/components/admin/products-flow/categories/CategoryEditPage";
-import { getAdminProductCategories, getAdminProductCategoryById } from "@/lib/data/admin/sales-flow/mock-products";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 export default async function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [categories, category] = await Promise.all([
-    getAdminProductCategories(),
-    getAdminProductCategoryById(id),
-  ]);
+  const catalog = getCatalogRepository();
+  const categories = catalogData(await catalog.getAdminCategories(), []);
+  const category = categories.find((item) => item.id === id);
 
   if (!category) notFound();
 

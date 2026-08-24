@@ -7,9 +7,9 @@ import type {
   ProductListingSortOption,
   ProductListingSortValue,
 } from "@/types/product-listing";
-import { getCategoryBySlug, getCategories } from "@/lib/data/categories";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { getShopNavItems } from "@/lib/data/navigation";
-import { getAllProductDetails } from "@/lib/data/products";
+import type { CategoryNavItem } from "@/types/navigation";
 
 type SearchParamsInput = Record<string, string | string[] | undefined>;
 
@@ -124,6 +124,7 @@ function resolveListingContext(
   segments: string[],
   searchParams: SearchParamsInput,
   products: ProductDetail[],
+  categories: CategoryNavItem[],
 ): ResolvedListingContext | null {
   const [section, firstSlug, secondSlug] = segments;
   const routePath = `/${segments.join("/")}`;
@@ -195,7 +196,9 @@ function resolveListingContext(
       return null;
     }
 
-    const category = group.productCategorySlug ? getCategoryBySlug(group.productCategorySlug) : undefined;
+    const category = group.productCategorySlug
+      ? categories.find((item) => item.slug === group.productCategorySlug)
+      : undefined;
     const baseProducts = group.productCategorySlug
       ? products.filter((product) => product.categorySlug === group.productCategorySlug)
       : [];
@@ -303,16 +306,16 @@ function getSegmentSubcategoryLinks(segment: string) {
     ?.links ?? [];
 }
 
-function createCategoryOptions(products: ProductDetail[]) {
-  const categoryLabels = new Map(getCategories().map((category) => [category.slug, category.label]));
-  const categories = createOptionCounts(products, (product) => [
+function createCategoryOptions(products: ProductDetail[], categories: CategoryNavItem[]) {
+  const categoryLabels = new Map(categories.map((category) => [category.slug, category.label]));
+  const categoryOptions = createOptionCounts(products, (product) => [
     {
       id: product.categorySlug,
       label: categoryLabels.get(product.categorySlug) ?? product.categoryName,
     },
   ]);
 
-  return categories.map((category) => {
+  return categoryOptions.map((category) => {
     const categoryProducts = products.filter((product) => product.categorySlug === category.id);
     const seenSubcategories = new Set<string>();
     const children = getCategorySubcategoryLinks(category.id)
@@ -382,12 +385,13 @@ function createSubcategoryOptions(context: ProductListingContext, products: Prod
 function createFilterGroups(
   context: ProductListingContext,
   products: ProductDetail[],
+  categories: CategoryNavItem[],
 ): ProductListingFilterGroup[] {
   const groups: ProductListingFilterGroup[] = [];
   const hasRouteCategoryContext = Boolean(context.categorySlug || context.categorySegment);
   const categoryOptions = hasRouteCategoryContext
     ? createSubcategoryOptions(context, products)
-    : createCategoryOptions(products);
+    : createCategoryOptions(products, categories);
 
   if (categoryOptions.length > 0) {
     groups.push({
@@ -472,12 +476,18 @@ function getPriceBounds(products: ProductDetail[]) {
   };
 }
 
-export function resolveProductListing(
+export async function resolveProductListing(
   segments: string[],
   searchParams: SearchParamsInput = {},
-): ProductListingResult | null {
-  const allProducts = getAllProductDetails();
-  const resolvedContext = resolveListingContext(segments, searchParams, allProducts);
+): Promise<ProductListingResult | null> {
+  const catalog = getCatalogRepository();
+  const [productsResult, categoriesResult] = await Promise.all([
+    catalog.getPublicProducts(),
+    catalog.getPublicCategories(),
+  ]);
+  const allProducts = catalogData(productsResult, []);
+  const categories = catalogData(categoriesResult, []);
+  const resolvedContext = resolveListingContext(segments, searchParams, allProducts, categories);
 
   if (!resolvedContext) {
     return null;
@@ -493,7 +503,7 @@ export function resolveProductListing(
     products: sortedProducts,
     totalCount: sortedProducts.length,
     filterState,
-    filterGroups: createFilterGroups(context, filterProducts ?? baseProducts),
+    filterGroups: createFilterGroups(context, filterProducts ?? baseProducts, categories),
     sortOptions: productListingSortOptions,
     priceBounds: getPriceBounds(baseProducts),
   };

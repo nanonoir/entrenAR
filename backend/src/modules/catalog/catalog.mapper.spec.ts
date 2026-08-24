@@ -19,6 +19,8 @@ describe("catalog mappers", () => {
     expect(admin.variantCombinations[0]?.price).toBe(19.99);
     expect(publicProduct.slug).toBe("storefront-product");
     expect(publicProduct.price).toBe(19.99);
+    expect(publicProduct.categorySlug).toBe("cat-1");
+    expect(publicProduct.description).toBe("Catalog product description.");
     expect(publicProduct.variants[0]?.price).toBe(19.99);
     expect(Number.isFinite(publicProduct.price)).toBe(true);
   });

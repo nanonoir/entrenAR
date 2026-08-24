@@ -1,8 +1,8 @@
 import { InventoryPage } from "@/components/admin/products-flow/inventory/InventoryPage";
-import { getAdminProducts } from "@/lib/data/admin/sales-flow/mock-products";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 export default async function ProductInventoryPage() {
-  const products = await getAdminProducts();
+  const products = catalogData(await getCatalogRepository().getAdminProducts(), []);
 
   return <InventoryPage products={products} />;
 }

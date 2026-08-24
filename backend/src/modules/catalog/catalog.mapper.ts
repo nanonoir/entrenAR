@@ -99,16 +99,28 @@ export interface AdminCatalogVariant {
 }
 
 export interface PublicCatalogProduct {
+  brand: string;
+  categoryName: string;
+  categorySlug: string;
   compareAtPrice?: number;
+  description: string;
   id: string;
+  imageTone?: string;
+  isBestSeller: boolean;
+  isFeatured: boolean;
   name: string;
   price: number;
+  shortDescription: string;
   slug: string;
   stock: number;
+  subcategorySlugs: string[];
+  tags: string[];
   variants: PublicCatalogVariant[];
+  variantProperties: unknown[];
 }
 
 export interface PublicCatalogVariant {
+  compareAtPrice?: number;
   id: string;
   label: string;
   optionValues: Record<string, string>;
@@ -159,21 +171,35 @@ export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProd
 
 export function toPublicCatalogProduct(product: CatalogProduct): PublicCatalogProduct {
   const productPrice = decimalToNumber(product.salePrice);
+  const categories = [...product.categories].sort((left, right) => left.category.id.localeCompare(right.category.id));
+  const primaryCategory = categories[0]?.category;
 
   return {
+    brand: product.brand ?? "EntrenAR",
+    categoryName: primaryCategory?.name ?? "Uncategorized",
+    categorySlug: primaryCategory?.slug ?? "uncategorized",
     ...(product.compareAtPrice ? { compareAtPrice: decimalToNumber(product.compareAtPrice) } : {}),
+    description: product.description ?? product.shortDescription ?? product.name,
     id: product.id,
+    ...(product.imageTone ? { imageTone: product.imageTone } : {}),
+    isBestSeller: product.isBestSeller,
+    isFeatured: product.isFeatured,
     name: product.name,
     price: productPrice,
+    shortDescription: product.shortDescription ?? product.description ?? product.name,
     slug: product.publicSlug,
     stock: toPublicStockNumber({ quantity: product.quantity, stockMode: product.stockMode }),
+    subcategorySlugs: stringArray(product.subcategorySlugs),
+    tags: stringArray(product.tags),
     variants: product.variants.map((variant) => ({
+      ...(variant.compareAtPrice ? { compareAtPrice: decimalToNumber(variant.compareAtPrice) } : {}),
       id: variant.id,
       label: variant.name,
       optionValues: stringRecord(variant.attributes),
       price: variant.price ? decimalToNumber(variant.price) : productPrice,
       stock: toPublicStockNumber({ quantity: variant.quantity, stockMode: variant.stockMode }),
     })),
+    variantProperties: unknownArray(product.variantProperties),
   };
 }
 

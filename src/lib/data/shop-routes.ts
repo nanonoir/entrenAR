@@ -1,11 +1,5 @@
 import type { ProductDetail, ProductSummary } from "@/types/product";
-import {
-  getAllProducts,
-  getFeaturedProducts,
-  getProductBySlug,
-  getProductsByCategory,
-} from "@/lib/data/products";
-import { getCategoryBySlug } from "@/lib/data/categories";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 type ProductRoute = {
   type: "product";
@@ -77,33 +71,47 @@ function listingRoute(title: string, description: string, products: ProductSumma
   };
 }
 
-export function resolveShopRoute(segments: string[]): ShopRouteResolution {
+export async function resolveShopRoute(segments: string[]): Promise<ShopRouteResolution> {
   const [section, firstSlug, secondSlug] = segments;
+  const catalog = getCatalogRepository();
 
   if (section === "productos" && firstSlug && !secondSlug) {
-    const product = getProductBySlug(firstSlug);
+    const [productResult, productsResult] = await Promise.all([
+      catalog.getPublicProductBySlug(firstSlug),
+      catalog.getPublicProducts(),
+    ]);
+    const product = catalogData(productResult, null);
 
     if (!product) {
       return { type: "not-found" };
     }
 
+    const products = catalogData(productsResult, []);
+
     return {
       type: "product",
       product,
-      related: getFeaturedProducts().filter((item) => item.id !== product.id).slice(0, 4),
+      related: products.filter((item) => item.isFeatured && item.id !== product.id).slice(0, 4),
     };
   }
 
+  const [productsResult, categoriesResult] = await Promise.all([
+    catalog.getPublicProducts(),
+    catalog.getPublicCategories(),
+  ]);
+  const products = catalogData(productsResult, []);
+  const categories = catalogData(categoriesResult, []);
+
   if (section === "suplementos") {
     if (!firstSlug) {
-      const products = getAllProducts().filter((product) =>
+      const categoryProducts = products.filter((product) =>
         ["proteinas", "creatina-y-pre", "vitaminas"].includes(product.categorySlug),
       );
 
       return listingRoute(
         "Suplementos",
         "Proteínas, creatina, vitaminas y soporte para tu rutina de entrenamiento.",
-        products,
+        categoryProducts,
       );
     }
 
@@ -113,38 +121,38 @@ export function resolveShopRoute(segments: string[]): ShopRouteResolution {
       return { type: "not-found" };
     }
 
-    const category = getCategoryBySlug(categorySlug);
-    const products = getProductsByCategory(categorySlug);
+    const category = categories.find((item) => item.slug === categorySlug);
+    const categoryProducts = products.filter((product) => product.categorySlug === categorySlug);
 
     return listingRoute(
       category?.label ?? firstSlug,
       category?.description ?? "Productos seleccionados para tu entrenamiento.",
-      products,
+      categoryProducts,
     );
   }
 
   if (section === "ofertas" && !firstSlug) {
-    const products = getAllProducts().filter((product) => product.compareAtPrice && product.compareAtPrice > product.price);
+    const offerProducts = products.filter((product) => product.compareAtPrice && product.compareAtPrice > product.price);
 
-    return listingRoute("Ofertas", "Productos con precio especial por tiempo limitado.", products);
+    return listingRoute("Ofertas", "Productos con precio especial por tiempo limitado.", offerProducts);
   }
 
   if (section === "marcas" && firstSlug && !secondSlug) {
-    const products = getAllProducts().filter((product) => slugify(product.brand) === firstSlug);
+    const brandProducts = products.filter((product) => slugify(product.brand) === firstSlug);
 
-    if (products.length === 0) {
+    if (brandProducts.length === 0) {
       return { type: "not-found" };
     }
 
-    return listingRoute(products[0]?.brand ?? "Marca", "Productos disponibles de la marca seleccionada.", products);
+    return listingRoute(brandProducts[0]?.brand ?? "Marca", "Productos disponibles de la marca seleccionada.", brandProducts);
   }
 
   const simpleCategory = simpleCategoryBySegment[section];
 
   if (simpleCategory && (!firstSlug || section === "market" || section === "indumentaria")) {
-    const products = getProductsByCategory(simpleCategory.categorySlug);
+    const categoryProducts = products.filter((product) => product.categorySlug === simpleCategory.categorySlug);
 
-    return listingRoute(simpleCategory.title, simpleCategory.description, products);
+    return listingRoute(simpleCategory.title, simpleCategory.description, categoryProducts);
   }
 
   return { type: "not-found" };
