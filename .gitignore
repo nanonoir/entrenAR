@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# EntrenAR backend generated Prisma client
+backend/node_modules/
+backend/dist/
+backend/src/generated/prisma/
+
 # production
 /build
 
