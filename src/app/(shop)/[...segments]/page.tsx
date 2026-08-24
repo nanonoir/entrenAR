@@ -17,7 +17,7 @@ type CatchAllShopPageProps = {
 export default async function CatchAllShopPage({ params, searchParams }: CatchAllShopPageProps) {
   const { segments } = await params;
   const resolvedSearchParams = await searchParams;
-  const route = resolveShopRoute(segments);
+  const route = await resolveShopRoute(segments);
 
   if (route.type === "product") {
     const { product, related } = route;
@@ -44,7 +44,7 @@ export default async function CatchAllShopPage({ params, searchParams }: CatchAl
     );
   }
 
-  const listing = resolveProductListing(segments, resolvedSearchParams);
+  const listing = await resolveProductListing(segments, resolvedSearchParams);
 
   if (!listing) {
     notFound();

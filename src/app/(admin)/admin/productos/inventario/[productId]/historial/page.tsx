@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { InventoryHistoryPage } from "@/components/admin/products-flow/inventory/InventoryHistoryPage";
-import { getAdminProductById } from "@/lib/data/admin/sales-flow/mock-products";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 export default async function StockHistoryRoute({ params }: { params: Promise<{ productId: string }> }) {
   const { productId } = await params;
-  const product = await getAdminProductById(productId);
+  const product = catalogData(await getCatalogRepository().getAdminProductById(productId), null);
 
   if (!product) notFound();
 

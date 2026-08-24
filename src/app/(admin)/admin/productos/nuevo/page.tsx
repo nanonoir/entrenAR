@@ -1,8 +1,8 @@
 import { ProductCreateFormPage } from "@/components/admin/products-flow/ProductCreateFormPage";
-import { getAdminProductCategories } from "@/lib/data/admin/sales-flow/mock-products";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 export default async function NewProductPage() {
-  const categories = await getAdminProductCategories();
+  const categories = catalogData(await getCatalogRepository().getAdminCategories(), []);
 
   return <ProductCreateFormPage categories={categories} />;
 }

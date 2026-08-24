@@ -1,8 +1,7 @@
-// Mock client-safe para el flujo visual estático. Reemplazar por una API cuando el backend esté implementado.
-import { getAllProductDetails, getProductBySlug } from "@/lib/data/products";
+import { getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import type { QuickBuyProduct } from "@/types/product";
 
-function toQuickBuyProduct(product: NonNullable<ReturnType<typeof getProductBySlug>>): QuickBuyProduct {
+function toQuickBuyProduct(product: QuickBuyProduct): QuickBuyProduct {
   return {
     id: product.id,
     slug: product.slug,
@@ -18,13 +17,13 @@ function toQuickBuyProduct(product: NonNullable<ReturnType<typeof getProductBySl
 }
 
 export async function getQuickBuyProductBySlug(slug: string): Promise<QuickBuyProduct | null> {
-  const product = getProductBySlug(slug);
+  const result = await getCatalogRepository().getPublicProductBySlug(slug);
 
-  if (!product) {
+  if (result.status !== "success") {
     return null;
   }
 
-  return toQuickBuyProduct(product);
+  return toQuickBuyProduct(result.data);
 }
 
 export async function getQuickBuyOfferProducts(excludedProductIds?: string | string[]): Promise<QuickBuyProduct[]> {
@@ -36,7 +35,10 @@ export async function getQuickBuyOfferProducts(excludedProductIds?: string | str
         : [],
   );
 
-  return getAllProductDetails()
+  const result = await getCatalogRepository().getPublicProducts();
+  const products = result.status === "success" || result.status === "empty" ? result.data : [];
+
+  return products
     .filter((product) => !excludedIds.has(product.id))
     .filter((product) => product.compareAtPrice && product.compareAtPrice > product.price)
     .slice(0, 12)

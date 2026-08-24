@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation";
 import { ProductCreateFormPage } from "@/components/admin/products-flow/ProductCreateFormPage";
-import { getAdminProductById, getAdminProductCategories } from "@/lib/data/admin/sales-flow/mock-products";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [categories, product] = await Promise.all([
-    getAdminProductCategories(),
-    getAdminProductById(id),
+  const catalog = getCatalogRepository();
+  const [categoriesResult, productResult] = await Promise.all([
+    catalog.getAdminCategories(),
+    catalog.getAdminProductById(id),
   ]);
+  const categories = catalogData(categoriesResult, []);
+  const product = catalogData(productResult, null);
 
   if (!product) notFound();
 

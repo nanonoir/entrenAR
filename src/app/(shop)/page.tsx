@@ -5,12 +5,14 @@ import { HomeCategoryCard } from "@/components/shop/home/HomeCategoryCard";
 import { HorizontalProductScroller } from "@/components/shop/products/HorizontalProductScroller";
 import { ProductCard } from "@/components/shop/products/ProductCard";
 import { QuickBuyController } from "@/components/shop/quick-buy/QuickBuyController";
+import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { getHeroBanners, getHomeCategoryCards } from "@/lib/data/home";
-import { getBestSellerProductDetails } from "@/lib/data/products";
 
-export default function HomePage() {
+export default async function HomePage() {
   const homeCategoryCards = getHomeCategoryCards();
-  const bestSellerProducts = getBestSellerProductDetails();
+  const bestSellerProducts = catalogData(await getCatalogRepository().getPublicProducts(), []).filter(
+    (product) => product.isBestSeller,
+  );
   const heroBanners = getHeroBanners();
 
   return (
