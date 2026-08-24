@@ -1,10 +1,54 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { getCatalogDataSource } from "@/lib/api/config";
 import { CatalogApiRepository } from "@/lib/api/catalog/catalog-api.repository";
 import { CatalogApiError } from "@/lib/api/catalog/client";
 import { catalogLoading, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { resolveShopRoute } from "@/lib/data/shop-routes";
 import { resolveProductListing } from "@/lib/product-listing";
 
+const migratedCatalogReadPaths = [
+  "src/app/(admin)/admin/productos/[id]/page.tsx",
+  "src/app/(admin)/admin/productos/categorias/[id]/page.tsx",
+  "src/app/(admin)/admin/productos/categorias/page.tsx",
+  "src/app/(admin)/admin/productos/inventario/[productId]/historial/page.tsx",
+  "src/app/(admin)/admin/productos/inventario/page.tsx",
+  "src/app/(admin)/admin/productos/nuevo/page.tsx",
+  "src/app/(admin)/admin/productos/page.tsx",
+  "src/app/(shop)/page.tsx",
+  "src/lib/data/shop-routes.ts",
+  "src/lib/product-listing.ts",
+  "src/lib/quick-buy-products.ts",
+] as const;
+
+const directCatalogMockImport = /from\s+["']@\/lib\/data\/(?:products|categories|admin\/sales-flow\/mock-products)["']/;
+
+async function assertMockRemovalGuard(): Promise<void> {
+  if (getCatalogDataSource() !== "mock" || getCatalogRepository() !== getCatalogRepository("mock")) {
+    throw new Error("Catalog mock source must remain the default.");
+  }
+
+  if (getCatalogRepository("api") === getCatalogRepository("mock")) {
+    throw new Error("Catalog API source must require explicit selection.");
+  }
+
+  const sources = await Promise.all(
+    migratedCatalogReadPaths.map(async (path) => ({
+      path,
+      source: await readFile(resolve(process.cwd(), path), "utf8"),
+    })),
+  );
+
+  for (const { path, source } of sources) {
+    if (!source.includes("getCatalogRepository") || directCatalogMockImport.test(source)) {
+      throw new Error(`Migrated catalog read path bypasses the repository: ${path}`);
+    }
+  }
+}
+
 async function run(): Promise<void> {
+  await assertMockRemovalGuard();
+
   const mock = getCatalogRepository("mock");
   const mockDetail = await mock.getPublicProductBySlug("whey-protein-isolate-900g");
 
@@ -147,7 +191,7 @@ async function run(): Promise<void> {
     throw new Error("Repository-backed public route mapping failed.");
   }
 
-  console.log("catalog adapter harness: mock URL, public/admin Decimal and stock mappings, history, route reads, loading, empty, and error states passed");
+  console.log("catalog adapter harness: mock default/API opt-in, repository-bound reads, public/admin Decimal and stock mappings, history, route reads, loading, empty, and error states passed");
 }
 
 void run();
