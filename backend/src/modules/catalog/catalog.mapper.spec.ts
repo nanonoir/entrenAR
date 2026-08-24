@@ -1,3 +1,4 @@
+import { PUBLIC_INFINITE_STOCK } from "../inventory/inventory.mapper";
 import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
 import {
   toAdminCatalogProduct,
@@ -34,6 +35,21 @@ describe("catalog mappers", () => {
       { id: "visible-a", name: "visible-a", slug: "visible-a" },
       { id: "visible-b", name: "visible-b", slug: "visible-b" },
     ]);
+  });
+
+  it("maps infinite stock to the numeric public contract without exposing stock mode", () => {
+    const product = fixtureProduct();
+    product.stockMode = StockMode.INFINITE;
+    product.quantity = null;
+    product.variants[0]!.stockMode = StockMode.INFINITE;
+    product.variants[0]!.quantity = null;
+
+    const publicProduct = toPublicCatalogProduct(product);
+
+    expect(publicProduct.stock).toBe(PUBLIC_INFINITE_STOCK);
+    expect(publicProduct.variants[0]?.stock).toBe(PUBLIC_INFINITE_STOCK);
+    expect(publicProduct).not.toHaveProperty("stockMode");
+    expect(Number.isFinite(publicProduct.stock)).toBe(true);
   });
 });
 

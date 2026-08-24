@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { CATALOG_STOCK_MODE, CATALOG_VISIBILITY } from "./catalog.constants";
+import {
+  CATALOG_ADMIN_PRODUCT_SORT,
+  CATALOG_PUBLIC_PRODUCT_SORT,
+  CATALOG_STOCK_MODE,
+  CATALOG_VISIBILITY,
+} from "./catalog.constants";
 
 const catalogVisibilityValues = Object.values(CATALOG_VISIBILITY) as [
   (typeof CATALOG_VISIBILITY)[keyof typeof CATALOG_VISIBILITY],
@@ -11,7 +16,7 @@ const catalogStockModeValues = Object.values(CATALOG_STOCK_MODE) as [
   ...(typeof CATALOG_STOCK_MODE)[keyof typeof CATALOG_STOCK_MODE][],
 ];
 
-const identifierSchema = z.string().trim().min(1).max(128);
+export const identifierSchema = z.string().trim().min(1).max(128);
 const optionalTextSchema = z.string().trim().min(1).max(500).optional();
 const optionalSlugSchema = z.string().trim().min(1).max(160).optional();
 const moneySchema = z.number().finite().positive().multipleOf(0.01);
@@ -143,10 +148,68 @@ export const categoryCreateSchema = z.object({
 
 export const categoryUpdateSchema = categoryCreateSchema.extend({ id: identifierSchema }).strict();
 
+const paginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+}).strict();
+
+const catalogAdminProductSortValues = Object.values(CATALOG_ADMIN_PRODUCT_SORT) as [
+  (typeof CATALOG_ADMIN_PRODUCT_SORT)[keyof typeof CATALOG_ADMIN_PRODUCT_SORT],
+  ...(typeof CATALOG_ADMIN_PRODUCT_SORT)[keyof typeof CATALOG_ADMIN_PRODUCT_SORT][],
+];
+const catalogPublicProductSortValues = Object.values(CATALOG_PUBLIC_PRODUCT_SORT) as [
+  (typeof CATALOG_PUBLIC_PRODUCT_SORT)[keyof typeof CATALOG_PUBLIC_PRODUCT_SORT],
+  ...(typeof CATALOG_PUBLIC_PRODUCT_SORT)[keyof typeof CATALOG_PUBLIC_PRODUCT_SORT][],
+];
+
+export const adminProductListQuerySchema = paginationSchema.extend({
+  categoryId: identifierSchema.optional(),
+  search: z.string().trim().min(1).max(240).optional(),
+  sort: z.enum(catalogAdminProductSortValues).default(CATALOG_ADMIN_PRODUCT_SORT.MANUAL_ORDER),
+  visibility: z.enum(catalogVisibilityValues).optional(),
+}).strict();
+
+export const publicProductListQuerySchema = paginationSchema.extend({
+  categorySlug: optionalSlugSchema,
+  sort: z.enum(catalogPublicProductSortValues).default(CATALOG_PUBLIC_PRODUCT_SORT.FEATURED),
+}).strict();
+
+export const categoryOrderSchema = z.object({
+  categoryIds: z.array(identifierSchema).min(1).max(500),
+}).strict();
+
+export const categoryVisibilitySchema = z.object({
+  visibility: z.enum(catalogVisibilityValues),
+}).strict();
+
+export const catalogSettingsUpdateSchema = z.object({
+  showOutOfStockAtEnd: z.boolean(),
+}).strict();
+
+export const productPriceUpdateSchema = z.object({
+  compareAtPrice: optionalMoneySchema,
+  promotionalPrice: optionalMoneySchema,
+  salePrice: moneySchema,
+}).strict().superRefine((input, context) => {
+  if (input.promotionalPrice !== undefined && input.promotionalPrice >= input.salePrice) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "promotionalPrice must be lower than salePrice.",
+      path: ["promotionalPrice"],
+    });
+  }
+});
+
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
+export type AdminProductListQuery = z.infer<typeof adminProductListQuerySchema>;
+export type CatalogSettingsUpdateInput = z.infer<typeof catalogSettingsUpdateSchema>;
+export type CategoryOrderInput = z.infer<typeof categoryOrderSchema>;
+export type CategoryVisibilityInput = z.infer<typeof categoryVisibilitySchema>;
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
+export type ProductPriceUpdateInput = z.infer<typeof productPriceUpdateSchema>;
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
+export type PublicProductListQuery = z.infer<typeof publicProductListQuerySchema>;
 export type VariantCombinationInput = z.infer<typeof variantCombinationSchema>;
 export type VariantPropertyInput = z.infer<typeof variantPropertySchema>;
 

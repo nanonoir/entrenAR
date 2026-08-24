@@ -114,6 +114,29 @@ export class ProductService {
     });
   }
 
+  async get(id: string): Promise<AdminCatalogProduct> {
+    const product = await this.catalogRepository.productByIdWithClient(id);
+    if (!product) throw this.notFound();
+    return toAdminCatalogProduct(product);
+  }
+
+  async updatePrices(
+    id: string,
+    input: Pick<ProductUpdateInput, "salePrice"> & Partial<Pick<ProductUpdateInput, "compareAtPrice" | "promotionalPrice">>,
+  ): Promise<AdminCatalogProduct> {
+    return this.catalogRepository.transaction(async (transaction) => {
+      if (!await this.catalogRepository.productById(transaction, id)) throw this.notFound();
+      return toAdminCatalogProduct(await this.catalogRepository.updateProductPrices(transaction, id, input));
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.catalogRepository.transaction(async (transaction) => {
+      if (!await this.catalogRepository.productById(transaction, id)) throw this.notFound();
+      await this.catalogRepository.deleteProduct(transaction, id);
+    });
+  }
+
   private async assertCategoriesExist(
     transaction: Parameters<CatalogRepository["allCategories"]>[0],
     categoryIds: readonly string[],

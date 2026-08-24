@@ -33,6 +33,25 @@ export interface PublicCatalogCategory {
   slug: string;
 }
 
+export function toAdminCatalogCategory(category: Prisma.CategoryGetPayload<Record<string, never>>): AdminCatalogCategory {
+  return {
+    children: [],
+    createdAt: category.createdAt.toISOString(),
+    ...(category.description ? { description: category.description } : {}),
+    ...(category.googleShoppingCategory ? { googleShoppingCategory: category.googleShoppingCategory } : {}),
+    id: category.id,
+    ...(category.imageUrl ? { imageUrl: category.imageUrl } : {}),
+    name: category.name,
+    ...(category.parentId ? { parentId: category.parentId } : {}),
+    ...(category.seoDescription ? { seoDescription: category.seoDescription } : {}),
+    ...(category.seoTitle ? { seoTitle: category.seoTitle } : {}),
+    slug: category.slug,
+    sortOrder: category.sortOrder,
+    updatedAt: category.updatedAt.toISOString(),
+    visibility: toVisibility(category.visibility),
+  };
+}
+
 export interface AdminCatalogProduct {
   brand?: string;
   categoryId: string;
@@ -171,20 +190,8 @@ export function toAdminCategoryTree(categories: readonly Prisma.CategoryGetPaylo
     return items.sort((left, right) => left.sortOrder - right.sortOrder || left.id.localeCompare(right.id));
   };
   const mapBranch = (parentId: string | undefined): AdminCatalogCategory[] => sort(childrenByParentId.get(parentId) ?? []).map((category) => ({
+    ...toAdminCatalogCategory(category),
     children: mapBranch(category.id),
-    createdAt: category.createdAt.toISOString(),
-    ...(category.description ? { description: category.description } : {}),
-    ...(category.googleShoppingCategory ? { googleShoppingCategory: category.googleShoppingCategory } : {}),
-    id: category.id,
-    ...(category.imageUrl ? { imageUrl: category.imageUrl } : {}),
-    name: category.name,
-    ...(category.parentId ? { parentId: category.parentId } : {}),
-    ...(category.seoDescription ? { seoDescription: category.seoDescription } : {}),
-    ...(category.seoTitle ? { seoTitle: category.seoTitle } : {}),
-    slug: category.slug,
-    sortOrder: category.sortOrder,
-    updatedAt: category.updatedAt.toISOString(),
-    visibility: toVisibility(category.visibility),
   }));
 
   return mapBranch(undefined);

@@ -14,7 +14,9 @@ export class CategoryService {
       if (input.parentId && !await this.catalogRepository.categoryById(transaction, input.parentId)) {
         throw this.notFound();
       }
-      const slug = await this.uniqueSlug(transaction, input.slug ?? input.name);
+      const slug = input.slug
+        ? await this.assertAvailableSlug(transaction, input.slug)
+        : await this.nextUniqueSlug(transaction, input.name);
       const categories = await this.catalogRepository.allCategories(transaction);
 
       return this.catalogRepository.createCategory(transaction, {
@@ -37,14 +39,22 @@ export class CategoryService {
       if (this.wouldCreateCycle(input.id, input.parentId, categoryById)) throw this.categoryCycle();
       const slug = input.slug === undefined || input.slug === current.slug
         ? input.slug ?? current.slug
-        : await this.uniqueSlug(transaction, input.slug, input.id);
+        : await this.assertAvailableSlug(transaction, input.slug, input.id);
 
-      return this.catalogRepository.updateCategory(transaction, input.id, {
+      const updated = await this.catalogRepository.updateCategory(transaction, input.id, {
         ...input,
         parentId: input.parentId,
         slug,
         visibility: this.visibility(input.visibility),
       });
+      if (input.visibility === "hidden") {
+        await this.catalogRepository.setCategoryVisibility(
+          transaction,
+          this.descendantIds(input.id, categories),
+          CatalogVisibility.HIDDEN,
+        );
+      }
+      return updated;
     });
   }
 
@@ -92,13 +102,22 @@ export class CategoryService {
     return ids;
   }
 
-  private async uniqueSlug(transaction: Parameters<CatalogRepository["categoryById"]>[0], value: string, ignoredId?: string): Promise<string> {
+  private async assertAvailableSlug(transaction: Parameters<CatalogRepository["categoryById"]>[0], value: string, ignoredId?: string): Promise<string> {
+    const slug = slugify(value);
+    const existing = await this.catalogRepository.categoryBySlug(transaction, slug);
+    if (existing && existing.id !== ignoredId) {
+      throw new ConflictException({ code: ERROR_CODE.SLUG_CONFLICT, message: "Category slug is already in use.", ok: false });
+    }
+    return slug;
+  }
+
+  private async nextUniqueSlug(transaction: Parameters<CatalogRepository["categoryById"]>[0], value: string): Promise<string> {
     const root = slugify(value);
     let candidate = root;
     let suffix = 2;
     while (true) {
       const existing = await this.catalogRepository.categoryBySlug(transaction, candidate);
-      if (!existing || existing.id === ignoredId) return candidate;
+      if (!existing) return candidate;
       candidate = `${root}-${suffix}`;
       suffix += 1;
     }

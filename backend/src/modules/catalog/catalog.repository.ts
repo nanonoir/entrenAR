@@ -92,6 +92,10 @@ export class CatalogRepository {
     return transaction.category.findMany({ orderBy: { id: "asc" } });
   }
 
+  async allCategoriesWithClient() {
+    return this.prisma.category.findMany({ orderBy: { id: "asc" } });
+  }
+
   async createCategory(transaction: TransactionClient, data: CreateCategoryRecord) {
     return transaction.category.create({ data });
   }
@@ -129,6 +133,14 @@ export class CatalogRepository {
 
   async productByIdWithClient(id: string): Promise<CatalogProduct | null> {
     return this.prisma.product.findUnique({ include: catalogProductInclude, where: { id } });
+  }
+
+  async productByPublicSlugWithClient(publicSlug: string): Promise<CatalogProduct | null> {
+    return this.prisma.product.findUnique({ include: catalogProductInclude, where: { publicSlug } });
+  }
+
+  async allProductsWithClient(): Promise<CatalogProduct[]> {
+    return this.prisma.product.findMany({ include: catalogProductInclude });
   }
 
   async countProducts(transaction: TransactionClient): Promise<number> {
@@ -188,6 +200,27 @@ export class CatalogRepository {
       data: data.variants.map((variant) => ({ ...variant, productId: data.id })),
     });
     return transaction.product.findUniqueOrThrow({ include: catalogProductInclude, where: { id: data.id } });
+  }
+
+  async updateProductPrices(
+    transaction: TransactionClient,
+    id: string,
+    data: Pick<CreateCatalogProductRecord, "salePrice"> & Partial<Pick<CreateCatalogProductRecord, "compareAtPrice" | "promotionalPrice">>,
+  ): Promise<CatalogProduct> {
+    await transaction.product.update({
+      data: {
+        compareAtPrice: data.compareAtPrice ?? null,
+        promotionalPrice: data.promotionalPrice ?? null,
+        salePrice: data.salePrice,
+      },
+      where: { id },
+    });
+    return transaction.product.findUniqueOrThrow({ include: catalogProductInclude, where: { id } });
+  }
+
+  async deleteProduct(transaction: TransactionClient, id: string): Promise<void> {
+    await transaction.productCategory.deleteMany({ where: { productId: id } });
+    await transaction.product.delete({ where: { id } });
   }
 }
 
