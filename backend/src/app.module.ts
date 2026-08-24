@@ -11,6 +11,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { HealthModule } from "./modules/health/health.module";
+import { InventoryModule } from "./modules/inventory/inventory.module";
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { HealthModule } from "./modules/health/health.module";
     PrismaModule,
     AuthModule,
     HealthModule,
+    InventoryModule,
   ],
   providers: [
     {
