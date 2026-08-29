@@ -10,7 +10,7 @@ import { PublicCatalogController } from "./public-catalog.controller";
 
 @Module({
   controllers: [AdminCatalogController, PublicCatalogController],
-  exports: [CatalogSettingsService, CategoryService, ProductService],
+  exports: [CatalogQueryService, CatalogSettingsService, CategoryService, ProductService],
   providers: [CatalogSettingsService, CatalogQueryService, CatalogRepository, CategoryService, ProductService],
 })
 export class CatalogModule {}
