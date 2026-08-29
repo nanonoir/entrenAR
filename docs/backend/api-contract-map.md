@@ -6,6 +6,7 @@ This document freezes the REST contracts to be implemented by the standalone Bac
 
 - **Authentication:** Public endpoints require no token; `CUSTOMER` and `ADMIN` mean backend-enforced JWT authorization. Refresh credentials use an HttpOnly cookie and access credentials use a Bearer token.
 - **Errors:** Every listed key error uses the shared envelope; endpoint-specific errors supplement the baseline `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, and `INTERNAL_ERROR` as applicable.
+- **Ownership:** Protected customer-account and wishlist operations derive the authoritative `userId` exclusively from the validated JWT. A client-supplied account identifier is never accepted as an ownership selector.
 
   ```json
   {
@@ -56,12 +57,20 @@ This document freezes the REST contracts to be implemented by the standalone Bac
 | PUT | `/api/v1/account/profile` | CUSTOMER | `AccountProfileRequest` | `AccountProfile` | `VALIDATION_ERROR` |
 | GET | `/api/v1/account/addresses` | CUSTOMER | None | `UserAddress[]` | — |
 | POST | `/api/v1/account/addresses` | CUSTOMER | `UserAddressRequest` | `UserAddress` | `ADDRESS_LIMIT_REACHED`, `VALIDATION_ERROR` |
-| GET | `/api/v1/account/orders` | CUSTOMER | `AccountOrderListQuery` | `AccountOrder[]` | — |
+| PUT | `/api/v1/account/addresses/:id` | CUSTOMER | `UserAddressRequest` | `UserAddress` | `NOT_FOUND`, `VALIDATION_ERROR` |
+| DELETE | `/api/v1/account/addresses/:id` | CUSTOMER | None | `{ ok: true }` | `NOT_FOUND` |
+| GET | `/api/v1/account/orders` | CUSTOMER | `AccountOrderListQuery` | `AccountOrder[]` (empty until Orders persistence) | — |
 | GET | `/api/v1/wishlist` | CUSTOMER | None | `ProductSummary[]` | — |
 | POST | `/api/v1/wishlist/:productId` | CUSTOMER | None | `{ ok: true }` | `PRODUCT_NOT_FOUND`, `WISHLIST_ITEM_EXISTS` |
 | DELETE | `/api/v1/wishlist/:productId` | CUSTOMER | None | `{ ok: true }` | `WISHLIST_ITEM_NOT_FOUND` |
 
-The wishlist paths follow PRD §25; guest wishlist behavior may remain local.
+The address `:id` is resolved within the authenticated customer's address set; foreign address IDs must return a safe not-found/authorization result without mutation. The wishlist paths follow PRD §25; guest wishlist behavior may remain local. Product visibility and availability are checked by the backend before a relation is created.
+
+Account and wishlist services MUST NOT accept `userId` in route parameters or request bodies. They use the JWT-derived actor and return only that actor's profile, addresses, wishlist products, and account projections.
+
+Password recovery has a deliberately narrow error contract: `forgot-password` returns the same successful `{ "ok": true }` response for known and unknown emails, while `reset-password` returns `INVALID_RESET_TOKEN` for missing, expired, or consumed credentials. Reset tokens are persisted only as hashes and never appear in responses or logs.
+
+`GET /api/v1/account/orders` is a stable DTO collection boundary. Until the Orders phase adds persistence, it returns `[]` and MUST NOT project the current static order mock as persisted history.
 
 ---
 

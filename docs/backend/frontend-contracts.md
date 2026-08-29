@@ -47,6 +47,54 @@ The backend MUST enforce these constraints, which are currently defined in the f
 - **CRM `dniOrCuil`:** Normalized identity number, **7–11 digits**.
 - These are separate contracts and MUST NOT share one validator. **PRD override/source:** PRD §13 explicitly preserves the two ranges despite any broader mock-data assumption.
 
+### Customer Account Profile
+
+The authenticated account projection contains only the permitted public fields:
+
+```typescript
+{
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  dni: string | null;
+  gender: string | null;
+  birthDate: string | null; // ISO date
+  phone: string | null;
+}
+```
+
+Profile mutations use `firstName`, `lastName`, `dni`, `gender`, `birthDate`, and `phone`. The backend derives ownership from the access JWT and MUST NOT accept an authoritative `userId` in the route or payload. Password hashes, refresh credentials, reset tokens, and unrelated account data are never part of this projection.
+
+### Customer Addresses
+
+The public account address DTO preserves this shape:
+
+```typescript
+{
+  id: string;
+  label: string;
+  recipient: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string;
+}
+```
+
+The account repository consumes `GET`/`POST /account/addresses` plus `PUT` and `DELETE /account/addresses/:id`. The server enforces a maximum of six addresses per JWT-owned account. A foreign address ID is treated as a safe not-found/authorization failure and MUST NOT mutate data.
+
+### Password and Wishlist Error Contracts
+
+- `forgot-password` always returns the same successful response for known and unknown emails; the frontend MUST NOT infer account existence from it.
+- `reset-password` returns `INVALID_RESET_TOKEN` for missing, expired, or already-consumed reset credentials. Raw reset tokens are not returned or logged.
+- Password change uses `INVALID_CREDENTIALS` for an incorrect current password and `VALIDATION_ERROR` for an invalid replacement.
+- Wishlist mutations return `PRODUCT_NOT_FOUND` for unknown/unavailable public products, `WISHLIST_ITEM_EXISTS` for duplicates, and `WISHLIST_ITEM_NOT_FOUND` when removing a missing relation.
+
+### Account Orders Before Orders Persistence
+
+`GET /account/orders` returns `AccountOrder[]` as a stable projection boundary. Before the Orders phase, the response MUST be `[]`; frontend static order mocks are not presented as server-persisted history.
+
 ### Pickup Points
 - **Schedule:** A configured/active pickup point has at least one schedule range. Ranges are returned and edited in canonical `dayOfWeek`, then opening-time order; each closing time must be later than its opening time, and ranges on the same day must not overlap.
 - **Cost:** `fixedCost` is required when `costType = fixed`.
