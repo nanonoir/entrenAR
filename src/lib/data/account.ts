@@ -1,3 +1,4 @@
+import { DATA_SOURCE, getAccountDataSource, type DataSource } from "@/lib/api/config";
 import { accountRoutes } from "@/lib/routes";
 import type { AccountNavItem, AccountOrder } from "@/types/account";
 
@@ -43,7 +44,7 @@ export function findMockAccountByEmail(email: string) {
   };
 }
 
-export const accountOrders: AccountOrder[] = [
+const accountOrderFixtures: AccountOrder[] = [
   {
     id: "EA-10248",
     date: "12/05/2026",
@@ -75,3 +76,18 @@ export const accountOrders: AccountOrder[] = [
     items: [{ id: "p-boxy", name: "Remera Boxy Fit DROP #0", quantity: 1, price: 49999 }],
   },
 ];
+
+export const mockAccountOrders = accountOrderFixtures;
+
+export function getMockAccountOrders(): AccountOrder[] {
+  return mockAccountOrders.map((order) => ({
+    ...order,
+    items: order.items.map((item) => ({ ...item })),
+  }));
+}
+
+export function getAccountOrders(source: DataSource = getAccountDataSource()): AccountOrder[] {
+  return source === DATA_SOURCE.API ? [] : getMockAccountOrders();
+}
+
+export const accountOrders = getAccountOrders();
