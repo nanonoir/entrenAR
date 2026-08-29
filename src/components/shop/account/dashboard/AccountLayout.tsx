@@ -14,10 +14,11 @@ type AccountLayoutProps = {
   mobileContentOpen: boolean;
   onBackToMenu: () => void;
   onLogout: () => void;
+  isLoggingOut: boolean;
   onSelectSection: (section: AccountSection) => void;
   orders: AccountOrder[];
   products: ProductSummary[];
-  profile: AccountProfile;
+  profile: AccountProfile | null;
   userEmail: string;
 };
 
@@ -28,6 +29,7 @@ export function AccountLayout({
   mobileContentOpen,
   onBackToMenu,
   onLogout,
+  isLoggingOut,
   onSelectSection,
   orders,
   products,
@@ -41,8 +43,8 @@ export function AccountLayout({
           <p className="font-subtitle text-sm font-semibold uppercase text-accent">Mi cuenta</p>
           <h1 className="mt-1 font-heading text-5xl leading-none sm:text-6xl">Hola, {displayName}!</h1>
         </div>
-        <Button onClick={onLogout} variant="secondary">
-          Cerrar sesión
+        <Button disabled={isLoggingOut} onClick={onLogout} variant="secondary">
+          {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
         </Button>
       </div>
 
@@ -61,7 +63,7 @@ export function AccountLayout({
           <AccountSectionPanel
             activeSection={activeSection}
             addresses={addresses}
-            key={profile.email}
+            key={profile?.email ?? userEmail}
             orders={orders}
             products={products}
             profile={profile}

@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import type { FormEvent } from "react";
 import { AccountForgotStep } from "@/components/shop/account/drawer/steps/AccountForgotStep";
 import { AccountLoggedStep } from "@/components/shop/account/drawer/steps/AccountLoggedStep";
 import { AccountPasswordStep } from "@/components/shop/account/drawer/steps/AccountPasswordStep";
@@ -7,12 +7,15 @@ import { AccountStartStep } from "@/components/shop/account/drawer/steps/Account
 import type { MockAccountUser } from "@/types/account";
 
 type AccountStep = "start" | "password" | "register" | "forgot";
-type AccountStepSubmitHandler = (event: React.FormEvent<HTMLFormElement>) => void;
+type AccountStepSubmitHandler = (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
 
 type AccountDrawerContentProps = {
   acceptedTerms: boolean;
   activeStep: AccountStep | "logged";
+  authError?: string;
   email: string;
+  forgotSent: boolean;
+  isSubmitting: boolean;
   normalizedEmail: string;
   password: string;
   passwordConfirmation: string;
@@ -20,24 +23,29 @@ type AccountDrawerContentProps = {
   passwordsMatch: boolean;
   submitted: boolean;
   user: MockAccountUser | null;
-  onAcceptedTermsChange: Dispatch<SetStateAction<boolean>>;
+  onAcceptedTermsChange: (accepted: boolean) => void;
   onBackToMobileMenu: () => void;
   onClose: () => void;
-  onEmailChange: Dispatch<SetStateAction<string>>;
+  onEmailChange: (email: string) => void;
   onForgot: () => void;
+  onForgotSubmit: AccountStepSubmitHandler;
+  onLoginStart: () => void;
   onLoginSubmit: AccountStepSubmitHandler;
-  onPasswordChange: Dispatch<SetStateAction<string>>;
-  onPasswordConfirmationChange: Dispatch<SetStateAction<string>>;
+  onPasswordChange: (password: string) => void;
+  onPasswordConfirmationChange: (password: string) => void;
+  onRegisterStart: () => void;
   onRegisterSubmit: AccountStepSubmitHandler;
-  onStartSubmit: AccountStepSubmitHandler;
-  onStepChange: Dispatch<SetStateAction<AccountStep>>;
+  onStepChange: (step: AccountStep) => void;
   onLogout: () => void;
 };
 
 export function AccountDrawerContent({
   acceptedTerms,
   activeStep,
+  authError,
   email,
+  forgotSent,
+  isSubmitting,
   normalizedEmail,
   password,
   passwordConfirmation,
@@ -50,12 +58,14 @@ export function AccountDrawerContent({
   onClose,
   onEmailChange,
   onForgot,
+  onForgotSubmit,
+  onLoginStart,
   onLoginSubmit,
   onLogout,
   onPasswordChange,
   onPasswordConfirmationChange,
+  onRegisterStart,
   onRegisterSubmit,
-  onStartSubmit,
   onStepChange,
 }: AccountDrawerContentProps) {
   return (
@@ -68,7 +78,8 @@ export function AccountDrawerContent({
           onBackToMobileMenu={onBackToMobileMenu}
           onClose={onClose}
           onEmailChange={onEmailChange}
-          onSubmit={onStartSubmit}
+          onLogin={onLoginStart}
+          onRegister={onRegisterStart}
           submitted={submitted}
         />
       ) : null}
@@ -76,6 +87,8 @@ export function AccountDrawerContent({
       {activeStep === "password" ? (
         <AccountPasswordStep
           normalizedEmail={normalizedEmail}
+          error={authError}
+          isSubmitting={isSubmitting}
           onForgot={onForgot}
           onPasswordChange={onPasswordChange}
           onSubmit={onLoginSubmit}
@@ -88,10 +101,13 @@ export function AccountDrawerContent({
       {activeStep === "register" ? (
         <AccountRegisterStep
           normalizedEmail={normalizedEmail}
+          error={authError}
+          isSubmitting={isSubmitting}
           onPasswordChange={onPasswordChange}
           onPasswordConfirmationChange={onPasswordConfirmationChange}
           onSubmit={onRegisterSubmit}
           password={password}
+          passwordIsValid={passwordIsValid}
           passwordConfirmation={passwordConfirmation}
           passwordsMatch={passwordsMatch}
           submitted={submitted}
@@ -101,8 +117,15 @@ export function AccountDrawerContent({
       {activeStep === "forgot" ? (
         <AccountForgotStep
           normalizedEmail={normalizedEmail}
+          email={email}
+          error={authError}
+          forgotSent={forgotSent}
+          isSubmitting={isSubmitting}
           onBackToPassword={() => onStepChange("password")}
           onClose={onClose}
+          onEmailChange={onEmailChange}
+          onSubmit={onForgotSubmit}
+          submitted={submitted}
         />
       ) : null}
 

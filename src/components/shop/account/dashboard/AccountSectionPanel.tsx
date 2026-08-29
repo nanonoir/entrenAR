@@ -12,7 +12,7 @@ type AccountSectionPanelProps = {
   addresses: AccountAddress[];
   orders: AccountOrder[];
   products: ProductSummary[];
-  profile: AccountProfile;
+  profile: AccountProfile | null;
   userEmail: string;
 };
 
@@ -41,8 +41,8 @@ export function AccountSectionPanel({
   }
 
   if (activeSection === "lista-de-deseados") {
-    return <WishlistSection products={products} />;
+    return <WishlistSection products={products} userEmail={userEmail} />;
   }
 
-  return <AuthenticationSection email={profile.email} />;
+  return <AuthenticationSection email={profile?.email ?? userEmail} />;
 }
