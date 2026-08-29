@@ -7,10 +7,11 @@ import type { ProductSummary } from "@/types/product";
 
 type WishlistProductCardProps = {
   product: ProductSummary;
-  onRemove: (productId: string) => void;
+  onRemove: (productId: string) => void | Promise<boolean>;
+  pending: boolean;
 };
 
-export function WishlistProductCard({ product, onRemove }: WishlistProductCardProps) {
+export function WishlistProductCard({ product, onRemove, pending }: WishlistProductCardProps) {
   return (
     <article className="grid overflow-hidden rounded-card border border-border bg-white shadow-card">
       <ProductVisual
@@ -33,8 +34,13 @@ export function WishlistProductCard({ product, onRemove }: WishlistProductCardPr
           >
             Info del Producto
           </Link>
-          <Button onClick={() => onRemove(product.id)} variant="danger">
-            Eliminar
+          <Button
+            aria-busy={pending}
+            disabled={pending}
+            onClick={() => void onRemove(product.id)}
+            variant="danger"
+          >
+            {pending ? "Quitando..." : "Eliminar"}
           </Button>
         </div>
       </div>
