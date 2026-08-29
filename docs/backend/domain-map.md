@@ -38,18 +38,52 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - Called by Orders (Sale creation deducts stock) and Catalog.
 
 ### 2.3 Users Module (`backend/src/modules/users/`)
-**Ownership:** Accounts, Addresses, Wishlist, Authentication.
+**Ownership:** Identity records, credentials, password hashing helpers, and role data.
 **Aggregates:**
-- `User` (Aggregate Root): Identity, credentials, and roles.
-- `Address` (Entity): Limit 6 per user.
-- `Wishlist` (Entity): Unique per user/product.
+- `User` (Aggregate Root): Identity, credentials, profile fields, and roles.
 **Invariants:**
 - Email must be unique.
 - Passwords must be hashed.
 **Cross-Domain Dependencies:**
-- Provides identity (Auth) for all protected routes.
+- Provides identity to Auth, Account, Wishlist, and all protected routes. Users does not own account-address or wishlist business workflows.
 
-### 2.4 Checkout Module (`backend/src/modules/checkout/`)
+### 2.4 Auth Module (`backend/src/modules/auth/`)
+**Ownership:** Authentication sessions, access-token issuance, and password lifecycle orchestration.
+**Aggregates & Entities:**
+- `RefreshToken` (Entity): Rotating, revocable, hashed refresh-session credential.
+- `PasswordResetToken` (Entity): Hashed, expiring, one-time recovery credential.
+**Invariants:**
+- Authenticated projections omit password hashes, refresh credentials, reset tokens, and unrelated account data.
+- Forgot-password responses are indistinguishable for known and unknown emails.
+- Expired or consumed reset credentials return `INVALID_RESET_TOKEN` and cannot mutate a password.
+**Cross-Domain Dependencies:**
+- Reads identity and credentials from Users; derives protected ownership from the validated JWT.
+
+### 2.5 Account Module (`backend/src/modules/account/`)
+**Ownership:** Customer profile projection, public customer-owned addresses, and the account-order DTO boundary.
+**Aggregates & Entities:**
+- `AccountProfile` (Projection): The permitted `User` fields exposed to a customer.
+- `UserAddress` (Entity): Customer-owned address with a maximum of six records per user.
+- `AccountOrder` (Projection): Stable order-history shape that returns an empty collection before Orders persistence exists.
+**Invariants:**
+- Profile, address, and order requests use the JWT-derived user ID; client-provided ownership IDs are not authoritative.
+- Address updates and deletes must verify ownership and must not mutate foreign records.
+- The order projection must not invent or read static mock orders as persisted history.
+**Cross-Domain Dependencies:**
+- Reads and updates Users profile fields; later reads persisted Orders without owning order persistence.
+
+### 2.6 Wishlist Module (`backend/src/modules/wishlist/`)
+**Ownership:** Authenticated customer wishlist relations and their public-product projections.
+**Aggregates & Entities:**
+- `WishlistItem` (Entity): Unique composite relation between a JWT-derived user and a Product.
+**Invariants:**
+- Duplicate user/product relations are rejected with `WISHLIST_ITEM_EXISTS`.
+- Unknown or unavailable products are rejected with a controlled product error.
+- Removal of a missing relation returns `WISHLIST_ITEM_NOT_FOUND` without affecting other relations.
+**Cross-Domain Dependencies:**
+- Reads public visibility and product projections from Catalog; reads ownership from Auth/Users.
+
+### 2.7 Checkout Module (`backend/src/modules/checkout/`)
 **Ownership:** Checkout Quote, Checkout Session.
 **Aggregates:**
 - `CheckoutSession` (Aggregate Root): Tracks the active cart state toward order creation.
@@ -59,7 +93,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Cross-Domain Dependencies:**
 - Reads from Catalog, Inventory, Commerce Config. Writes to Orders upon conversion.
 
-### 2.5 Orders Module (`backend/src/modules/orders/`)
+### 2.8 Orders Module (`backend/src/modules/orders/`)
 **Ownership:** Sales, Purchase Orders, Order History.
 **Aggregates:**
 - `Sale` (Aggregate Root): Represents a confirmed transaction. Owns `SaleItem` (snapshots) and `SaleHistory`.
@@ -72,7 +106,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Cross-Domain Dependencies:**
 - Writes to CRM Customers (updates totals), Inventory (deductions).
 
-### 2.6 CRM Customers Module (`backend/src/modules/customers/`)
+### 2.9 CRM Customers Module (`backend/src/modules/customers/`)
 **Ownership:** CRM Customer profiles, aggregated statistics.
 **Aggregates:**
 - `CrmCustomer` (Aggregate Root): CRM representation of buyers.
@@ -82,7 +116,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Cross-Domain Dependencies:**
 - Read by Orders (links sales).
 
-### 2.7 Commerce Configuration Module (`backend/src/modules/commerce/`)
+### 2.10 Commerce Configuration Module (`backend/src/modules/commerce/`)
 **Ownership:** Payment Providers, Shipping Providers, Pickup Points, Coupons, Shipping Discounts.
 **Aggregates:**
 - `Coupon`, `ShippingProvider`, `PickupPoint`.
@@ -93,7 +127,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Cross-Domain Dependencies:**
 - Read by Checkout.
 
-### 2.8 Statistics Module (`backend/src/modules/statistics/`)
+### 2.11 Statistics Module (`backend/src/modules/statistics/`)
 **Ownership:** Aggregation of transactional data.
 **Aggregates:** Derived views/metrics.
 **Invariants:** Revenue/Sales aggregates only count payment-received, non-cancelled, non-refunded sales.
