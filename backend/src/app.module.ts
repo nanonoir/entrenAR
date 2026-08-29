@@ -10,9 +10,11 @@ import { RolesGuard } from "./common/guards/roles.guard";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { AccountModule } from "./modules/account/account.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
+import { WishlistModule } from "./modules/wishlist/wishlist.module";
 
 @Module({
   imports: [
@@ -32,9 +34,11 @@ import { InventoryModule } from "./modules/inventory/inventory.module";
     }),
     PrismaModule,
     AuthModule,
+    AccountModule,
     CatalogModule,
     HealthModule,
     InventoryModule,
+    WishlistModule,
   ],
   providers: [
     {
