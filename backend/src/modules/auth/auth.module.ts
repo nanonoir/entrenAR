@@ -7,6 +7,7 @@ import { UsersModule } from "../users/users.module";
 import { AdminAuthController } from "./admin-auth.controller";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { NoopResetDelivery, RESET_DELIVERY_PORT } from "./reset-delivery.port";
 
 @Module({
   controllers: [AdminAuthController, AuthController],
@@ -21,6 +22,12 @@ import { AuthService } from "./auth.service";
     }),
     UsersModule,
   ],
-  providers: [AuthService],
+  providers: [
+    AuthService,
+    {
+      provide: RESET_DELIVERY_PORT,
+      useClass: NoopResetDelivery,
+    },
+  ],
 })
 export class AuthModule {}

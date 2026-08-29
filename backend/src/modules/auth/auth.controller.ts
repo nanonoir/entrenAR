@@ -11,23 +11,31 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import type { Request, Response } from "express";
-import { z } from "zod";
 
 import type { AccessTokenPayload } from "../../common/auth/jwt-authentication.guard";
 import { Public } from "../../common/auth/public.decorator";
 import { ApiErrorResponseDto } from "../../common/errors/api-error-response.dto";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
-import { AuthCredentialsDto, AuthSessionResponseDto, AuthUserDto } from "./dto/auth-openapi.dto";
+import {
+  AuthCredentialsDto,
+  AuthSessionResponseDto,
+  AuthSuccessResponseDto,
+  AuthUserDto,
+  ChangePasswordRequestDto,
+  ForgotPasswordRequestDto,
+  ResetPasswordRequestDto,
+} from "./dto/auth-openapi.dto";
 import { AuthService, REFRESH_COOKIE_NAME, type AuthSession } from "./auth.service";
-
-const passwordSchema = z.string().min(12, { error: "Password must contain at least 12 characters." });
-
-const credentialsSchema = z.object({
-  email: z.email({ error: "Email must be valid." }).transform((email) => email.toLowerCase()),
-  password: passwordSchema,
-});
-
-type CredentialsInput = z.infer<typeof credentialsSchema>;
+import {
+  changePasswordSchema,
+  credentialsSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  type AuthCredentialsInput,
+  type ChangePasswordInput,
+  type ForgotPasswordInput,
+  type ResetPasswordInput,
+} from "./auth.schemas";
 
 interface RequestWithAuthenticatedUser extends Request {
   user: AccessTokenPayload;
@@ -46,7 +54,7 @@ export class AuthController {
   @ApiResponse({ description: "VALIDATION_ERROR", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
   @ApiResponse({ description: "CONFLICT", status: HttpStatus.CONFLICT, type: ApiErrorResponseDto })
   async register(
-    @Body(new ZodValidationPipe(credentialsSchema)) credentials: CredentialsInput,
+    @Body(new ZodValidationPipe(credentialsSchema)) credentials: AuthCredentialsInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<ReturnType<AuthController["toResponse"]>> {
     const session = await this.authService.register(credentials.email, credentials.password);
@@ -64,7 +72,7 @@ export class AuthController {
   @ApiResponse({ description: "VALIDATION_ERROR", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
   @ApiResponse({ description: "INVALID_CREDENTIALS", status: HttpStatus.UNAUTHORIZED, type: ApiErrorResponseDto })
   async login(
-    @Body(new ZodValidationPipe(credentialsSchema)) credentials: CredentialsInput,
+    @Body(new ZodValidationPipe(credentialsSchema)) credentials: AuthCredentialsInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<ReturnType<AuthController["toResponse"]>> {
     const session = await this.authService.login(credentials.email, credentials.password);
@@ -104,6 +112,48 @@ export class AuthController {
     response.clearCookie(REFRESH_COOKIE_NAME, this.refreshCookieOptions());
   }
 
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post("forgot-password")
+  @ApiOperation({ summary: "Start password recovery without revealing account existence" })
+  @ApiBody({ type: ForgotPasswordRequestDto })
+  @ApiOkResponse({ description: "Recovery request accepted.", type: AuthSuccessResponseDto })
+  @ApiResponse({ description: "VALIDATION_ERROR", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordSchema)) input: ForgotPasswordInput,
+  ) {
+    return this.authService.forgotPassword(input.email);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post("reset-password")
+  @ApiOperation({ summary: "Set a new password with an opaque one-time recovery credential" })
+  @ApiBody({ type: ResetPasswordRequestDto })
+  @ApiOkResponse({ description: "Password reset completed.", type: AuthSuccessResponseDto })
+  @ApiResponse({ description: "INVALID_RESET_TOKEN", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
+  @ApiResponse({ description: "VALIDATION_ERROR", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema)) input: ResetPasswordInput,
+  ) {
+    return this.authService.resetPassword(input.token, input.password);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post("change-password")
+  @ApiOperation({ summary: "Change the authenticated user's password" })
+  @ApiBearerAuth("access-token")
+  @ApiBody({ type: ChangePasswordRequestDto })
+  @ApiOkResponse({ description: "Password changed and prior refresh sessions revoked.", type: AuthSuccessResponseDto })
+  @ApiResponse({ description: "INVALID_CREDENTIALS", status: HttpStatus.UNAUTHORIZED, type: ApiErrorResponseDto })
+  @ApiResponse({ description: "VALIDATION_ERROR", status: HttpStatus.BAD_REQUEST, type: ApiErrorResponseDto })
+  async changePassword(
+    @Req() request: RequestWithAuthenticatedUser,
+    @Body(new ZodValidationPipe(changePasswordSchema)) input: ChangePasswordInput,
+  ) {
+    return this.authService.changePassword(request.user.userId, input.currentPassword, input.newPassword);
+  }
+
   @Get("me")
   @ApiOperation({ summary: "Get the current authenticated user" })
   @ApiBearerAuth("access-token")
@@ -132,13 +182,7 @@ export class AuthController {
   }
 
   private refreshCookieOptions() {
-    return {
-      httpOnly: true,
-      maxAge: 2_592_000_000,
-      path: "/api/v1/auth",
-      sameSite: "lax" as const,
-      secure: true,
-    };
+    return this.authService.getRefreshCookieOptions();
   }
 
   private setRefreshCookie(response: Response, refreshToken: string): void {
