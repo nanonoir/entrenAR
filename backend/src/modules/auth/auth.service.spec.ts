@@ -129,6 +129,26 @@ describe("auth.service", () => {
     expect(harness.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("rejects an invalid replacement before loading the account or mutating sessions", async () => {
+    const harness = createHarness();
+
+    await expect(harness.service.changePassword(
+      ADMIN_USER.id,
+      "CurrentPassword123!",
+      "short",
+    )).rejects.toMatchObject({
+      response: {
+        code: ERROR_CODE.VALIDATION_ERROR,
+        ok: false,
+      },
+      status: 400,
+    });
+
+    expect(harness.users.findById).not.toHaveBeenCalled();
+    expect(harness.users.hashPassword).not.toHaveBeenCalled();
+    expect(harness.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("returns the same forgot-password response for known and unknown emails", async () => {
     const harness = createHarness();
     harness.users.findByEmail.mockResolvedValue(ADMIN_USER);
@@ -237,6 +257,30 @@ describe("auth.service", () => {
 
     expect(harness.users.hashPassword).not.toHaveBeenCalled();
     expect(harness.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not update the password when atomic reset-token consumption loses a race", async () => {
+    const harness = createHarness();
+    harness.prisma.passwordResetToken.findUnique.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      id: "raced-reset-token-id",
+      tokenHash: "raced-reset-hash",
+      usedAt: null,
+      userId: ADMIN_USER.id,
+    });
+    harness.users.hashPassword.mockResolvedValue("raced-password-hash");
+    harness.transaction.passwordResetToken.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(harness.service.resetPassword("raced-reset-credential", REPLACEMENT_PASSWORD)).rejects.toMatchObject({
+      response: {
+        code: ERROR_CODE.INVALID_RESET_TOKEN,
+        ok: false,
+      },
+      status: 400,
+    });
+
+    expect(harness.transaction.user.update).not.toHaveBeenCalled();
+    expect(harness.transaction.refreshToken.updateMany).not.toHaveBeenCalled();
   });
 
   it("makes refresh-cookie security environment-aware and aligns its lifetime with the refresh TTL", () => {

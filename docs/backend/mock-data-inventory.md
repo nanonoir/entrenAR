@@ -6,10 +6,10 @@ This document inventories every authoritative mock source and Zustand store in t
 
 | Store | Domain | State Classification | Consumers | Migration Target | Removal Gate | PRD Migration Phase |
 |---|---|---|---|---|---|---|
-| `auth-store` | Auth | Persisted (`localStorage`) | Public Navbar, Checkout, Account | Auth API | `/api/v1/auth/me` and session cookies active | Phase 3 — Customer Account |
-| `account-profile-store` | Account | Persisted (`localStorage`) | Public Account Pages | Account API | `/api/v1/account/profile` endpoints active | Phase 3 — Customer Account |
+| `auth-store` | Auth | Mock-only persisted snapshot; API access token is memory-only | Public Navbar, Checkout, Account | Auth API adapter | `/api/v1/auth/me` and session cookies active | Phase 3 — Customer Account |
+| `account-profile-store` | Account | Mock persistence plus API async state | Public Account Pages | Account API adapter | `/api/v1/account/profile` endpoints active | Phase 3 — Customer Account |
 | `cart-store` | Checkout | Persisted (`localStorage`) | Quick Buy, Cart Drawer, Checkout | Checkout quote/session API | Server-side quote and checkout validation active; guest cart remains local | Phase 5 — Checkout |
-| `wishlist-store` | Products | Persisted (`localStorage`) | Product Cards, Account Wishlist | Wishlist API | Server-side wishlist implemented | Phase 3 — Customer Account |
+| `wishlist-store` | Products | Mock persistence plus API async state | Product Cards, Account Wishlist | Wishlist API adapter | Server-side wishlist implemented | Phase 3 — Customer Account |
 | `admin-sales-store` | CRM Sales | In-memory | Admin Sales, Orders | Sales API | `/api/v1/admin/sales` migration complete | Phase 6 — Sales CRM |
 | `admin-products-store` | CRM Products | In-memory | Admin Products, Inventory | Catalog API | `/api/v1/admin/products` migration complete | Phase 2 — Catalog |
 | `admin-categories-store` | CRM Categories | In-memory | Admin Categories | Catalog API | `/api/v1/admin/categories` migration complete | Phase 2 — Catalog |
@@ -35,7 +35,7 @@ These files act as the current read-only database. They are highly relevant for 
 | `admin/sales-flow/*` | CRM Sales | Static Mock | Base Sales Seed | `GET /api/v1/admin/sales` | Sales fetched via API | Phase 6 — Sales CRM |
 | `admin/customers/*` | CRM Users | Static Mock | Base Customers Seed | `GET /api/v1/admin/customers`| Customers fetched via API | Phase 7 — Customers CRM |
 | `checkout.ts` | Checkout | Static Mock | Seed for shipping, pickup, and bank configuration | `POST /api/v1/checkout/quote` | API calculates quote and methods | Phase 5 — Checkout |
-| `account.ts` | Account | Static Mock | Ignored (use real auth) | `GET /api/v1/account/profile` | Account uses real session | Phase 3 — Customer Account |
+| `account.ts` | Account | Static Mock fallback | Retained for mock mode and rollback; not an API source of truth | `GET /api/v1/account/profile` | API account repository and UI states verified | Phase 3 — Customer Account |
 | `promotions.ts` | Marketing | Static Mock | Coupon seed; banners remain optional CMS data | Commerce configuration API | Coupon behavior is API-backed; banner migration is Post-Core | Phase 4 — Commerce Configuration / Post-Core |
 | `home.ts`, `footer.ts`, `navigation.ts` | CMS / UI | Static Mock | Optional CMS Seed | CMS APIs | Headless CMS or API implemented | Post-Core |
 
@@ -43,9 +43,19 @@ These files act as the current read-only database. They are highly relevant for 
 
 ## 3. PRD Migration Strategy & Ordering
 
-**Current phase: Phase 0 — Contract Freeze.** These inventories are Phase 0 evidence; no mock is removed until its domain meets the Phase 10 removal gate.
+**Current phase: Phase 3 — Customer Account.** The account adapters and API-mode stores are verification-ready, but no mock is removed until its domain meets the Phase 10 removal gate.
 
 To prevent breaking the application, each phase replaces only its domain through a frontend repository/API adapter. Zustand remains appropriate for UI state, local selections, optimistic UI, and the guest cart; it stops being the persistent source of truth only after its API parity is verified.
+
+## 4. Customer Account Adapter Verification
+
+The account adapter harness is the executable compatibility boundary for this phase:
+
+```bash
+npx tsx src/lib/api/account/account-adapter.harness.ts
+```
+
+It verifies mock-default/API-opt-in selection, DTO-only mapping, server-owned identity fields, memory-only token cleanup, loading/empty/error states, server-authoritative responses, and one-time reconciliation of empty server collections with legacy snapshots. The account mock data and local rollback path remain intentionally preserved for the Phase 10 mock-removal gate.
 
 | Sequence | PRD Phase | Migration outcome relevant to this inventory |
 |---:|---|---|
