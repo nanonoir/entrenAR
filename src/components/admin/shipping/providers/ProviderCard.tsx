@@ -12,7 +12,7 @@ const providerLogoById: Record<ShippingProviderConfig["id"], string> = {
   "correo-argentino": "/correoArgentino.svg",
 };
 
-export function ProviderCard({ provider, onDeactivate }: { provider: ShippingProviderConfig; onDeactivate: () => void }) {
+export function ProviderCard({ provider, onDeactivate, disabled = false }: { provider: ShippingProviderConfig; onDeactivate: () => void | Promise<void>; disabled?: boolean }) {
   const isActive = provider.status === "active";
   return (
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-border bg-white p-5 shadow-sm">
@@ -29,7 +29,7 @@ export function ProviderCard({ provider, onDeactivate }: { provider: ShippingPro
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <LinkButton href={`/admin/envios/medios-de-envio/${provider.id}`} variant="secondary" size="sm"><Edit2 aria-hidden size={14} />{provider.status === "not_configured" ? "Configurar" : "Editar"}</LinkButton>
-          {isActive ? <Button type="button" variant="secondary" size="sm" onClick={onDeactivate}><Power aria-hidden size={14} />Desactivar</Button> : null}
+           {isActive ? <Button disabled={disabled} type="button" variant="secondary" size="sm" onClick={() => void onDeactivate()}><Power aria-hidden size={14} />Desactivar</Button> : null}
         </div>
       </div>
     </article>

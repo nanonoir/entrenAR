@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
@@ -8,6 +8,7 @@ import { ProviderCard } from "@/components/admin/payment-methods/ProviderCard";
 import { BankTransferModal } from "@/components/admin/payment-methods/BankTransferModal";
 import { GatewayModal } from "@/components/admin/payment-methods/GatewayModal";
 import { DeactivateModal } from "@/components/admin/payment-methods/DeactivateModal";
+import { CommerceErrorBanner, CommerceLoadingState, CommerceMutationStatus, CommerceSourceBadge } from "@/components/admin/ui/CommerceDataState";
 import { useAdminPaymentMethodsStore } from "@/stores/admin-payment-methods-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { cn } from "@/lib/utils";
@@ -38,49 +39,72 @@ export function PaymentMethodsClient({ providers }: PaymentMethodsClientProps) {
   const activateProvider = useAdminPaymentMethodsStore((state) => state.activateProvider);
   const updateProviderConfig = useAdminPaymentMethodsStore((state) => state.updateProviderConfig);
   const deactivateProvider = useAdminPaymentMethodsStore((state) => state.deactivateProvider);
+  const clearError = useAdminPaymentMethodsStore((state) => state.clearError);
+  const error = useAdminPaymentMethodsStore((state) => state.error);
+  const hasLoaded = useAdminPaymentMethodsStore((state) => state.hasLoaded);
+  const isEmpty = useAdminPaymentMethodsStore((state) => state.isEmpty);
+  const load = useAdminPaymentMethodsStore((state) => state.load);
+  const source = useAdminPaymentMethodsStore((state) => state.source);
+  const status = useAdminPaymentMethodsStore((state) => state.status);
   const addToast = useAdminToastStore((state) => state.addToast);
+
+  useEffect(() => {
+    if (!hasLoaded) void load();
+  }, [hasLoaded, load]);
 
   const activeCount = providers.filter((provider) => providerConfigs[provider.id].status === "active").length;
   const visibleProviders = providers.filter((provider) => filter === "all" || providerConfigs[provider.id].status === filter);
-  const selectedProvider = useMemo(
-    () => (modal.type === "none" ? null : providers.find((provider) => provider.id === modal.providerId) ?? null),
-    [modal, providers],
-  );
+  const selectedProvider = modal.type === "none" ? null : providers.find((provider) => provider.id === modal.providerId) ?? null;
+  const isBusy = status === "loading";
 
   function openConfig(providerId: PaymentProviderId) {
+    clearError();
     setModal(providerId === "bank-transfer" ? { type: "bank", providerId } : { type: "gateway", providerId });
   }
 
-  function handleBankSubmit(values: BankTransferFormValues) {
+  async function handleBankSubmit(values: BankTransferFormValues): Promise<boolean> {
     const config = providerConfigs["bank-transfer"];
+    const succeeded = config.status === "active"
+      ? await updateProviderConfig("bank-transfer", { bankConfig: values })
+      : await activateProvider("bank-transfer", { bankConfig: values });
+
+    if (!succeeded) return false;
+
     if (config.status === "active") {
-      updateProviderConfig("bank-transfer", { bankConfig: values });
       addToast("Configuración actualizada correctamente.", "success");
     } else {
-      activateProvider("bank-transfer", { bankConfig: values });
       addToast("Transferencia Bancaria activado correctamente.", "success");
     }
     setModal({ type: "none" });
+    return true;
   }
 
-  function handleGatewayConfirm(optionId: string) {
-    if (!selectedProvider) return;
+  async function handleGatewayConfirm(optionId: string): Promise<boolean> {
+    if (!selectedProvider) return false;
     const config = providerConfigs[selectedProvider.id];
+    const succeeded = config.status === "active"
+      ? await updateProviderConfig(selectedProvider.id, { selectedOptionId: optionId })
+      : await activateProvider(selectedProvider.id, { selectedOptionId: optionId });
+
+    if (!succeeded) return false;
+
     if (config.status === "active") {
-      updateProviderConfig(selectedProvider.id, { selectedOptionId: optionId });
       addToast("Configuración actualizada correctamente.", "success");
     } else {
-      activateProvider(selectedProvider.id, { selectedOptionId: optionId });
       addToast(`${selectedProvider.name} activado correctamente.`, "success");
     }
     setModal({ type: "none" });
+    return true;
   }
 
-  function handleDeactivate() {
-    if (!selectedProvider) return;
-    deactivateProvider(selectedProvider.id);
+  async function handleDeactivate(): Promise<boolean> {
+    if (!selectedProvider) return false;
+    const succeeded = await deactivateProvider(selectedProvider.id);
+    if (!succeeded) return false;
+
     addToast("Medio de pago desactivado correctamente.", "success");
     setModal({ type: "none" });
+    return true;
   }
 
   return (
@@ -89,15 +113,22 @@ export function PaymentMethodsClient({ providers }: PaymentMethodsClientProps) {
         description="Activá, configurá y desactivá los medios de pago disponibles para el checkout."
         tag="Configuración"
         title="Medios de Pago"
-      />
+      >
+        <CommerceSourceBadge source={source} />
+      </AdminPageHeader>
 
-      {activeCount === 0 ? (
+      {!hasLoaded && !error ? <CommerceLoadingState label="Cargando medios de pago…" /> : null}
+      {!hasLoaded && error ? <CommerceErrorBanner error={error} onRetry={() => void load()} /> : null}
+      {hasLoaded && status === "loading" ? <CommerceMutationStatus /> : null}
+      {hasLoaded && error ? <CommerceErrorBanner error={error} onRetry={() => void load()} /> : null}
+
+      {hasLoaded && activeCount === 0 ? (
         <Alert title="Sin medios de pago activos" tone="warning">
           Cuando el backend sincronice checkout, la tienda no tendrá medios de pago disponibles hasta que actives al menos uno.
         </Alert>
       ) : null}
 
-      <div aria-label="Filtrar medios de pago" className="flex flex-wrap gap-2" role="tablist">
+      {hasLoaded && !isEmpty ? <div aria-label="Filtrar medios de pago" className="flex flex-wrap gap-2" role="tablist">
         {filterTabs.map((tab) => (
           <Button
             aria-selected={filter === tab.id}
@@ -111,26 +142,31 @@ export function PaymentMethodsClient({ providers }: PaymentMethodsClientProps) {
             {tab.label}
           </Button>
         ))}
-      </div>
+      </div> : null}
 
-      {visibleProviders.length === 0 ? (
+      {hasLoaded && isEmpty ? (
         <div className="rounded-3xl border border-border bg-white p-8 text-center text-sm font-semibold text-text-muted">
           No hay medios de pago para mostrar.
         </div>
-      ) : (
+      ) : hasLoaded && visibleProviders.length === 0 ? (
+        <div className="rounded-3xl border border-border bg-white p-8 text-center text-sm font-semibold text-text-muted">
+          No hay medios de pago para mostrar.
+        </div>
+      ) : hasLoaded ? (
         <div className="grid min-w-0 gap-4">
           {visibleProviders.map((provider) => (
             <ProviderCard
               config={providerConfigs[provider.id]}
+              disabled={isBusy}
               key={provider.id}
               onActivate={() => openConfig(provider.id)}
-              onDeactivate={() => setModal({ type: "deactivate", providerId: provider.id })}
+              onDeactivate={() => { clearError(); setModal({ type: "deactivate", providerId: provider.id }); }}
               onEdit={() => openConfig(provider.id)}
               provider={provider}
             />
           ))}
         </div>
-      )}
+      ) : null}
 
       <BankTransferModal
         initialValues={providerConfigs["bank-transfer"].bankConfig}

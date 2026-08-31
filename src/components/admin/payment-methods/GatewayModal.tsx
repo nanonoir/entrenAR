@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { useAdminPaymentMethodsStore } from "@/stores/admin-payment-methods-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { cn } from "@/lib/utils";
 import type { PaymentProviderDefinition } from "@/lib/data/admin/payment-methods";
@@ -14,26 +15,39 @@ type GatewayModalProps = {
   provider: PaymentProviderDefinition | null;
   selectedOptionId?: string;
   onClose: () => void;
-  onConfirm: (optionId: string) => void;
+  onConfirm: (optionId: string) => Promise<boolean | void> | boolean | void;
 };
 
 export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptionId }: GatewayModalProps) {
   const [currentOptionId, setCurrentOptionId] = useState(selectedOptionId ?? "");
   const [selectionError, setSelectionError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const clearError = useAdminPaymentMethodsStore((state) => state.clearError);
+  const apiError = useAdminPaymentMethodsStore((state) => state.error);
   const addToast = useAdminToastStore((state) => state.addToast);
   const isDirty = currentOptionId !== (selectedOptionId ?? "");
   const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
 
   if (!provider) return null;
 
-  function handleConfirm() {
+  const apiSelectionError = apiError?.issues.find((issue) => resolveGatewayField(issue.field) === "selectedOptionId")?.message;
+  const optionError = selectionError || apiSelectionError;
+
+  async function handleConfirm() {
+    if (isSubmitting) return;
     if (!currentOptionId) {
       setSelectionError("Seleccioná un plazo de acreditación para continuar.");
       addToast("Debes seleccionar un plazo para activar este medio de pago.", "error");
       return;
     }
     setSelectionError("");
-    onConfirm(currentOptionId);
+    clearError();
+    setIsSubmitting(true);
+    try {
+      await onConfirm(currentOptionId);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function requestClose() {
@@ -53,16 +67,17 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
           </div>
         </div>
 
-        <fieldset className="grid gap-3" aria-invalid={selectionError ? true : undefined} aria-describedby={selectionError ? "gateway-option-error" : "gateway-option-helper"}>
-          <legend className="text-sm font-semibold text-text">Seleccioná un plazo de acreditación</legend>
-          <p id="gateway-option-helper" className="text-xs text-text-muted">El plazo define cuándo se acredita el pago en la cuenta de la tienda.</p>
-          {selectionError ? <p id="gateway-option-error" className="text-xs font-medium text-sale">{selectionError}</p> : null}
+         <fieldset className="grid gap-3" aria-invalid={optionError ? true : undefined} aria-describedby={optionError ? "gateway-option-error" : "gateway-option-helper"}>
+           <legend className="text-sm font-semibold text-text">Seleccioná un plazo de acreditación</legend>
+           <p id="gateway-option-helper" className="text-xs text-text-muted">El plazo define cuándo se acredita el pago en la cuenta de la tienda.</p>
+           {optionError ? <p id="gateway-option-error" className="text-xs font-medium text-sale">{optionError}</p> : null}
+           {apiError ? <div role="alert" className="rounded-2xl border border-sale/20 bg-sale/10 p-3 text-sm font-medium text-sale">{apiError.message}</div> : null}
           {provider.options.map((option) => (
             <label
               className={cn(
                 "flex cursor-pointer gap-3 rounded-2xl border border-border p-4 transition hover:border-accent",
                 currentOptionId === option.id && "border-accent bg-accent-soft",
-                selectionError && "border-sale",
+                 optionError && "border-sale",
               )}
               key={option.id}
             >
@@ -71,7 +86,8 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
                 className="mt-1 h-4 w-4 shrink-0 accent-accent"
                 name="gateway-option"
                 onBlur={() => undefined}
-                onChange={() => { setCurrentOptionId(option.id); setSelectionError(""); }}
+                 disabled={isSubmitting}
+                 onChange={() => { clearError(); setCurrentOptionId(option.id); setSelectionError(""); }}
                 type="radio"
               />
               <span className="grid min-w-0 gap-1 text-sm sm:grid-cols-3 sm:gap-3">
@@ -83,11 +99,15 @@ export function GatewayModal({ onClose, onConfirm, open, provider, selectedOptio
         </fieldset>
 
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button onClick={requestClose} type="button" variant="secondary">Cancelar</Button>
-          <Button onClick={handleConfirm} type="button">Confirmar</Button>
+           <Button disabled={isSubmitting} onClick={requestClose} type="button" variant="secondary">Cancelar</Button>
+           <Button disabled={isSubmitting} onClick={handleConfirm} type="button">{isSubmitting ? "Guardando…" : "Confirmar"}</Button>
         </div>
       </div>
       {discardModal}
     </Modal>
   );
+}
+
+function resolveGatewayField(field: string) {
+  return field === "selectedOptionId" ? field : undefined;
 }

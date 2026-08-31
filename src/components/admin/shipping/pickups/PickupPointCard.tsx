@@ -6,7 +6,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { ShippingStatusBadge } from "@/components/admin/shipping/shipping-ui";
 import type { PickupPoint } from "@/lib/data/admin/shipping/shipping-config";
 
-export function PickupPointCard({ point, onDeactivate }: { point: PickupPoint; onDeactivate: () => void }) {
+export function PickupPointCard({ point, onDeactivate, disabled = false }: { point: PickupPoint; onDeactivate: () => void | Promise<void>; disabled?: boolean }) {
   return (
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-border bg-white p-5 shadow-sm">
       <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -17,7 +17,7 @@ export function PickupPointCard({ point, onDeactivate }: { point: PickupPoint; o
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <LinkButton href={`/admin/envios/medios-de-envio/retiros/${point.id}`} variant="secondary" size="sm"><Edit2 aria-hidden size={14} />Editar</LinkButton>
-          {point.status === "active" ? <Button type="button" variant="secondary" size="sm" onClick={onDeactivate}><Power aria-hidden size={14} />Desactivar</Button> : null}
+          {point.status === "active" ? <Button disabled={disabled} type="button" variant="secondary" size="sm" onClick={() => void onDeactivate()}><Power aria-hidden size={14} />Desactivar</Button> : null}
         </div>
       </div>
     </article>
