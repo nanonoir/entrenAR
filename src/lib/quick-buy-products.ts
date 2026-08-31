@@ -19,7 +19,7 @@ function toQuickBuyProduct(product: QuickBuyProduct): QuickBuyProduct {
 export async function getQuickBuyProductBySlug(slug: string): Promise<QuickBuyProduct | null> {
   const result = await getCatalogRepository().getPublicProductBySlug(slug);
 
-  if (result.status !== "success") {
+  if (result.status !== "success" || !result.data) {
     return null;
   }
 

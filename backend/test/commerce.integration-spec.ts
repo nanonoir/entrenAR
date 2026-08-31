@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { stderr } from "node:process";
 import { promisify } from "node:util";
 
 import { HttpException } from "@nestjs/common";
@@ -114,6 +115,43 @@ describe("commerce persistence integration", () => {
     );
   });
 
+  it("keeps coupon create and update transaction reads free of pg client-query deprecations", async () => {
+    const fixture = requireFixtures(fixtures);
+    const code = `sequential-${fixture.suffix}`;
+    const { created, updated } = await expectNoClientQueryDeprecation(async () => {
+      const created = await discounts.createCoupon(couponSchema.parse(validCoupon(code, {
+        categoryIds: ["cat-training", "cat-supplements"],
+        targetType: "categories",
+      })), fixture.adminId);
+      fixture.couponIds.push(created.id);
+      const updated = await discounts.updateCoupon(
+        created.id,
+        couponSchema.parse(validCoupon(code, {
+          discountValue: 20,
+          productIds: ["p-whey-pro", "p-creatine"],
+          targetType: "products",
+        })),
+        fixture.adminId,
+      );
+
+      return { created, updated };
+    });
+
+    expect(created).toEqual(expect.objectContaining({
+      categoryIds: ["cat-supplements", "cat-training"],
+      code: code.toUpperCase(),
+      history: [expect.objectContaining({ action: "created" })],
+      productIds: [],
+    }));
+    expect(updated).toEqual(expect.objectContaining({
+      categoryIds: [],
+      discountValue: 20,
+      history: expect.arrayContaining([expect.objectContaining({ action: "updated" })]),
+      id: created.id,
+      productIds: ["p-creatine", "p-whey-pro"],
+    }));
+  });
+
   it("enforces active coupon-code uniqueness at PostgreSQL level and allows reuse after soft deletion", async () => {
     const fixture = requireFixtures(fixtures);
     const reusableInput = couponSchema.parse(validCoupon(`reuse-${fixture.suffix}`));
@@ -161,18 +199,22 @@ describe("commerce persistence integration", () => {
     const fixture = requireFixtures(fixtures);
     const code = `history-${fixture.suffix}`;
     const normalizedCode = code.toUpperCase();
-    const created = await discounts.createCoupon(couponSchema.parse(validCoupon(code)), fixture.adminId);
-    fixture.couponIds.push(created.id);
+    const created = await expectNoClientQueryDeprecation(async () => {
+      const created = await discounts.createCoupon(couponSchema.parse(validCoupon(code)), fixture.adminId);
+      fixture.couponIds.push(created.id);
 
-    await prisma.user.update({
-      data: { firstName: "Renamed", lastName: "Administrator" },
-      where: { id: fixture.adminId },
+      await prisma.user.update({
+        data: { firstName: "Renamed", lastName: "Administrator" },
+        where: { id: fixture.adminId },
+      });
+      await discounts.updateCoupon(
+        created.id,
+        couponSchema.parse(validCoupon(code, { discountValue: 20, status: "inactive" })),
+        fixture.adminId,
+      );
+
+      return created;
     });
-    await discounts.updateCoupon(
-      created.id,
-      couponSchema.parse(validCoupon(code, { discountValue: 20, status: "inactive" })),
-      fixture.adminId,
-    );
 
     const history = await prisma.couponHistory.findMany({
       include: {
@@ -477,6 +519,25 @@ async function expectCode(operation: Promise<unknown>, expectedCode: string): Pr
   }
 
   throw new Error(`Expected ${expectedCode}.`);
+}
+
+async function expectNoClientQueryDeprecation<T>(operation: () => Promise<T>): Promise<T> {
+  const warningWrite = jest.spyOn(stderr, "write");
+  try {
+    const result = await operation();
+    await flushProcessWarnings();
+    expect(warningWrite.mock.calls.filter(([chunk]) => {
+      return typeof chunk === "string" && chunk.includes("client.query() when the client is already executing a query");
+    })).toEqual([]);
+    return result;
+  } finally {
+    warningWrite.mockRestore();
+  }
+}
+
+async function flushProcessWarnings(): Promise<void> {
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
 function errorCode(error: unknown): string | undefined {

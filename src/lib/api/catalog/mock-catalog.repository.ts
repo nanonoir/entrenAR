@@ -30,7 +30,8 @@ export class MockCatalogRepository implements CatalogRepository {
     return products.length > 0 ? { data: products, status: "success" } : { data: products, status: "empty" };
   }
 
-  async getInventoryHistory(_productId: string): Promise<CatalogReadResult<CatalogInventoryHistoryEntry[]>> {
+  async getInventoryHistory(productId: string): Promise<CatalogReadResult<CatalogInventoryHistoryEntry[]>> {
+    void productId;
     return { data: [], status: "empty" };
   }
 

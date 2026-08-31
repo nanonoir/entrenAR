@@ -14,7 +14,8 @@ export interface ResetDeliveryPort {
 
 @Injectable()
 export class NoopResetDelivery implements ResetDeliveryPort {
-  async deliverPasswordReset(_delivery: PasswordResetDelivery): Promise<void> {
+  async deliverPasswordReset(delivery: PasswordResetDelivery): Promise<void> {
+    void delivery;
     return Promise.resolve();
   }
 }

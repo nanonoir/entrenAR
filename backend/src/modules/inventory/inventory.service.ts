@@ -6,7 +6,6 @@ import {
   INVENTORY_OPERATION,
   INVENTORY_STOCK_MODE,
   type InventoryOperationInput,
-  type InventoryStockModeInput,
 } from "./inventory.constants";
 import {
   formatInventoryStock,

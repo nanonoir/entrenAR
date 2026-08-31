@@ -9,7 +9,7 @@ import { PrismaService } from "../src/common/prisma/prisma.service";
 import { CatalogRepository } from "../src/modules/catalog/catalog.repository";
 import { CategoryService } from "../src/modules/catalog/category.service";
 import { ProductService } from "../src/modules/catalog/product.service";
-import { categoryCreateSchema, categoryUpdateSchema, productCreateSchema } from "../src/modules/catalog/catalog.schemas";
+import { categoryUpdateSchema, productCreateSchema } from "../src/modules/catalog/catalog.schemas";
 
 const databaseUrl = process.env["DATABASE_URL"];
 
@@ -18,28 +18,34 @@ describe("catalog domain integration", () => {
   const repository = new CatalogRepository(prisma as unknown as PrismaService);
   const categories = new CategoryService(repository);
   const products = new ProductService(repository);
+  const fixtureCategoryIds: string[] = [];
+  const fixtureProductIds: string[] = [];
 
   beforeAll(() => {
     if (!databaseUrl) throw new Error("DATABASE_URL is required for catalog domain integration tests.");
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
+    try {
+      await deleteFixtures(prisma, fixtureProductIds, fixtureCategoryIds);
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   it("prevents category cycles and deletion of a referenced descendant", async () => {
-    const root = await categories.create(categoryInput("root"));
-    const child = await categories.create(categoryInput("child", root.id));
+    const root = await createFixtureCategory(categoryInput("root"));
+    const child = await createFixtureCategory(categoryInput("child", root.id));
     await expectCode(categories.update(categoryUpdateSchema.parse(categoryInput("root", child.id, root.id))), "CATEGORY_CYCLE");
 
-    await products.create(productInput(root.id, { sku: `PRODUCT-${randomUUID()}` }));
+    await createFixtureProduct(productInput(root.id, { sku: `PRODUCT-${randomUUID()}` }));
     await expectCode(categories.delete(root.id), "CATEGORY_IN_USE");
     await expect(prisma.category.findUnique({ where: { id: child.id } })).resolves.toEqual(expect.objectContaining({ parentId: root.id }));
   });
 
   it("hides a category subtree and does not reveal descendants when its parent is shown", async () => {
-    const root = await categories.create(categoryInput("visibility-root"));
-    const child = await categories.create(categoryInput("visibility-child", root.id));
+    const root = await createFixtureCategory(categoryInput("visibility-root"));
+    const child = await createFixtureCategory(categoryInput("visibility-child", root.id));
 
     await categories.setVisibility(root.id, "hidden");
     await categories.setVisibility(root.id, "visible");
@@ -49,9 +55,9 @@ describe("catalog domain integration", () => {
   });
 
   it("rejects duplicate slug, public slug, and SKU without partial product writes", async () => {
-    const category = await categories.create(categoryInput("identity"));
+    const category = await createFixtureCategory(categoryInput("identity"));
     const suffix = randomUUID();
-    await products.create(productInput(category.id, { publicSlug: `public-${suffix}`, sku: `SKU-${suffix}`, slug: `slug-${suffix}` }));
+    await createFixtureProduct(productInput(category.id, { publicSlug: `public-${suffix}`, sku: `SKU-${suffix}`, slug: `slug-${suffix}` }));
     const count = await prisma.product.count();
 
     await expectCode(products.create(productInput(category.id, { sku: `NEW-${suffix}`, slug: `slug-${suffix}` })), "SLUG_CONFLICT");
@@ -61,9 +67,9 @@ describe("catalog domain integration", () => {
   });
 
   it("requires every Cartesian combination and creates a default variant when no axes exist", async () => {
-    const category = await categories.create(categoryInput("variants"));
+    const category = await createFixtureCategory(categoryInput("variants"));
     const count = await prisma.product.count();
-    await expectCode(products.create(productInput(category.id, {
+    await expectCode(createFixtureProduct(productInput(category.id, {
       variantCombinations: [
         { name: "Black / S", sku: `VAR-${randomUUID()}`, stock: 1 },
         { name: "Black / M", sku: `VAR-${randomUUID()}`, stock: 1 },
@@ -76,13 +82,13 @@ describe("catalog domain integration", () => {
     })), "VALIDATION_ERROR");
     await expect(prisma.product.count()).resolves.toBe(count);
 
-    const created = await products.create(productInput(category.id));
+    const created = await createFixtureProduct(productInput(category.id));
     expect(created.variantCombinations).toEqual([expect.objectContaining({ name: "Default", stock: 8 })]);
   });
 
   it("inherits the product price for variants without overrides", async () => {
-    const category = await categories.create(categoryInput("inheritance"));
-    const product = await products.create(productInput(category.id, {
+    const category = await createFixtureCategory(categoryInput("inheritance"));
+    const product = await createFixtureProduct(productInput(category.id, {
       salePrice: 55.5,
       variantCombinations: [
         { name: "Black", sku: `VAR-${randomUUID()}`, stock: 2 },
@@ -94,14 +100,15 @@ describe("catalog domain integration", () => {
   });
 
   it("duplicates products with independent variants, inventory, zero sales, and collision-safe identities", async () => {
-    const category = await categories.create(categoryInput("duplicate"));
-    const source = await products.create(productInput(category.id, {
+    const category = await createFixtureCategory(categoryInput("duplicate"));
+    const source = await createFixtureProduct(productInput(category.id, {
       variantCombinations: [
         { name: "Black", sku: `VAR-${randomUUID()}`, stock: 4 },
       ],
       variantProperties: [{ name: "Color", values: ["Black"] }],
     }));
     const duplicate = await products.duplicate(source.id);
+    fixtureProductIds.push(duplicate.id);
     const sourceVariant = source.variantCombinations[0];
     const duplicateVariant = duplicate.variantCombinations[0];
     if (!sourceVariant || !duplicateVariant) throw new Error("Expected source and duplicate variants.");
@@ -121,6 +128,18 @@ describe("catalog domain integration", () => {
     await expect(prisma.productVariant.findUnique({ where: { id: sourceVariant.id } })).resolves.toEqual(expect.objectContaining({ quantity: 4 }));
     await expectCode(products.duplicate(`missing-${randomUUID()}`), "NOT_FOUND");
   });
+
+  async function createFixtureCategory(input: Parameters<CategoryService["create"]>[0]) {
+    const category = await categories.create(input);
+    fixtureCategoryIds.push(category.id);
+    return category;
+  }
+
+  async function createFixtureProduct(input: Parameters<ProductService["create"]>[0]) {
+    const product = await products.create(input);
+    fixtureProductIds.push(product.id);
+    return product;
+  }
 });
 
 function categoryInput(name: string, parentId?: string, id?: string) {
@@ -146,6 +165,22 @@ function productInput(categoryId: string, overrides: Record<string, unknown> = {
     visibility: "visible",
     ...overrides,
   });
+}
+
+async function deleteFixtures(
+  prisma: PrismaClient,
+  productIds: readonly string[],
+  categoryIds: readonly string[],
+): Promise<void> {
+  const uniqueProductIds = [...new Set(productIds)];
+  if (uniqueProductIds.length > 0) {
+    await prisma.productCategory.deleteMany({ where: { productId: { in: uniqueProductIds } } });
+    await prisma.product.deleteMany({ where: { id: { in: uniqueProductIds } } });
+  }
+
+  for (const categoryId of [...new Set(categoryIds)].reverse()) {
+    await prisma.category.deleteMany({ where: { id: categoryId } });
+  }
 }
 
 async function expectCode(operation: Promise<unknown>, expectedCode: string): Promise<void> {
