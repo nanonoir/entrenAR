@@ -12,6 +12,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AccountModule } from "./modules/account/account.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
+import { CommerceModule } from "./modules/commerce/commerce.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { WishlistModule } from "./modules/wishlist/wishlist.module";
@@ -36,6 +37,7 @@ import { WishlistModule } from "./modules/wishlist/wishlist.module";
     AuthModule,
     AccountModule,
     CatalogModule,
+    CommerceModule,
     HealthModule,
     InventoryModule,
     WishlistModule,
