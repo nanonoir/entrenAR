@@ -29,23 +29,106 @@ enum InventoryOperation {
   REPLACE
 }
 
+enum PaymentMethodStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ShippingProviderStatus {
+  NOT_CONFIGURED
+  CONFIGURED_INACTIVE
+  ACTIVE
+}
+
+enum PickupPointStatus {
+  NOT_CONFIGURED
+  CONFIGURED_INACTIVE
+  ACTIVE
+}
+
+enum PickupCostType {
+  FREE
+  FIXED
+}
+
+enum PickupCoverageType {
+  ALL
+  PROVINCES
+}
+
+enum CouponDiscountType {
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
+}
+
+enum CouponTargetType {
+  ALL_STORE
+  CATEGORIES
+  PRODUCTS
+}
+
+enum CouponUsageLimitType {
+  UNLIMITED
+  LIMITED
+}
+
+enum CouponCustomerLimitType {
+  UNLIMITED
+  LIMITED
+  FIRST_PURCHASE
+}
+
+enum CouponDateLimitType {
+  UNLIMITED
+  PERIOD
+}
+
+enum CouponMaxDiscountType {
+  NONE
+  AMOUNT
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CouponHistoryAction {
+  CREATED
+  ACTIVATED
+  DEACTIVATED
+  UPDATED
+}
+
+enum ShippingDiscountTargetType {
+  ALL_STORE
+  CATEGORIES
+}
+
+enum ShippingZoneTargetType {
+  ALL
+  SPECIFIC
+}
+
 model User {
-  id                  String               @id @default(cuid())
-  email               String               @unique
-  passwordHash        String
-  role                Role                 @default(CUSTOMER)
-  firstName           String?
-  lastName            String?
-  dni                 String?
-  gender              String?
-  birthDate           DateTime?
-  phone               String?
-  refreshTokens       RefreshToken[]
-  addresses           UserAddress[]
-  wishlistItems       WishlistItem[]
-  passwordResetTokens PasswordResetToken[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  passwordHash         String
+  role                 Role                 @default(CUSTOMER)
+  firstName            String?
+  lastName             String?
+  dni                  String?
+  gender               String?
+  birthDate            DateTime?
+  phone                String?
+  refreshTokens        RefreshToken[]
+  addresses            UserAddress[]
+  wishlistItems        WishlistItem[]
+  passwordResetTokens  PasswordResetToken[]
+  couponHistoryEntries CouponHistory[]      @relation("CouponHistoryActor")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 }
 
 model RefreshToken {
@@ -103,22 +186,24 @@ model PasswordResetToken {
 }
 
 model Category {
-  id                     String            @id @default(cuid())
-  name                   String
-  slug                   String            @unique
-  description            String?
-  imageUrl               String?
-  googleShoppingCategory String?
-  seoTitle               String?
-  seoDescription         String?
-  visibility             CatalogVisibility @default(VISIBLE)
-  sortOrder              Int               @default(0)
-  parentId               String?
-  parent                 Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children               Category[]        @relation("CategoryHierarchy")
-  productCategories      ProductCategory[]
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  id                         String                     @id @default(cuid())
+  name                       String
+  slug                       String                     @unique
+  description                String?
+  imageUrl                   String?
+  googleShoppingCategory     String?
+  seoTitle                   String?
+  seoDescription             String?
+  visibility                 CatalogVisibility          @default(VISIBLE)
+  sortOrder                  Int                        @default(0)
+  parentId                   String?
+  parent                     Category?                  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children                   Category[]                 @relation("CategoryHierarchy")
+  productCategories          ProductCategory[]
+  couponCategories           CouponCategory[]
+  shippingDiscountCategories ShippingDiscountCategory[]
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
 
   @@index([parentId])
   @@index([parentId, sortOrder])
@@ -163,6 +248,7 @@ model Product {
   categories        ProductCategory[]
   wishlistItems     WishlistItem[]
   inventoryHistory  InventoryHistory[]
+  couponProducts    CouponProduct[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -227,4 +313,197 @@ model CatalogSettings {
   showOutOfStockAtEnd Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model PaymentMethodConfig {
+  id               String              @id
+  name             String
+  description      String
+  logoSrc          String
+  acceptedMethods  Json                @default("[]")
+  options          Json                @default("[]")
+  status           PaymentMethodStatus @default(INACTIVE)
+  selectedOptionId String?
+  bankConfig       Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([status])
+}
+
+model ShippingProvider {
+  id                    String                 @id
+  name                  String
+  status                ShippingProviderStatus @default(NOT_CONFIGURED)
+  enabledModalities     Json                   @default("[]")
+  originSenderName      String?
+  originCuitCuil        String?
+  originPhone           String?
+  originEmail           String?
+  originStreet          String?
+  originNumber          String?
+  originCity            String?
+  originProvince        String?
+  originPostalCode      String?
+  originFloor           String?
+  originApartment       String?
+  originReference       String?
+  freeShippingThreshold Decimal?               @db.Decimal(12, 2)
+  weightBands           WeightBand[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([status])
+}
+
+model WeightBand {
+  id                 String           @id @default(cuid())
+  shippingProviderId String
+  minWeightGrams     Int
+  maxWeightGrams     Int?
+  cost               Decimal          @db.Decimal(12, 2)
+  sortOrder          Int              @default(0)
+  shippingProvider   ShippingProvider @relation(fields: [shippingProviderId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([shippingProviderId, minWeightGrams])
+  @@index([shippingProviderId, sortOrder])
+}
+
+model PickupPoint {
+  id               String                @id @default(cuid())
+  name             String
+  status           PickupPointStatus     @default(NOT_CONFIGURED)
+  isMain           Boolean               @default(false)
+  street           String?
+  number           String?
+  city             String?
+  province         String?
+  postalCode       String?
+  contactName      String?
+  contactPhone     String?
+  contactEmail     String?
+  preparationHours Int                   @default(24)
+  costType         PickupCostType        @default(FREE)
+  fixedCost        Decimal?              @db.Decimal(12, 2)
+  coverageType     PickupCoverageType    @default(ALL)
+  provinces        Json                  @default("[]")
+  schedules        PickupPointSchedule[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([status])
+}
+
+model PickupPointSchedule {
+  id            String      @id @default(cuid())
+  pickupPointId String
+  dayOfWeek     String
+  opensAt       String
+  closesAt      String
+  sortOrder     Int         @default(0)
+  pickupPoint   PickupPoint @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([pickupPointId, dayOfWeek, sortOrder])
+}
+
+model Coupon {
+  id                       String                  @id @default(cuid())
+  code                     String
+  discountType             CouponDiscountType
+  discountValue            Decimal?                @db.Decimal(12, 2)
+  includeShippingCost      Boolean                 @default(false)
+  targetType               CouponTargetType
+  canCombineWithPromotions Boolean                 @default(false)
+  totalUsageLimitType      CouponUsageLimitType    @default(UNLIMITED)
+  totalUsageLimit          Int?
+  usageCount               Int                     @default(0)
+  customerLimitType        CouponCustomerLimitType @default(UNLIMITED)
+  customerUsageLimit       Int?
+  dateLimitType            CouponDateLimitType     @default(UNLIMITED)
+  startDate                DateTime?
+  endDate                  DateTime?
+  minimumCartAmount        Decimal                 @default(0) @db.Decimal(12, 2)
+  maxDiscountType          CouponMaxDiscountType   @default(NONE)
+  maxDiscountAmount        Decimal?                @db.Decimal(12, 2)
+  status                   CouponStatus            @default(INACTIVE)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  deletedAt                DateTime?
+  categories               CouponCategory[]
+  products                 CouponProduct[]
+  history                  CouponHistory[]
+
+  @@index([code])
+  @@index([status, deletedAt])
+  @@index([deletedAt])
+}
+
+model CouponCategory {
+  couponId   String
+  categoryId String
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+
+  @@id([couponId, categoryId])
+  @@index([categoryId])
+}
+
+model CouponProduct {
+  couponId  String
+  productId String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@id([couponId, productId])
+  @@index([productId])
+}
+
+model CouponHistory {
+  id        String              @id @default(cuid())
+  couponId  String
+  action    CouponHistoryAction
+  actorId   String?
+  actorName String?
+  coupon    Coupon              @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  actor     User?               @relation("CouponHistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime            @default(now())
+
+  @@index([couponId, createdAt])
+  @@index([actorId])
+}
+
+model ShippingDiscount {
+  id                         String                     @id @default(cuid())
+  shippingMethodIds          Json                       @default("[]")
+  onlyCheapestShippingMethod Boolean                    @default(false)
+  targetType                 ShippingDiscountTargetType @default(ALL_STORE)
+  canCombineWithPromotions   Boolean                    @default(false)
+  zoneTargetType             ShippingZoneTargetType     @default(ALL)
+  zoneIds                    Json                       @default("[]")
+  minimumCartAmount          Decimal                    @default(0) @db.Decimal(12, 2)
+  status                     CouponStatus               @default(INACTIVE)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  deletedAt                  DateTime?
+  categories                 ShippingDiscountCategory[]
+
+  @@index([status, deletedAt])
+  @@index([deletedAt])
+}
+
+model ShippingDiscountCategory {
+  shippingDiscountId String
+  categoryId         String
+  shippingDiscount   ShippingDiscount @relation(fields: [shippingDiscountId], references: [id], onDelete: Cascade)
+  category           Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now())
+
+  @@id([shippingDiscountId, categoryId])
+  @@index([categoryId])
 }
