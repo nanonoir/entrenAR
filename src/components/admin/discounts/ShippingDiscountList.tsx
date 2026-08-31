@@ -10,14 +10,15 @@ import type { DiscountSelectOption, ShippingDiscount } from "@/lib/data/admin/di
 
 type ShippingDiscountListProps = {
   categoryOptions: DiscountSelectOption[];
+  disabled?: boolean;
   shippingDiscounts: ShippingDiscount[];
   shippingMethodOptions: DiscountSelectOption[];
   zoneOptions: DiscountSelectOption[];
   onDelete: (shippingDiscount: ShippingDiscount) => void;
-  onToggle: (shippingDiscount: ShippingDiscount) => void;
+  onToggle: (shippingDiscount: ShippingDiscount) => void | Promise<void>;
 };
 
-export function ShippingDiscountList({ categoryOptions, shippingDiscounts, shippingMethodOptions, zoneOptions, onDelete, onToggle }: ShippingDiscountListProps) {
+export function ShippingDiscountList({ categoryOptions, disabled = false, shippingDiscounts, shippingMethodOptions, zoneOptions, onDelete, onToggle }: ShippingDiscountListProps) {
   return (
     <>
       <div className="hidden overflow-hidden rounded-3xl border border-border bg-white shadow-sm xl:block">
@@ -42,8 +43,8 @@ export function ShippingDiscountList({ categoryOptions, shippingDiscounts, shipp
                 <td className="px-4 py-4"><DiscountStatusBadge status={shippingDiscount.status} /></td>
                 <td className="px-4 py-4">
                   <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" aria-label={shippingDiscount.status === "active" ? "Desactivar envío gratis" : "Activar envío gratis"} onClick={() => onToggle(shippingDiscount)}>{shippingDiscount.status === "active" ? <PowerOff aria-hidden size={17} /> : <Power aria-hidden size={17} />}</Button>
-                    <Button size="icon" variant="ghost" aria-label="Eliminar envío gratis" onClick={() => onDelete(shippingDiscount)}><Trash2 aria-hidden size={17} className="text-sale" /></Button>
+                     <Button disabled={disabled} size="icon" variant="ghost" aria-label={shippingDiscount.status === "active" ? "Desactivar envío gratis" : "Activar envío gratis"} onClick={() => void onToggle(shippingDiscount)}>{shippingDiscount.status === "active" ? <PowerOff aria-hidden size={17} /> : <Power aria-hidden size={17} />}</Button>
+                     <Button disabled={disabled} size="icon" variant="ghost" aria-label="Eliminar envío gratis" onClick={() => onDelete(shippingDiscount)}><Trash2 aria-hidden size={17} className="text-sale" /></Button>
                   </div>
                 </td>
               </tr>
@@ -51,7 +52,7 @@ export function ShippingDiscountList({ categoryOptions, shippingDiscounts, shipp
           </tbody>
         </table>
       </div>
-      <div className="grid min-w-0 gap-3 xl:hidden">{shippingDiscounts.map((shippingDiscount) => <ShippingDiscountCard key={shippingDiscount.id} shippingDiscount={shippingDiscount} categoryOptions={categoryOptions} shippingMethodOptions={shippingMethodOptions} zoneOptions={zoneOptions} onDelete={onDelete} onToggle={onToggle} />)}</div>
+       <div className="grid min-w-0 gap-3 xl:hidden">{shippingDiscounts.map((shippingDiscount) => <ShippingDiscountCard disabled={disabled} key={shippingDiscount.id} shippingDiscount={shippingDiscount} categoryOptions={categoryOptions} shippingMethodOptions={shippingMethodOptions} zoneOptions={zoneOptions} onDelete={onDelete} onToggle={onToggle} />)}</div>
     </>
   );
 }

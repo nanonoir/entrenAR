@@ -9,11 +9,12 @@ import type { Coupon } from "@/lib/data/admin/discounts/types";
 
 type CouponCardProps = {
   coupon: Coupon;
+  disabled?: boolean;
   onDelete: (coupon: Coupon) => void;
-  onToggle: (coupon: Coupon) => void;
+  onToggle: (coupon: Coupon) => void | Promise<void>;
 };
 
-export function CouponCard({ coupon, onDelete, onToggle }: CouponCardProps) {
+export function CouponCard({ coupon, disabled = false, onDelete, onToggle }: CouponCardProps) {
   return (
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-border bg-white p-4 shadow-sm">
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -29,8 +30,8 @@ export function CouponCard({ coupon, onDelete, onToggle }: CouponCardProps) {
         <div className="min-w-0"><dt className="text-xs text-text-muted">Límites</dt><dd className="truncate font-medium text-text">{getCouponLimitsLabel(coupon)}</dd></div>
       </dl>
       <div className="mt-4 flex justify-end gap-2">
-        <Button size="icon" variant="ghost" aria-label={coupon.status === "active" ? "Desactivar cupón" : "Activar cupón"} onClick={() => onToggle(coupon)}>{coupon.status === "active" ? <PowerOff aria-hidden size={18} /> : <Power aria-hidden size={18} />}</Button>
-        <Button size="icon" variant="ghost" aria-label="Eliminar cupón" onClick={() => onDelete(coupon)}><Trash2 aria-hidden size={18} className="text-sale" /></Button>
+         <Button disabled={disabled} size="icon" variant="ghost" aria-label={coupon.status === "active" ? "Desactivar cupón" : "Activar cupón"} onClick={() => void onToggle(coupon)}>{coupon.status === "active" ? <PowerOff aria-hidden size={18} /> : <Power aria-hidden size={18} />}</Button>
+         <Button disabled={disabled} size="icon" variant="ghost" aria-label="Eliminar cupón" onClick={() => onDelete(coupon)}><Trash2 aria-hidden size={18} className="text-sale" /></Button>
       </div>
     </article>
   );

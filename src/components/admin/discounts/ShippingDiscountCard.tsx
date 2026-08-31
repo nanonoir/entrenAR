@@ -9,14 +9,15 @@ import type { DiscountSelectOption, ShippingDiscount } from "@/lib/data/admin/di
 
 type ShippingDiscountCardProps = {
   categoryOptions: DiscountSelectOption[];
+  disabled?: boolean;
   shippingDiscount: ShippingDiscount;
   shippingMethodOptions: DiscountSelectOption[];
   zoneOptions: DiscountSelectOption[];
   onDelete: (shippingDiscount: ShippingDiscount) => void;
-  onToggle: (shippingDiscount: ShippingDiscount) => void;
+  onToggle: (shippingDiscount: ShippingDiscount) => void | Promise<void>;
 };
 
-export function ShippingDiscountCard({ categoryOptions, shippingDiscount, shippingMethodOptions, zoneOptions, onDelete, onToggle }: ShippingDiscountCardProps) {
+export function ShippingDiscountCard({ categoryOptions, disabled = false, shippingDiscount, shippingMethodOptions, zoneOptions, onDelete, onToggle }: ShippingDiscountCardProps) {
   return (
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-border bg-white p-4 shadow-sm">
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -31,8 +32,8 @@ export function ShippingDiscountCard({ categoryOptions, shippingDiscount, shippi
         <div className="min-w-0"><dt className="text-xs text-text-muted">Zonas</dt><dd className="truncate font-medium text-text">{getShippingZonesLabel(shippingDiscount, zoneOptions)}</dd></div>
       </dl>
       <div className="mt-4 flex justify-end gap-2">
-        <Button size="icon" variant="ghost" aria-label={shippingDiscount.status === "active" ? "Desactivar envío gratis" : "Activar envío gratis"} onClick={() => onToggle(shippingDiscount)}>{shippingDiscount.status === "active" ? <PowerOff aria-hidden size={18} /> : <Power aria-hidden size={18} />}</Button>
-        <Button size="icon" variant="ghost" aria-label="Eliminar envío gratis" onClick={() => onDelete(shippingDiscount)}><Trash2 aria-hidden size={18} className="text-sale" /></Button>
+         <Button disabled={disabled} size="icon" variant="ghost" aria-label={shippingDiscount.status === "active" ? "Desactivar envío gratis" : "Activar envío gratis"} onClick={() => void onToggle(shippingDiscount)}>{shippingDiscount.status === "active" ? <PowerOff aria-hidden size={18} /> : <Power aria-hidden size={18} />}</Button>
+         <Button disabled={disabled} size="icon" variant="ghost" aria-label="Eliminar envío gratis" onClick={() => onDelete(shippingDiscount)}><Trash2 aria-hidden size={18} className="text-sale" /></Button>
       </div>
     </article>
   );
