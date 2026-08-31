@@ -10,12 +10,13 @@ import type { PaymentProviderDefinition } from "@/lib/data/admin/payment-methods
 type ProviderCardProps = {
   provider: PaymentProviderDefinition;
   config: PaymentProviderConfig;
+  disabled?: boolean;
   onActivate: () => void;
   onEdit: () => void;
   onDeactivate: () => void;
 };
 
-export function ProviderCard({ config, onActivate, onDeactivate, onEdit, provider }: ProviderCardProps) {
+export function ProviderCard({ config, disabled = false, onActivate, onDeactivate, onEdit, provider }: ProviderCardProps) {
   const isActive = config.status === "active";
 
   return (
@@ -37,11 +38,11 @@ export function ProviderCard({ config, onActivate, onDeactivate, onEdit, provide
         <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
           {isActive ? (
             <>
-              <Button onClick={onEdit} size="sm" variant="secondary">Editar configuración</Button>
-              <Button onClick={onDeactivate} size="sm" variant="danger">Desactivar</Button>
+               <Button disabled={disabled} onClick={onEdit} size="sm" variant="secondary">Editar configuración</Button>
+               <Button disabled={disabled} onClick={onDeactivate} size="sm" variant="danger">Desactivar</Button>
             </>
           ) : (
-            <Button onClick={onActivate} size="sm" variant="primary">Activar</Button>
+             <Button disabled={disabled} onClick={onActivate} size="sm" variant="primary">Activar</Button>
           )}
         </div>
       </div>
