@@ -10,11 +10,12 @@ import type { Coupon } from "@/lib/data/admin/discounts/types";
 
 type CouponListProps = {
   coupons: Coupon[];
+  disabled?: boolean;
   onDelete: (coupon: Coupon) => void;
-  onToggle: (coupon: Coupon) => void;
+  onToggle: (coupon: Coupon) => void | Promise<void>;
 };
 
-export function CouponList({ coupons, onDelete, onToggle }: CouponListProps) {
+export function CouponList({ coupons, disabled = false, onDelete, onToggle }: CouponListProps) {
   return (
     <>
       <div className="hidden overflow-hidden rounded-3xl border border-border bg-white shadow-sm xl:block">
@@ -43,8 +44,8 @@ export function CouponList({ coupons, onDelete, onToggle }: CouponListProps) {
                 <td className="px-4 py-4"><DiscountStatusBadge status={coupon.status} /></td>
                 <td className="px-4 py-4">
                   <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" aria-label={coupon.status === "active" ? "Desactivar cupón" : "Activar cupón"} onClick={() => onToggle(coupon)}>{coupon.status === "active" ? <PowerOff aria-hidden size={17} /> : <Power aria-hidden size={17} />}</Button>
-                    <Button size="icon" variant="ghost" aria-label="Eliminar cupón" onClick={() => onDelete(coupon)}><Trash2 aria-hidden size={17} className="text-sale" /></Button>
+                     <Button disabled={disabled} size="icon" variant="ghost" aria-label={coupon.status === "active" ? "Desactivar cupón" : "Activar cupón"} onClick={() => void onToggle(coupon)}>{coupon.status === "active" ? <PowerOff aria-hidden size={17} /> : <Power aria-hidden size={17} />}</Button>
+                     <Button disabled={disabled} size="icon" variant="ghost" aria-label="Eliminar cupón" onClick={() => onDelete(coupon)}><Trash2 aria-hidden size={17} className="text-sale" /></Button>
                   </div>
                 </td>
               </tr>
@@ -52,7 +53,7 @@ export function CouponList({ coupons, onDelete, onToggle }: CouponListProps) {
           </tbody>
         </table>
       </div>
-      <div className="grid min-w-0 gap-3 xl:hidden">{coupons.map((coupon) => <CouponCard key={coupon.id} coupon={coupon} onDelete={onDelete} onToggle={onToggle} />)}</div>
+       <div className="grid min-w-0 gap-3 xl:hidden">{coupons.map((coupon) => <CouponCard disabled={disabled} key={coupon.id} coupon={coupon} onDelete={onDelete} onToggle={onToggle} />)}</div>
     </>
   );
 }
