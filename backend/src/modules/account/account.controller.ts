@@ -31,7 +31,6 @@ import {
   AccountAddressDto,
   AccountAddressRequestDto,
   AccountOrderDto,
-  AccountOrderListQueryDto,
   AccountProfileDto,
   AccountProfileRequestDto,
   AccountSuccessResponseDto,

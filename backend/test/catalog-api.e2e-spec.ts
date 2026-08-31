@@ -35,39 +35,50 @@ interface CategoryResponse {
 }
 
 describe("catalog administration and public API (e2e)", () => {
-  let app: INestApplication;
+  let app: INestApplication | undefined;
+  let prisma: PrismaService | undefined;
   let adminToken: string;
   let baseUrl: string;
   let categoryId: string;
   let categorySlug: string;
   let customerToken: string;
   let publicSlug: string;
+  const fixtureCategoryIds: string[] = [];
+  const fixtureProductIds: string[] = [];
+  const fixtureUserIds: string[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    const prisma = moduleFixture.get(PrismaService);
+    const database = moduleFixture.get(PrismaService);
+    prisma = database;
     const suffix = randomUUID();
     const password = "catalog_api_e2e_password";
     const adminEmail = `catalog-admin-${suffix}@entrenar.test`;
     const customerEmail = `catalog-customer-${suffix}@entrenar.test`;
+    const adminId = `catalog-api-admin-${suffix}`;
+    const customerId = `catalog-api-customer-${suffix}`;
 
-    await prisma.user.createMany({
+    await database.user.createMany({
       data: [
-        { email: adminEmail, passwordHash: await bcrypt.hash(password, 12), role: Role.ADMIN },
-        { email: customerEmail, passwordHash: await bcrypt.hash(password, 12), role: Role.CUSTOMER },
+        { email: adminEmail, id: adminId, passwordHash: await bcrypt.hash(password, 12), role: Role.ADMIN },
+        { email: customerEmail, id: customerId, passwordHash: await bcrypt.hash(password, 12), role: Role.CUSTOMER },
       ],
     });
-    const visibleCategory = await prisma.category.create({
+    fixtureUserIds.push(adminId, customerId);
+    const visibleCategory = await database.category.create({
       data: { name: "Catalog API visible", slug: `catalog-api-visible-${suffix}`, sortOrder: 1 },
     });
-    const hiddenParent = await prisma.category.create({
+    fixtureCategoryIds.push(visibleCategory.id);
+    const hiddenParent = await database.category.create({
       data: { name: "Catalog API hidden", slug: `catalog-api-hidden-${suffix}`, sortOrder: 2, visibility: CatalogVisibility.HIDDEN },
     });
-    await prisma.category.create({
+    fixtureCategoryIds.push(hiddenParent.id);
+    const hiddenChild = await database.category.create({
       data: { name: "Catalog API hidden child", parentId: hiddenParent.id, slug: `catalog-api-hidden-child-${suffix}`, sortOrder: 1 },
     });
+    fixtureCategoryIds.push(hiddenChild.id);
     publicSlug = `catalog-api-public-${suffix}`;
-    const publicProduct = await prisma.product.create({
+    const publicProduct = await database.product.create({
       data: {
         name: "Public API product",
         publicSlug,
@@ -78,20 +89,30 @@ describe("catalog administration and public API (e2e)", () => {
         stockMode: StockMode.INFINITE,
       },
     });
-    await prisma.productCategory.create({ data: { categoryId: visibleCategory.id, productId: publicProduct.id } });
+    fixtureProductIds.push(publicProduct.id);
+    await database.productCategory.create({ data: { categoryId: visibleCategory.id, productId: publicProduct.id } });
     categoryId = visibleCategory.id;
     categorySlug = visibleCategory.slug;
     const authService = moduleFixture.get(AuthService);
     adminToken = (await authService.login(adminEmail, password)).accessToken;
     customerToken = (await authService.login(customerEmail, password)).accessToken;
-    app = moduleFixture.createNestApplication({ bodyParser: false });
-    configureHttpApplication(app, testConfig());
-    await app.listen(0, "127.0.0.1");
-    baseUrl = await app.getUrl();
+    const nestApp = moduleFixture.createNestApplication({ bodyParser: false });
+    configureHttpApplication(nestApp, testConfig());
+    await nestApp.listen(0, "127.0.0.1");
+    app = nestApp;
+    baseUrl = await nestApp.getUrl();
   });
 
   afterAll(async () => {
-    await app.close();
+    try {
+      if (prisma) {
+        await deleteFixtures(prisma, fixtureUserIds, fixtureProductIds, fixtureCategoryIds);
+      }
+    } finally {
+      if (app) {
+        await app.close();
+      }
+    }
   });
 
   it("enforces ADMIN boundaries without mutating catalog state", async () => {
@@ -113,6 +134,7 @@ describe("catalog administration and public API (e2e)", () => {
     const createdResponse = await request("/api/v1/admin/products", { body, method: "POST", token: adminToken });
     expect(createdResponse.status).toBe(201);
     const created = await json<ProductResponse>(createdResponse);
+    fixtureProductIds.push(created.id);
     expect(created).toEqual(expect.objectContaining({ publicSlug: body.publicSlug, salePrice: body.salePrice, slug: body.slug }));
     expect(Number.isFinite(created.salePrice!)).toBe(true);
 
@@ -136,6 +158,7 @@ describe("catalog administration and public API (e2e)", () => {
     const duplicateResponse = await request(`/api/v1/admin/products/${created.id}/duplicate`, { method: "POST", token: adminToken });
     expect(duplicateResponse.status).toBe(201);
     const duplicate = await json<ProductResponse>(duplicateResponse);
+    fixtureProductIds.push(duplicate.id);
     expect(duplicate.id).not.toBe(created.id);
     expect(duplicate.slug).not.toBe(created.slug);
     expect(duplicate.publicSlug).not.toBe(created.publicSlug);
@@ -156,6 +179,7 @@ describe("catalog administration and public API (e2e)", () => {
     });
     expect(createdResponse.status).toBe(201);
     const created = await json<CategoryResponse>(createdResponse);
+    fixtureCategoryIds.push(created.id);
 
     const visibilityResponse = await request(`/api/v1/admin/categories/${created.id}/visibility`, {
       body: { visibility: "hidden" },
@@ -250,6 +274,28 @@ function productInput(categoryId: string, label: string) {
 
 function flattenCategoryIds(categories: readonly CategoryResponse[]): string[] {
   return categories.flatMap((category) => [category.id, ...flattenCategoryIds(category.children)]);
+}
+
+async function deleteFixtures(
+  prisma: PrismaService,
+  userIds: readonly string[],
+  productIds: readonly string[],
+  categoryIds: readonly string[],
+): Promise<void> {
+  const uniqueProductIds = [...new Set(productIds)];
+  if (uniqueProductIds.length > 0) {
+    await prisma.productCategory.deleteMany({ where: { productId: { in: uniqueProductIds } } });
+    await prisma.product.deleteMany({ where: { id: { in: uniqueProductIds } } });
+  }
+
+  for (const categoryId of [...new Set(categoryIds)].reverse()) {
+    await prisma.category.deleteMany({ where: { id: categoryId } });
+  }
+
+  const uniqueUserIds = [...new Set(userIds)];
+  if (uniqueUserIds.length > 0) {
+    await prisma.user.deleteMany({ where: { id: { in: uniqueUserIds } } });
+  }
 }
 
 function testConfig() {

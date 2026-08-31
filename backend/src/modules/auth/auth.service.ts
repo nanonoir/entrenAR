@@ -7,7 +7,6 @@ import type { AppConfig } from "../../config/app.config";
 import { NODE_ENV } from "../../config/app.config";
 import type { AccessTokenPayload } from "../../common/auth/jwt-authentication.guard";
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { ROLE } from "../../common/guards/roles.guard";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import {
   AUTH_USER_SELECT,

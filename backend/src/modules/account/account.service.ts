@@ -110,9 +110,11 @@ export class AccountService {
   }
 
   async listOrders(
-    _userId: string,
-    _query: AccountOrderListQuery,
+    userId: string,
+    query: AccountOrderListQuery,
   ): Promise<AccountOrderProjection[]> {
+    void userId;
+    void query;
     return [];
   }
 

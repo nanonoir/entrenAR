@@ -8,7 +8,6 @@ import {
   CatalogRepository,
   type CreateCatalogProductRecord,
   type CreateCatalogVariantRecord,
-  type UpdateCatalogProductRecord,
 } from "./catalog.repository";
 import { CATALOG_STOCK_MODE } from "./catalog.constants";
 import {

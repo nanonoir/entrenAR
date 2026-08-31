@@ -18,7 +18,7 @@ export interface CreateCategoryRecord {
   visibility: CatalogVisibility;
 }
 
-export interface UpdateCategoryRecord extends Omit<CreateCategoryRecord, "sortOrder"> {}
+export type UpdateCategoryRecord = Omit<CreateCategoryRecord, "sortOrder">;
 
 export interface CreateCatalogVariantRecord {
   attributes: Prisma.InputJsonValue;
@@ -152,12 +152,18 @@ export class CatalogRepository {
     values: { publicSlug?: string; skus?: readonly string[]; slug?: string },
     ignoredProductId?: string,
   ): Promise<{ publicSlug?: string; sku?: string; slug?: string }> {
-    const [slug, publicSlug, products, variants] = await Promise.all([
-      values.slug ? transaction.product.findFirst({ select: { id: true }, where: { slug: values.slug, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } }) : null,
-      values.publicSlug ? transaction.product.findFirst({ select: { id: true }, where: { publicSlug: values.publicSlug, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } }) : null,
-      values.skus && values.skus.length > 0 ? transaction.product.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } }) : [],
-      values.skus && values.skus.length > 0 ? transaction.productVariant.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { productId: { not: ignoredProductId } } : {}) } }) : [],
-    ]);
+    const slug = values.slug
+      ? await transaction.product.findFirst({ select: { id: true }, where: { slug: values.slug, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } })
+      : null;
+    const publicSlug = values.publicSlug
+      ? await transaction.product.findFirst({ select: { id: true }, where: { publicSlug: values.publicSlug, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } })
+      : null;
+    const products = values.skus && values.skus.length > 0
+      ? await transaction.product.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } })
+      : [];
+    const variants = values.skus && values.skus.length > 0
+      ? await transaction.productVariant.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { productId: { not: ignoredProductId } } : {}) } })
+      : [];
     const conflictingSku = [...products, ...variants][0]?.sku;
 
     return {
@@ -168,10 +174,8 @@ export class CatalogRepository {
   }
 
   async allSkus(transaction: TransactionClient): Promise<Set<string>> {
-    const [products, variants] = await Promise.all([
-      transaction.product.findMany({ select: { sku: true } }),
-      transaction.productVariant.findMany({ select: { sku: true } }),
-    ]);
+    const products = await transaction.product.findMany({ select: { sku: true } });
+    const variants = await transaction.productVariant.findMany({ select: { sku: true } });
     return new Set([...products, ...variants].map((record) => record.sku));
   }
 

@@ -52,12 +52,12 @@ async function run(): Promise<void> {
   const mock = getCatalogRepository("mock");
   const mockDetail = await mock.getPublicProductBySlug("whey-protein-isolate-900g");
 
-  if (mockDetail.status !== "success" || mockDetail.data.slug !== "whey-protein-isolate-900g") {
+  if (mockDetail.status !== "success" || !mockDetail.data || mockDetail.data.slug !== "whey-protein-isolate-900g") {
     throw new Error("Mock public slug compatibility failed.");
   }
 
   const api = new CatalogApiRepository({
-    get: async (path) => {
+    get: async <T>(path: string): Promise<T> => {
       if (path.startsWith("/products?")) {
         return {
           items: [{
@@ -79,7 +79,7 @@ async function run(): Promise<void> {
           limit: 100,
           page: 1,
           total: 1,
-        };
+        } as T;
       }
 
       if (path.startsWith("/admin/products?")) {
@@ -110,7 +110,7 @@ async function run(): Promise<void> {
           limit: 100,
           page: 1,
           total: 1,
-        };
+        } as T;
       }
 
       if (path.startsWith("/admin/inventory/history?")) {
@@ -126,7 +126,7 @@ async function run(): Promise<void> {
             resultingStock: "∞",
             type: "stock-edit",
           }],
-        };
+        } as T;
       }
 
       throw new CatalogApiError({ code: "NOT_FOUND", message: "Missing", status: 404 });
@@ -161,7 +161,7 @@ async function run(): Promise<void> {
   }
 
   const empty = new CatalogApiRepository({
-    get: async () => ({ items: [], limit: 100, page: 1, total: 0 }),
+    get: async <T>(): Promise<T> => ({ items: [], limit: 100, page: 1, total: 0 } as T),
   });
   const emptyProducts = await empty.getPublicProducts();
 
@@ -170,7 +170,7 @@ async function run(): Promise<void> {
   }
 
   const unavailable = new CatalogApiRepository({
-    get: async () => {
+    get: async <T>(): Promise<T> => {
       throw new CatalogApiError({ code: "CATALOG_API_UNAVAILABLE", message: "Unavailable", status: 503 });
     },
   });

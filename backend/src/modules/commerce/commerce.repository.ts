@@ -33,6 +33,40 @@ import {
   type ShippingProviderRecord,
 } from "./commerce.mapper";
 
+const couponScalarSelect = {
+  canCombineWithPromotions: true,
+  code: true,
+  createdAt: true,
+  customerLimitType: true,
+  customerUsageLimit: true,
+  dateLimitType: true,
+  deletedAt: true,
+  discountType: true,
+  discountValue: true,
+  endDate: true,
+  id: true,
+  includeShippingCost: true,
+  maxDiscountAmount: true,
+  maxDiscountType: true,
+  minimumCartAmount: true,
+  startDate: true,
+  status: true,
+  targetType: true,
+  totalUsageLimit: true,
+  totalUsageLimitType: true,
+  updatedAt: true,
+  usageCount: true,
+} satisfies Prisma.CouponSelect;
+
+const couponCategorySelect = { categoryId: true } satisfies Prisma.CouponCategorySelect;
+const couponProductSelect = { productId: true } satisfies Prisma.CouponProductSelect;
+const couponHistorySelect = {
+  action: true,
+  actorName: true,
+  createdAt: true,
+  id: true,
+} satisfies Prisma.CouponHistorySelect;
+
 export type TransactionClient = Prisma.TransactionClient;
 
 export interface PaymentMethodUpdateRecord {
@@ -326,7 +360,26 @@ export class CommerceRepository {
   }
 
   async couponById(transaction: TransactionClient, id: string): Promise<CouponRecord | null> {
-    return transaction.coupon.findFirst({ select: couponSelect, where: { deletedAt: null, id } });
+    const coupon = await transaction.coupon.findFirst({ select: couponScalarSelect, where: { deletedAt: null, id } });
+    if (!coupon) return null;
+
+    const categories = await transaction.couponCategory.findMany({
+      orderBy: { categoryId: "asc" },
+      select: couponCategorySelect,
+      where: { couponId: coupon.id },
+    });
+    const products = await transaction.couponProduct.findMany({
+      orderBy: { productId: "asc" },
+      select: couponProductSelect,
+      where: { couponId: coupon.id },
+    });
+    const history = await transaction.couponHistory.findMany({
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: couponHistorySelect,
+      where: { couponId: coupon.id },
+    });
+
+    return { ...coupon, categories, history, products };
   }
 
   async createCoupon(transaction: TransactionClient, input: CouponMutationRecord): Promise<CouponRecord> {

@@ -4,7 +4,7 @@ import { HttpException } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../src/generated/prisma/client";
-import { CatalogVisibility, Role, StockMode } from "../src/generated/prisma/enums";
+import { CatalogVisibility, StockMode } from "../src/generated/prisma/enums";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import { INVENTORY_ORIGIN } from "../src/modules/inventory/inventory.constants";
 import { InventoryRepository } from "../src/modules/inventory/inventory.repository";
