@@ -11,7 +11,7 @@ import { ShippingService } from "./services/shipping.service";
 
 @Module({
   controllers: [DiscountsController, PaymentMethodsController, PickupPointsController, ShippingController],
-  exports: [DiscountService, PaymentService, ShippingService],
+  exports: [CommerceRepository, DiscountService, PaymentService, ShippingService],
   providers: [CommerceRepository, DiscountService, PaymentService, ShippingService],
 })
 export class CommerceModule {}

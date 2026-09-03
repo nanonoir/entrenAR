@@ -9,6 +9,99 @@ export const catalogProductInclude = {
 
 export type CatalogProduct = Prisma.ProductGetPayload<{ include: typeof catalogProductInclude }>;
 
+export const checkoutProductSelect = {
+  brand: true,
+  categories: { select: { categoryId: true } },
+  compareAtPrice: true,
+  id: true,
+  missingLogistics: true,
+  name: true,
+  promotionalPrice: true,
+  salePrice: true,
+  shippingRequired: true,
+  sku: true,
+  variants: {
+    orderBy: { id: "asc" },
+    select: {
+      attributes: true,
+      compareAtPrice: true,
+      id: true,
+      isDefault: true,
+      name: true,
+      price: true,
+      quantity: true,
+      sku: true,
+      stockMode: true,
+    },
+  },
+  visibility: true,
+  weightGrams: true,
+} satisfies Prisma.ProductSelect;
+
+export type CheckoutCatalogProductRecord = Prisma.ProductGetPayload<{ select: typeof checkoutProductSelect }>;
+
+export interface CheckoutCatalogVariant {
+  attributes: Record<string, string>;
+  compareAtPrice?: number;
+  id: string;
+  isDefault: boolean;
+  name: string;
+  price: number;
+  quantity: number | null;
+  sku: string;
+  stockMode: StockMode;
+}
+
+export interface CheckoutCatalogProduct {
+  brand?: string;
+  categoryIds: string[];
+  compareAtPrice?: number;
+  effectivePrice: number;
+  id: string;
+  missingLogistics: boolean;
+  name: string;
+  promotionalPrice?: number;
+  salePrice: number;
+  shippingRequired: boolean;
+  sku: string;
+  variants: CheckoutCatalogVariant[];
+  visibility: CatalogVisibility;
+  weightGrams?: number;
+}
+
+export function toCheckoutCatalogProduct(product: CheckoutCatalogProductRecord): CheckoutCatalogProduct {
+  const salePrice = decimalToNumber(product.salePrice);
+  const promotionalPrice = product.promotionalPrice === null ? undefined : decimalToNumber(product.promotionalPrice);
+  const effectivePrice = promotionalPrice ?? salePrice;
+
+  return {
+    ...(product.brand ? { brand: product.brand } : {}),
+    categoryIds: product.categories.map((category) => category.categoryId),
+    ...(product.compareAtPrice === null ? {} : { compareAtPrice: decimalToNumber(product.compareAtPrice) }),
+    effectivePrice,
+    id: product.id,
+    missingLogistics: product.missingLogistics,
+    name: product.name,
+    ...(promotionalPrice === undefined ? {} : { promotionalPrice }),
+    salePrice,
+    shippingRequired: product.shippingRequired,
+    sku: product.sku,
+    variants: product.variants.map((variant) => ({
+      attributes: stringRecord(variant.attributes),
+      ...(variant.compareAtPrice === null ? {} : { compareAtPrice: decimalToNumber(variant.compareAtPrice) }),
+      id: variant.id,
+      isDefault: variant.isDefault,
+      name: variant.name,
+      price: variant.price === null ? effectivePrice : decimalToNumber(variant.price),
+      quantity: variant.quantity,
+      sku: variant.sku,
+      stockMode: variant.stockMode,
+    })),
+    visibility: product.visibility,
+    ...(product.weightGrams === null ? {} : { weightGrams: product.weightGrams }),
+  };
+}
+
 export interface AdminCatalogCategory {
   children: AdminCatalogCategory[];
   createdAt: string;
