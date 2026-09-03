@@ -7,6 +7,7 @@ import {
 } from "./account.repository";
 import {
   toAccountAddress,
+  toAccountOrder,
   toAccountProfile,
   type AccountProfileProjection,
 } from "./account.mapper";
@@ -113,9 +114,13 @@ export class AccountService {
     userId: string,
     query: AccountOrderListQuery,
   ): Promise<AccountOrderProjection[]> {
-    void userId;
-    void query;
-    return [];
+    const orders = await this.accountRepository.listOrders(
+      userId,
+      (query.page - 1) * query.limit,
+      query.limit,
+    );
+
+    return orders.map(toAccountOrder);
   }
 
   private notFound(message: string): NotFoundException {

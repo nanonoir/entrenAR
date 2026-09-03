@@ -116,7 +116,7 @@ export class AccountController {
 
   @Get("orders")
   @ApiOperation({ summary: "List the authenticated customer's orders" })
-  @ApiOkResponse({ description: "Stable order projection; empty until Orders persistence exists.", type: [AccountOrderDto] })
+  @ApiOkResponse({ description: "JWT-owned immutable order snapshot history.", type: [AccountOrderDto] })
   async orders(
     @Req() request: RequestWithAuthenticatedUser,
     @Query(new ZodValidationPipe(accountOrderListQuerySchema)) query: AccountOrderListQuery,

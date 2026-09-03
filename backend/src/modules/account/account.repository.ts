@@ -9,8 +9,10 @@ import {
 } from "./account.schemas";
 import {
   accountAddressSelect,
+  accountOrderSelect,
   accountProfileSelect,
   type AccountAddressRecord,
+  type AccountOrderRecord,
   type AccountProfileRecord,
 } from "./account.mapper";
 
@@ -82,6 +84,16 @@ export class AccountRepository {
     return this.prisma.userAddress.findMany({
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: accountAddressSelect,
+      where: { userId },
+    });
+  }
+
+  async listOrders(userId: string, skip: number, take: number): Promise<AccountOrderRecord[]> {
+    return this.prisma.order.findMany({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: accountOrderSelect,
+      skip,
+      take,
       where: { userId },
     });
   }
