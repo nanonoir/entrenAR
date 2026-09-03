@@ -2,7 +2,7 @@ import {
   createCheckoutUnitHarness,
   checkoutUnitCouponRecord,
   checkoutUnitShippingDiscountRecord,
-} from "../../../test/support/checkout-fixtures";
+} from "../../../test/support/checkout-unit-fixtures";
 import { checkoutQuoteRequestSchema } from "./checkout.schemas";
 
 describe("CheckoutService", () => {
