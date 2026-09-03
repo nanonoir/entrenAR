@@ -6,6 +6,9 @@ export class ApiErrorResponseDto {
   @ApiProperty({ enum: Object.values(ERROR_CODE), enumName: "ApiErrorCode" })
   code!: ErrorCode;
 
+  @ApiPropertyOptional({ description: "Optional top-level field associated with the error." })
+  field?: string;
+
   @ApiPropertyOptional({
     description: "Field-level details included only for validation failures.",
     type: "array",

@@ -29,6 +29,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (this.isErrorCode(typedPayload.code) && typeof typedPayload.message === "string") {
           return {
             code: typedPayload.code,
+            ...(typeof typedPayload.field === "string" ? { field: typedPayload.field } : {}),
             ...(this.isFieldIssues(typedPayload.issues) ? { issues: typedPayload.issues } : {}),
             message: typedPayload.code === ERROR_CODE.INTERNAL_ERROR ? this.messageForStatus(status) : typedPayload.message,
             ok: false,

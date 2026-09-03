@@ -1,12 +1,20 @@
+import { z } from "zod";
+
 export const ERROR_CODE = {
   BAD_REQUEST: "BAD_REQUEST",
   ADDRESS_LIMIT_REACHED: "ADDRESS_LIMIT_REACHED",
+  CART_NOT_FOUND: "CART_NOT_FOUND",
   CATEGORY_CYCLE: "CATEGORY_CYCLE",
   CATEGORY_IN_USE: "CATEGORY_IN_USE",
+  CHECKOUT_SESSION_EXPIRED: "CHECKOUT_SESSION_EXPIRED",
+  CHECKOUT_SESSION_INVALID: "CHECKOUT_SESSION_INVALID",
   CONFLICT: "CONFLICT",
   COUPON_CODE_ALREADY_EXISTS: "COUPON_CODE_ALREADY_EXISTS",
+  COUPON_NOT_VALID: "COUPON_NOT_VALID",
+  COUPON_USAGE_LIMIT_REACHED: "COUPON_USAGE_LIMIT_REACHED",
   EMAIL_EXISTS: "EMAIL_EXISTS",
   FORBIDDEN: "FORBIDDEN",
+  IDEMPOTENCY_KEY_REUSED: "IDEMPOTENCY_KEY_REUSED",
   INVALID_INVENTORY_OPERATION: "INVALID_INVENTORY_OPERATION",
   INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
   INVALID_PICKUP_CONFIGURATION: "INVALID_PICKUP_CONFIGURATION",
@@ -18,13 +26,17 @@ export const ERROR_CODE = {
   INVALID_RESET_TOKEN: "INVALID_RESET_TOKEN",
   NOT_FOUND: "NOT_FOUND",
   OUT_OF_STOCK: "OUT_OF_STOCK",
+  PAYMENT_METHOD_UNAVAILABLE: "PAYMENT_METHOD_UNAVAILABLE",
+  PRICE_CHANGED: "PRICE_CHANGED",
   PICKUP_SCHEDULE_OVERLAP: "PICKUP_SCHEDULE_OVERLAP",
   PRODUCT_NOT_FOUND: "PRODUCT_NOT_FOUND",
   RATE_LIMITED: "RATE_LIMITED",
   SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
   SKU_CONFLICT: "SKU_CONFLICT",
   SLUG_CONFLICT: "SLUG_CONFLICT",
+  SHIPPING_OPTION_UNAVAILABLE: "SHIPPING_OPTION_UNAVAILABLE",
   UNAUTHORIZED: "UNAUTHORIZED",
+  VARIANT_NOT_FOUND: "VARIANT_NOT_FOUND",
   VALIDATION_ERROR: "VALIDATION_ERROR",
   WISHLIST_ITEM_EXISTS: "WISHLIST_ITEM_EXISTS",
   WISHLIST_ITEM_NOT_FOUND: "WISHLIST_ITEM_NOT_FOUND",
@@ -32,14 +44,29 @@ export const ERROR_CODE = {
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
 
-export interface ApiFieldIssue {
-  code: string;
-  field: string;
-  message: string;
-}
+const errorCodeValues = Object.values(ERROR_CODE) as [ErrorCode, ...ErrorCode[]];
+
+export const apiFieldIssueSchema = z.object({
+  code: z.string().trim().min(1).max(80),
+  field: z.string().trim().min(1).max(160),
+  message: z.string().trim().min(1).max(500),
+}).strict();
+
+export type ApiFieldIssue = z.output<typeof apiFieldIssueSchema>;
+
+export const apiErrorResponseSchema = z.object({
+  code: z.enum(errorCodeValues),
+  field: z.string().trim().min(1).max(160).optional(),
+  issues: z.array(apiFieldIssueSchema).max(100).optional(),
+  message: z.string().trim().min(1).max(500),
+  ok: z.literal(false),
+}).strict();
+
+export type ApiErrorResponseContract = z.output<typeof apiErrorResponseSchema>;
 
 export interface ApiErrorResponse {
   code: ErrorCode;
+  field?: string;
   issues?: readonly ApiFieldIssue[];
   message: string;
   ok: false;
