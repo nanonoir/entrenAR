@@ -10,6 +10,7 @@ import { getAccountRepository } from "@/lib/api/account/account.repository";
 import { DATA_SOURCE, getAccountDataSource } from "@/lib/api/config";
 import { normalizeAccountEmail } from "@/lib/account-validation";
 import { useAccountProfileStore } from "@/stores/account-profile-store";
+import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import {
   ACCOUNT_ASYNC_STATUS,
@@ -88,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         if (getAccountDataSource() !== DATA_SOURCE.API) {
           clearAccountAccessToken();
+          useCartStore.getState().detachAuthenticatedUser();
           set({
             error: null,
             isBootstrapped: true,
@@ -117,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
 
         if (getAccountDataSource() !== DATA_SOURCE.API) {
           clearAccountAccessToken();
+          useCartStore.getState().detachAuthenticatedUser();
           set({
             error: null,
             isBootstrapped: true,
@@ -129,6 +132,7 @@ export const useAuthStore = create<AuthState>()(
         set({ error: null, status: ACCOUNT_ASYNC_STATUS.LOADING });
 
         try {
+          await useCartStore.getState().syncBeforeLogout();
           await getAccountRepository(DATA_SOURCE.API).logout();
           clearAuthenticatedStores(currentUser);
           set({
@@ -176,6 +180,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (email, password) => {
         if (getAccountDataSource() !== DATA_SOURCE.API) {
           clearAccountAccessToken();
+          useCartStore.getState().detachAuthenticatedUser();
           set({
             error: null,
             isBootstrapped: true,
@@ -274,6 +279,7 @@ async function bootstrapAuth(
         status: ACCOUNT_ASYNC_STATUS.SUCCESS,
         user,
       });
+      reconcileCheckoutCart(user);
       await bootstrapAccountStores(user);
       return true;
     } catch (error) {
@@ -300,6 +306,15 @@ function setAuthenticatedUser(
     status: ACCOUNT_ASYNC_STATUS.SUCCESS,
     user: session.user,
   });
+  reconcileCheckoutCart(session.user);
+}
+
+function reconcileCheckoutCart(user: AccountUser): void {
+  if (getAccountDataSource() !== DATA_SOURCE.API || user.role !== ACCOUNT_ROLE.CUSTOMER) {
+    return;
+  }
+
+  void useCartStore.getState().reconcileGuestCart(user.email).catch(() => undefined);
 }
 
 async function bootstrapAccountStores(user: AccountUser): Promise<void> {
@@ -327,6 +342,8 @@ function hydrateStore(
 }
 
 function clearAuthenticatedStores(user: AccountUser | null): void {
+  useCartStore.getState().detachAuthenticatedUser();
+
   if (getAccountDataSource() !== DATA_SOURCE.API) {
     return;
   }
