@@ -11,6 +11,7 @@ export const INVENTORY_STOCK_MODE = {
 
 export const INVENTORY_ORIGIN = {
   ADMIN_MANUAL: "admin_manual",
+  CHECKOUT: "checkout",
 } as const;
 
 export type InventoryOperationInput = (typeof INVENTORY_OPERATION)[keyof typeof INVENTORY_OPERATION];

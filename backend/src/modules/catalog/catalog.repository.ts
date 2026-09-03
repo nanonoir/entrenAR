@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
-import type { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
-import { catalogProductInclude, type CatalogProduct } from "./catalog.mapper";
+import {
+  catalogProductInclude,
+  checkoutProductSelect,
+  toCheckoutCatalogProduct,
+  type CatalogProduct,
+  type CheckoutCatalogProduct,
+} from "./catalog.mapper";
 
 export interface CreateCategoryRecord {
   description?: string;
@@ -131,6 +137,46 @@ export class CatalogRepository {
     return transaction.product.findUnique({ include: catalogProductInclude, where: { id } });
   }
 
+  async checkoutProductById(transaction: TransactionClient, id: string): Promise<CheckoutCatalogProduct | null> {
+    const product = await transaction.product.findUnique({ select: checkoutProductSelect, where: { id } });
+
+    return product ? toCheckoutCatalogProduct(product) : null;
+  }
+
+  async checkoutProductByIdForUpdate(transaction: TransactionClient, id: string): Promise<CheckoutCatalogProduct | null> {
+    await transaction.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "Product" WHERE "id" = ${id} FOR UPDATE`,
+    );
+    await transaction.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "ProductVariant" WHERE "productId" = ${id} ORDER BY "id" FOR UPDATE`,
+    );
+
+    return this.checkoutProductById(transaction, id);
+  }
+
+  async productForCheckout(transaction: TransactionClient, id: string): Promise<CheckoutCatalogProduct | null> {
+    return this.checkoutProductById(transaction, id);
+  }
+
+  async checkoutCategoryVisibility(transaction: TransactionClient): Promise<CheckoutCategoryVisibilityRecord[]> {
+    return transaction.category.findMany({
+      orderBy: { id: "asc" },
+      select: { id: true, parentId: true, visibility: true },
+    });
+  }
+
+  async publicCheckoutCategoryIds(transaction: TransactionClient): Promise<ReadonlySet<string>> {
+    const categories = await this.checkoutCategoryVisibility(transaction);
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    const publicIds = new Set<string>();
+
+    for (const category of categories) {
+      if (isPublicCategory(category, byId)) publicIds.add(category.id);
+    }
+
+    return publicIds;
+  }
+
   async productByIdWithClient(id: string): Promise<CatalogProduct | null> {
     return this.prisma.product.findUnique({ include: catalogProductInclude, where: { id } });
   }
@@ -226,6 +272,24 @@ export class CatalogRepository {
     await transaction.productCategory.deleteMany({ where: { productId: id } });
     await transaction.product.delete({ where: { id } });
   }
+}
+
+export type CheckoutCategoryVisibilityRecord = Pick<Prisma.CategoryGetPayload<Record<string, never>>, "id" | "parentId" | "visibility">;
+
+function isPublicCategory(
+  category: CheckoutCategoryVisibilityRecord,
+  byId: ReadonlyMap<string, CheckoutCategoryVisibilityRecord>,
+): boolean {
+  const visited = new Set<string>();
+  let current: CheckoutCategoryVisibilityRecord | undefined = category;
+
+  while (current) {
+    if (visited.has(current.id) || current.visibility !== CatalogVisibility.VISIBLE) return false;
+    visited.add(current.id);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+
+  return true;
 }
 
 function productData(data: CreateCatalogProductRecord): Prisma.ProductUncheckedCreateInput {

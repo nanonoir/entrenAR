@@ -58,6 +58,8 @@ const couponScalarSelect = {
   usageCount: true,
 } satisfies Prisma.CouponSelect;
 
+type CouponScalarRecord = Prisma.CouponGetPayload<{ select: typeof couponScalarSelect }>;
+
 const couponCategorySelect = { categoryId: true } satisfies Prisma.CouponCategorySelect;
 const couponProductSelect = { productId: true } satisfies Prisma.CouponProductSelect;
 const couponHistorySelect = {
@@ -198,6 +200,21 @@ export class CommerceRepository {
     return transaction.paymentMethodConfig.findUnique({ select: paymentMethodSelect, where: { id } });
   }
 
+  async checkoutPaymentMethods(transaction: TransactionClient): Promise<PaymentMethodRecord[]> {
+    return transaction.paymentMethodConfig.findMany({
+      orderBy: { id: "asc" },
+      select: paymentMethodSelect,
+      where: { status: PaymentMethodStatus.ACTIVE },
+    });
+  }
+
+  async checkoutPaymentMethodById(transaction: TransactionClient, id: string): Promise<PaymentMethodRecord | null> {
+    return transaction.paymentMethodConfig.findFirst({
+      select: paymentMethodSelect,
+      where: { id, status: PaymentMethodStatus.ACTIVE },
+    });
+  }
+
   async updatePaymentMethod(
     transaction: TransactionClient,
     id: string,
@@ -224,6 +241,21 @@ export class CommerceRepository {
 
   async shippingProviderById(transaction: TransactionClient, id: string): Promise<ShippingProviderRecord | null> {
     return transaction.shippingProvider.findUnique({ select: shippingProviderSelect, where: { id } });
+  }
+
+  async checkoutShippingProviders(transaction: TransactionClient): Promise<ShippingProviderRecord[]> {
+    return transaction.shippingProvider.findMany({
+      orderBy: { id: "asc" },
+      select: shippingProviderSelect,
+      where: { status: ShippingProviderStatus.ACTIVE },
+    });
+  }
+
+  async checkoutShippingProviderById(transaction: TransactionClient, id: string): Promise<ShippingProviderRecord | null> {
+    return transaction.shippingProvider.findFirst({
+      select: shippingProviderSelect,
+      where: { id, status: ShippingProviderStatus.ACTIVE },
+    });
   }
 
   async updateShippingProvider(
@@ -274,6 +306,21 @@ export class CommerceRepository {
 
   async pickupPointById(transaction: TransactionClient, id: string): Promise<PickupPointRecord | null> {
     return transaction.pickupPoint.findUnique({ select: pickupPointSelect, where: { id } });
+  }
+
+  async checkoutPickupPoints(transaction: TransactionClient): Promise<PickupPointRecord[]> {
+    return transaction.pickupPoint.findMany({
+      orderBy: [{ isMain: "desc" }, { id: "asc" }],
+      select: pickupPointSelect,
+      where: { status: PickupPointStatus.ACTIVE },
+    });
+  }
+
+  async checkoutPickupPointById(transaction: TransactionClient, id: string): Promise<PickupPointRecord | null> {
+    return transaction.pickupPoint.findFirst({
+      select: pickupPointSelect,
+      where: { id, status: PickupPointStatus.ACTIVE },
+    });
   }
 
   async lockPickupPoints(transaction: TransactionClient): Promise<void> {
@@ -362,6 +409,36 @@ export class CommerceRepository {
   async couponById(transaction: TransactionClient, id: string): Promise<CouponRecord | null> {
     const coupon = await transaction.coupon.findFirst({ select: couponScalarSelect, where: { deletedAt: null, id } });
     if (!coupon) return null;
+
+    return this.couponWithRelations(transaction, coupon);
+  }
+
+  async checkoutCouponByCode(transaction: TransactionClient, code: string): Promise<CouponRecord | null> {
+    const coupon = await transaction.coupon.findFirst({
+      select: couponScalarSelect,
+      where: {
+        code: normalizeCouponCodeForCheckout(code),
+        deletedAt: null,
+        status: CouponStatus.ACTIVE,
+      },
+    });
+    if (!coupon) return null;
+
+    return this.couponWithRelations(transaction, coupon);
+  }
+
+  async checkoutShippingDiscounts(transaction: TransactionClient): Promise<ShippingDiscountRecord[]> {
+    return transaction.shippingDiscount.findMany({
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: shippingDiscountSelect,
+      where: { deletedAt: null, status: CouponStatus.ACTIVE },
+    });
+  }
+
+  private async couponWithRelations(
+    transaction: TransactionClient,
+    coupon: CouponScalarRecord,
+  ): Promise<CouponRecord> {
 
     const categories = await transaction.couponCategory.findMany({
       orderBy: { categoryId: "asc" },
@@ -535,4 +612,8 @@ function shippingDiscountData(input: ShippingDiscountMutationRecord): Prisma.Shi
 
 export function isPrismaErrorCode(error: unknown, code: string): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}
+
+function normalizeCouponCodeForCheckout(value: string): string {
+  return value.trim().toLocaleUpperCase();
 }

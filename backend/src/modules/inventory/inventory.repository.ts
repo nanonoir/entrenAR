@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { InventoryOperation, StockMode } from "../../generated/prisma/enums";
 import type { Prisma } from "../../generated/prisma/client";
+import { INVENTORY_ORIGIN } from "./inventory.constants";
 import type { InventoryState } from "./inventory.mapper";
 
 export const INVENTORY_TARGET_KIND = {
@@ -38,6 +39,20 @@ export interface InventoryHistoryPageRow extends CreateInventoryHistoryInput {
 export interface InventoryHistoryPageResult {
   items: readonly InventoryHistoryPageRow[];
   total: number;
+}
+
+export const CHECKOUT_STOCK_DEDUCTION_STATUS = {
+  DEDUCTED: "deducted",
+  NOT_FOUND: "not-found",
+  OUT_OF_STOCK: "out-of-stock",
+} as const;
+
+export type CheckoutStockDeductionStatus = (typeof CHECKOUT_STOCK_DEDUCTION_STATUS)[keyof typeof CHECKOUT_STOCK_DEDUCTION_STATUS];
+
+export interface CheckoutStockDeductionResult {
+  remainingQuantity: number | null;
+  status: CheckoutStockDeductionStatus;
+  target: InventoryTarget | null;
 }
 
 type TransactionClient = Prisma.TransactionClient;
@@ -105,6 +120,72 @@ export class InventoryRepository {
       : await transaction.productVariant.updateMany({ data, where });
 
     return result.count === 1;
+  }
+
+  async deductForCheckout(
+    transaction: TransactionClient,
+    productId: string,
+    variantId: string | undefined,
+    quantity: number,
+  ): Promise<CheckoutStockDeductionResult> {
+    const target = await this.findTarget(transaction, productId, variantId);
+
+    if (!target) {
+      return {
+        remainingQuantity: null,
+        status: CHECKOUT_STOCK_DEDUCTION_STATUS.NOT_FOUND,
+        target: null,
+      };
+    }
+
+    if (target.stockMode === StockMode.INFINITE) {
+      return {
+        remainingQuantity: null,
+        status: CHECKOUT_STOCK_DEDUCTION_STATUS.DEDUCTED,
+        target,
+      };
+    }
+
+    const applied = await this.applyLimitedDelta(transaction, target, -quantity, quantity);
+    if (!applied) {
+      return {
+        remainingQuantity: target.quantity ?? 0,
+        status: CHECKOUT_STOCK_DEDUCTION_STATUS.OUT_OF_STOCK,
+        target,
+      };
+    }
+
+    const updated = await this.findTarget(transaction, productId, variantId);
+    if (!updated) {
+      throw new Error("Inventory target disappeared after checkout deduction.");
+    }
+
+    await this.createHistory(transaction, {
+      actorId: undefined,
+      delta: -quantity,
+      operation: InventoryOperation.SUBTRACT,
+      origin: INVENTORY_ORIGIN.CHECKOUT,
+      productId,
+      quantity: updated.quantity,
+      reason: "Checkout order placement",
+      stockMode: updated.stockMode,
+      variantId: updated.variantId,
+    });
+
+    return {
+      remainingQuantity: updated.quantity,
+      status: CHECKOUT_STOCK_DEDUCTION_STATUS.DEDUCTED,
+      target: updated,
+    };
+  }
+
+  async deductStockForCheckout(
+    transaction: TransactionClient,
+    productId: string,
+    variantId: string | undefined,
+    quantity: number,
+  ): Promise<CheckoutStockDeductionResult> {
+    return this.deductForCheckout(transaction, productId, variantId, quantity);
   }
 
   async replaceState(
