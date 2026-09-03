@@ -1,6 +1,18 @@
-# Backend Domain Map
+# Backend Domain Map (Phase 5 Checkout)
 
-This document outlines the bounded contexts and domain boundaries for the standalone NestJS backend (Phase 0). It defines module ownership, aggregates, commands, and dependencies based on the existing frontend contract.
+This document outlines the bounded contexts and domain boundaries for the standalone NestJS backend through Phase 5 Checkout. It defines module ownership, aggregates, commands, and dependencies based on the implemented backend and frontend repository boundary.
+
+## Phase 5 Outcome
+
+Phase 5 is implemented as a dedicated checkout slice inside the modular monolith:
+
+- ✅ `CheckoutModule` owns quote calculation, checkout-session/cart reconciliation, and completion orchestration.
+- ✅ `CatalogRepository`, `CommerceRepository`, and `InventoryRepository` remain owners of their records and expose checkout-safe reads/commands.
+- ✅ `CheckoutRepository` coordinates Prisma transactions, pending `Order`/`OrderItem`/`OrderPayment` persistence, coupon redemption, idempotency, cart cleanup, and session completion.
+- ✅ Placement-time snapshots are immutable and account history reads only the authenticated customer's persisted projection.
+- ✅ `src/lib/api/checkout/` is the only frontend transport boundary; mock data remains an explicit source until the mock-removal gate.
+
+There is no standalone `OrdersModule` or external provider integration in this phase. The persisted `Order` records are the checkout completion output; Phase 6 owns the later sales/fulfillment lifecycle.
 
 ## 1. Modular Monolith Architecture
 
@@ -35,7 +47,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - `stockMode` is `limited` (>= 0) or `infinite`.
 - Deductions must be atomic and produce a history record simultaneously.
 **Cross-Domain Dependencies:**
-- Called by Orders (Sale creation deducts stock) and Catalog.
+- Called by Checkout for completion deductions and by Catalog for inventory-aware reads.
 
 ### 2.3 Users Module (`backend/src/modules/users/`)
 **Ownership:** Identity records, credentials, password hashing helpers, and role data.
@@ -64,13 +76,13 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Aggregates & Entities:**
 - `AccountProfile` (Projection): The permitted `User` fields exposed to a customer.
 - `UserAddress` (Entity): Customer-owned address with a maximum of six records per user.
-- `AccountOrder` (Projection): Stable order-history shape that returns an empty collection before Orders persistence exists.
+- `AccountOrder` (Projection): Stable JWT-owned order-history shape mapped from persisted Phase 5 order snapshots; it is empty only when the customer has no persisted orders.
 **Invariants:**
 - Profile, address, and order requests use the JWT-derived user ID; client-provided ownership IDs are not authoritative.
 - Address updates and deletes must verify ownership and must not mutate foreign records.
-- The order projection must not invent or read static mock orders as persisted history.
+- The order projection must not invent or read static mock orders as persisted history; it reads only orders owned by the JWT subject.
 **Cross-Domain Dependencies:**
-- Reads and updates Users profile fields; later reads persisted Orders without owning order persistence.
+- Reads and updates Users profile fields and reads persisted Orders without owning order persistence or lifecycle commands.
 
 ### 2.6 Wishlist Module (`backend/src/modules/wishlist/`)
 **Ownership:** Authenticated customer wishlist relations and their public-product projections.
@@ -84,27 +96,36 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - Reads public visibility and product projections from Catalog; reads ownership from Auth/Users.
 
 ### 2.7 Checkout Module (`backend/src/modules/checkout/`)
-**Ownership:** Checkout Quote, Checkout Session.
+**Ownership:** Checkout Quote, Checkout Session, active checkout cart synchronization, and transactional conversion into a pending order.
 **Aggregates:**
-- `CheckoutSession` (Aggregate Root): Tracks the active cart state toward order creation.
+- `CheckoutSession` (Aggregate Root): Tracks the active cart state, quote snapshot, recovery state, and conversion toward order creation.
+- `Cart` / `CartItem`: Active guest or customer cart used by checkout; cart ownership is nullable for guests and JWT-derived for customers.
+- `Order` / `OrderItem` / `OrderPayment`: Placement output persisted by `CheckoutRepository` with immutable customer, delivery, discount, payment, product, price, quantity, weight, and attribute snapshots.
+- `CheckoutIdempotencyKey` / `CouponRedemption`: Transactional retry and usage records scoped to the completion owner.
 **Invariants:**
-- Checkout calculations (Quote) are entirely server-authoritative. Browser totals are ignored.
-- Validates current product price, stock, active coupons, and valid shipping configuration.
+- Checkout calculations and completion are entirely server-authoritative. Browser totals, prices, stock, cart IDs, user IDs, payment states, and order states are ignored or rejected.
+- Guest sessions use opaque tokens; only token hashes are persisted. Customer ownership comes from the validated JWT and ADMIN actors are rejected.
+- Guest and customer carts merge by product/variant key without duplicate lines; foreign or expired sessions do not mutate state.
+- Current public product visibility, category visibility, variant ownership, effective price, stock, active payment/bank configuration, shipping/pickup options, coupons, and shipping discounts are re-read for each quote and completion.
+- Completion requires a valid payment method/option and delivery selection, then atomically creates a pending order/payment, records usage/history, conditionally deducts stock, clears the cart, completes the session, and stores the replay response.
+- Matching idempotency retries return the stored response without duplicate writes; mismatched reuse returns a controlled conflict.
+- Order and order-item snapshots cannot be updated after placement; later catalog/configuration edits do not change history.
 **Cross-Domain Dependencies:**
-- Reads from Catalog, Inventory, Commerce Config. Writes to Orders upon conversion.
+- Reads from Catalog, Inventory, and Commerce Configuration. Owns the transaction boundary that writes pending Orders persistence; it does not own later order lifecycle commands.
 
 ### 2.8 Orders Module (`backend/src/modules/orders/`)
-**Ownership:** Sales, Purchase Orders, Order History.
+**Phase 5 status:** No standalone module is implemented yet. Checkout persists the core `Order`, `OrderItem`, and `OrderPayment` records needed for pending placement and account history. Phase 6 will introduce the sales/purchase-order lifecycle and its CRM commands.
+**Target ownership:** Sales, Purchase Orders, Order History.
 **Aggregates:**
-- `Sale` (Aggregate Root): Represents a confirmed transaction. Owns `SaleItem` (snapshots) and `SaleHistory`.
-- `PurchaseOrder` (Aggregate Root): Unpaid intent. Can be converted to a `Sale`.
+- `Sale` (Aggregate Root): Future confirmed transaction projection. Owns `SaleItem` snapshots and `SaleHistory`.
+- `PurchaseOrder` (Aggregate Root): Future unpaid intent that can be converted to a `Sale`.
 **Invariants:**
-- `SaleItem` is a hard snapshot; changes to the catalog do not alter historical orders.
-- Sale creation MUST deduct stock (replaces frontend `stock_reserved` mock behavior).
-- Purchase Order conversion must be idempotent.
-- Payment received state does not re-deduct stock.
+- Historical checkout snapshots are already immutable in the Phase 5 persistence boundary.
+- Future Sale creation MUST deduct stock (replacing frontend `stock_reserved` mock behavior).
+- Future Purchase Order conversion must be idempotent.
+- Future payment-received state must not re-deduct stock.
 **Cross-Domain Dependencies:**
-- Writes to CRM Customers (updates totals), Inventory (deductions).
+- Phase 6 will depend on Checkout's persisted order output, CRM Customers, and Inventory; it is not a Phase 5 dependency.
 
 ### 2.9 CRM Customers Module (`backend/src/modules/customers/`)
 **Ownership:** CRM Customer profiles, aggregated statistics.
@@ -125,7 +146,7 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - `Coupon` redemption is tracked transactionally.
 - `PickupPoint` can only have one `isMain = true` record globally.
 **Cross-Domain Dependencies:**
-- Read by Checkout.
+- Read by Checkout; Commerce remains the owner of configuration validation and persistence, while Checkout consumes safe projections only.
 
 ### 2.11 Statistics Module (`backend/src/modules/statistics/`)
 **Ownership:** Aggregation of transactional data.
@@ -145,8 +166,33 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - **Order Status:** Internal `SaleShippingStatus` maps to public `preparacion`, `en-camino`, `entregado`, `listo-para-retirar` (pickup), `cancelado`.
 - **Inventory:** Internal numeric limits map to frontend `stockMode` (`infinite` or quantity).
 
+### 3.1 Phase 5 Checkout Boundary
+
+- `src/lib/api/checkout/checkout.repository.ts` defines the frontend-facing request, quote, completion, error, and source-selection contracts.
+- `src/lib/api/checkout/api-checkout.repository.ts` validates transport DTOs, strips client-authoritative fields, maps Decimal-like response values to numbers, and exposes only safe projections.
+- `src/lib/api/checkout/mock-checkout.repository.ts` implements the same contract over static catalog/commerce mocks for local preview and rollback.
+- `src/stores/cart-store.ts` owns transient quote/session/error/idempotency state and persists only preview cart items under `entrenar-cart-preview`; it delegates quote and completion to the selected repository.
+- Checkout components consume store projections and may render labeled mock/reference values while a quote is loading or unavailable. They do not call `fetch()` directly and never import Prisma/backend modules.
+
 ## 4. Prohibited Coupling
 - Do not couple the database Schema directly to the REST API responses (No raw Prisma exposure).
 - Do not rely on frontend-provided calculated totals or status values.
 - Do not merge `Sale` and `PurchaseOrder` into a single frontend UI type; they maintain conceptual separation.
-- Carrier integrations (MercadoPago, Andreani, Emails) are POST-CORE. Do not couple domain logic to external APIs yet.
+- Do not couple domain logic to external payment/carrier APIs, webhooks, refunds, financial reconciliation, or notification delivery in Phase 5.
+- Do not scatter checkout `fetch()` calls through components or import Prisma into the Next.js frontend; the repository/API adapter is the boundary.
+- Do not remove static checkout/cart mocks until the dedicated mock-removal gate proves API parity, UX/error coverage, restart persistence, and rollback readiness.
+
+## 5. Phase 5 Flow and Exclusions
+
+```text
+Frontend cart/store
+  -> checkout repository (mock by default; API only by explicit source selection)
+  -> POST /api/v1/checkout/quote
+  -> CheckoutController -> CheckoutService -> Catalog/Commerce/Inventory projections
+  -> authoritative quote + opaque session/quote IDs
+  -> POST /api/v1/checkout/complete
+  -> one Prisma transaction: revalidate -> deduct stock/history -> order/item/payment snapshots
+     -> coupon usage/redemption -> cart cleanup -> session completion -> idempotency response
+```
+
+The transaction creates a pending order and payment intent only. Real Mercado Pago/Stripe sessions, carrier labels/tracking, webhooks, refunds, financial reconciliation, external emails/notifications, Phase 6 sales lifecycle, and Phase 8 abandoned-cart recovery remain explicitly out of scope.
