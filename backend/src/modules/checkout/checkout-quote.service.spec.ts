@@ -3,8 +3,8 @@ import { CatalogVisibility, Role } from "../../generated/prisma/enums";
 import {
   checkoutUnitCatalogProduct,
   createCheckoutUnitHarness,
-  expectCheckoutCode,
-} from "../../../test/support/checkout-fixtures";
+} from "../../../test/support/checkout-unit-fixtures";
+import { expectCheckoutCode } from "../../../test/support/checkout-fixtures";
 import { checkoutQuoteRequestSchema } from "./checkout.schemas";
 
 describe("CheckoutService", () => {

@@ -4,8 +4,8 @@ import { hashCheckoutRequest } from "./checkout.repository";
 import {
   checkoutUnitCatalogProduct,
   createCheckoutUnitHarness,
-  expectCheckoutCode,
-} from "../../../test/support/checkout-fixtures";
+} from "../../../test/support/checkout-unit-fixtures";
+import { expectCheckoutCode } from "../../../test/support/checkout-fixtures";
 import { checkoutCompleteRequestSchema, checkoutQuoteRequestSchema } from "./checkout.schemas";
 
 describe("CheckoutService", () => {
