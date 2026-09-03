@@ -16,6 +16,7 @@ import { CommerceModule } from "./modules/commerce/commerce.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { WishlistModule } from "./modules/wishlist/wishlist.module";
+import { CheckoutModule } from "./modules/checkout/checkout.module";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { WishlistModule } from "./modules/wishlist/wishlist.module";
     HealthModule,
     InventoryModule,
     WishlistModule,
+    CheckoutModule,
   ],
   providers: [
     {

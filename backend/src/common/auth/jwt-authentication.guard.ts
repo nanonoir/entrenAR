@@ -4,6 +4,7 @@ import { Reflector } from "@nestjs/core";
 
 import { ERROR_CODE } from "../errors/api-error.response";
 import { ROLE, type Role } from "../guards/roles.guard";
+import { OPTIONAL_AUTH_METADATA_KEY } from "./optional-auth.decorator";
 import { IS_PUBLIC_KEY } from "./public.decorator";
 
 export interface AccessTokenPayload {
@@ -30,6 +31,10 @@ export class JwtAuthenticationGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+    const isOptional = this.reflector.getAllAndOverride<boolean>(OPTIONAL_AUTH_METADATA_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (isPublic) {
       return true;
@@ -37,6 +42,10 @@ export class JwtAuthenticationGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<RequestWithAuthorization>();
     const token = this.extractBearerToken(request.headers.authorization);
+
+    if (!token && isOptional) {
+      return true;
+    }
 
     if (!token) {
       throw this.unauthorized();

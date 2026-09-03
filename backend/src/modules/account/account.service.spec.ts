@@ -5,7 +5,7 @@ import {
 } from "./account.repository";
 import { AccountService } from "./account.service";
 import type { AccountAddressInput, AccountProfileUpdateInput } from "./account.schemas";
-import type { AccountAddressRecord, AccountProfileRecord } from "./account.mapper";
+import type { AccountAddressRecord, AccountOrderRecord, AccountProfileRecord } from "./account.mapper";
 
 const PROFILE_RECORD: AccountProfileRecord = {
   birthDate: new Date("1990-01-01T00:00:00.000Z"),
@@ -173,6 +173,28 @@ describe("account.service", () => {
     await expect(harness.service.listOrders("customer-a", { limit: 20, page: 1 })).resolves.toEqual([]);
   });
 
+  it("maps JWT-scoped order snapshots without exposing mutable catalog relations", async () => {
+    const harness = createHarness();
+    harness.repository.listOrders.mockResolvedValue([{
+      createdAt: new Date("2026-08-31T12:00:00.000Z"),
+      id: "order-1",
+      items: [{ id: "order-item-1", productName: "Persisted product", quantity: 2, unitPrice: "49.99" }],
+      number: "EN-ORDER-1",
+      status: "PENDING",
+      total: "99.98",
+    } as unknown as AccountOrderRecord]);
+
+    await expect(harness.service.listOrders("customer-a", { limit: 20, page: 1 })).resolves.toEqual([{
+      date: "2026-08-31T12:00:00.000Z",
+      id: "order-1",
+      items: [{ id: "order-item-1", name: "Persisted product", price: 49.99, quantity: 2 }],
+      status: "preparacion",
+      total: 99.98,
+      trackingCode: "EN-ORDER-1",
+    }]);
+    expect(harness.repository.listOrders).toHaveBeenCalledWith("customer-a", 0, 20);
+  });
+
   it("maps a successful address update and deletion result", async () => {
     const harness = createHarness();
     harness.repository.updateAddress.mockResolvedValue(ADDRESS_RECORD);
@@ -200,6 +222,7 @@ function createHarness(): AccountHarness {
     listAddresses: jest.fn(),
     updateAddress: jest.fn(),
     updateProfile: jest.fn(),
+    listOrders: jest.fn().mockResolvedValue([]),
   };
 
   return {
@@ -214,6 +237,7 @@ interface AccountHarness {
     deleteAddress: jest.Mock;
     findProfileByUserId: jest.Mock;
     listAddresses: jest.Mock;
+    listOrders: jest.Mock;
     updateAddress: jest.Mock;
     updateProfile: jest.Mock;
   };
