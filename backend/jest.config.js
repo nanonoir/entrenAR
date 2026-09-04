@@ -4,7 +4,7 @@ module.exports = {
   rootDir: ".",
   roots: ["<rootDir>/src", "<rootDir>/test"],
   testEnvironment: "node",
-  testMatch: ["<rootDir>/src/**/*.spec.ts", "<rootDir>/test/*-service.spec.ts"],
+  testMatch: ["<rootDir>/src/**/*.spec.ts", "<rootDir>/test/*-service.spec.ts", "<rootDir>/test/**/*.spec.ts"],
   testPathIgnorePatterns: ["/dist/", "/node_modules/"],
   transform: {
     "^.+\\.(t|j)s$": ["ts-jest", { tsconfig: "tsconfig.json" }],
