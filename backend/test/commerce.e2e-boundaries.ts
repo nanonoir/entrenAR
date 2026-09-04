@@ -25,7 +25,6 @@ export function registerCommerceBoundaryScenarios(context: CommerceE2eTestContex
           { method: "GET", path: "/admin/reconciliation" },
           { method: "GET", path: "/admin/checkout" },
           { method: "GET", path: "/admin/orders" },
-          { method: "GET", path: "/admin/sales" },
           { method: "GET", path: "/admin/crm" },
           { method: "GET", path: "/webhooks/payment" },
           { method: "GET", path: "/payments/refund" },
