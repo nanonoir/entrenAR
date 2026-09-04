@@ -1,3 +1,7 @@
+import { ApiCustomersRepository } from "@/lib/api/admin/customers/api-customers.repository";
+import { MockCustomersRepository } from "@/lib/api/admin/customers/mock-customers.repository";
+import { customersApiConfig } from "@/lib/api/admin/customers/customers-api-config";
+import type { CustomersRepository } from "@/lib/api/admin/customers/repository";
 import { ApiSalesRepository } from "@/lib/api/admin/sales/api-sales.repository";
 import { MockSalesRepository } from "@/lib/api/admin/sales/mock-sales.repository";
 import { salesApiConfig } from "@/lib/api/admin/sales/sales-api-config";
@@ -14,6 +18,8 @@ const configuredDataSource = process.env.NEXT_PUBLIC_DATA_SOURCE?.trim().toLower
 const configuredCommerceDataSource = process.env.NEXT_PUBLIC_COMMERCE_DATA_SOURCE?.trim().toLowerCase();
 const configuredCheckoutDataSource = process.env.NEXT_PUBLIC_CHECKOUT_DATA_SOURCE?.trim().toLowerCase();
 const configuredAdminSalesMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_SALES?.trim().toLowerCase();
+const configuredAdminCustomersSource = process.env.NEXT_PUBLIC_ADMIN_DATA_SOURCE?.trim().toLowerCase();
+const configuredAdminCustomersMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_CUSTOMERS?.trim().toLowerCase();
 const defaultApiBaseUrl = "http://localhost:3001/api/v1";
 const configuredAccountApiBaseUrl =
   process.env.NEXT_PUBLIC_ACCOUNT_API_BASE_URL ??
@@ -77,12 +83,25 @@ export function getAdminSalesDataSource(): DataSource {
   return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
 }
 
+export function getAdminCustomersDataSource(): DataSource {
+  if (configuredAdminCustomersMock === "true" || configuredAdminCustomersMock === "1") return DATA_SOURCE.MOCK;
+  if (configuredAdminCustomersMock === "false" || configuredAdminCustomersMock === "0") return DATA_SOURCE.API;
+  const source = configuredAdminCustomersSource ?? configuredDataSource;
+  return source === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+}
+
 export const salesRepository: SalesRepository = getAdminSalesDataSource() === DATA_SOURCE.API
   ? new ApiSalesRepository()
   : new MockSalesRepository();
 
+export const customersRepository: CustomersRepository = getAdminCustomersDataSource() === DATA_SOURCE.API
+  ? new ApiCustomersRepository()
+  : new MockCustomersRepository();
+
 export { DATA_SOURCE };
 export { salesApiConfig };
+export { customersApiConfig };
+export const adminCustomersApiConfig = customersApiConfig;
 export type { DataSource };
 
 function normalizeBaseUrl(value: string): string {

@@ -28,6 +28,8 @@ export type Customer = {
   isAnonymized: boolean;
   createdAt: string;
   updatedAt: string;
+  tags?: string[];
+  summary?: CustomerSalesSummary;
 };
 
 export type CustomerSalesSummary = {
