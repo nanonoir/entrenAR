@@ -67,6 +67,7 @@ export type AdminSale = {
   createdAt: string; // ISO 8601
   source?: string;
   customer: SaleCustomer;
+  itemCount?: number;
   shippingAddress?: SaleAddress;
   products: SaleProduct[];
   paymentStatus: SalePaymentStatus;

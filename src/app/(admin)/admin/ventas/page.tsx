@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Archive, ArchiveRestore, Download, Edit2, Eye, MoreHorizontal, Plus, RefreshCw, Search, ShoppingBag } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import {
@@ -35,13 +35,22 @@ const QUICK_FILTER_LABELS: Record<QuickFilter, string> = {
 export default function SalesListPage() {
   const sales = useAdminSalesStore((s) => s.sales);
   const isInitializing = useAdminSalesStore((s) => s.isInitializing);
+  const isLoading = useAdminSalesStore((s) => s.isLoading);
+  const hasLoaded = useAdminSalesStore((s) => s.hasLoaded);
+  const source = useAdminSalesStore((s) => s.source);
   const error = useAdminSalesStore((s) => s.error);
+  const fallbackMessage = useAdminSalesStore((s) => s.fallbackMessage);
+  const fetchSales = useAdminSalesStore((s) => s.fetchSales);
   const retryLoad = useAdminSalesStore((s) => s.retryLoad);
   const archiveSale = useAdminSalesStore((s) => s.archiveSale);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("all");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (source === "api" || !hasLoaded) void fetchSales({ limit: 100 });
+  }, [fetchSales, hasLoaded, source]);
 
   // Only non-archived sales in the main list
   const baseSales = sales.filter((s) => !s.archived);
@@ -96,8 +105,8 @@ export default function SalesListPage() {
     setSelectedSaleIds((current) => (current.includes(id) ? current.filter((saleId) => saleId !== id) : [...current, id]));
   }
 
-  function handleBulkArchive() {
-    selectedEligibleSales.forEach((sale) => archiveSale(sale.id));
+  async function handleBulkArchive() {
+    await Promise.all(selectedEligibleSales.map((sale) => archiveSale(sale.id)));
     setSelectedSaleIds((current) => current.filter((id) => !selectedEligibleSales.some((sale) => sale.id === id)));
   }
 
@@ -115,7 +124,7 @@ export default function SalesListPage() {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {selectedSaleIds.length > 0 && (
-            <Button variant="secondary" size="sm" onClick={handleBulkArchive} disabled={selectedEligibleSales.length === 0}>
+            <Button variant="secondary" size="sm" onClick={() => void handleBulkArchive()} disabled={selectedEligibleSales.length === 0 || isLoading}>
               <ArchiveRestore aria-hidden size={16} />
               Archivar
             </Button>
@@ -133,6 +142,7 @@ export default function SalesListPage() {
 
       {/* Search + Quick filters */}
       <div className="flex flex-col gap-3">
+        {fallbackMessage ? <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{fallbackMessage}</p> : null}
         <label className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 h-11 text-sm text-zinc-600 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition">
           <Search aria-hidden size={16} className="shrink-0 text-zinc-400" />
           <input
@@ -173,7 +183,7 @@ export default function SalesListPage() {
       </div>
 
       {error ? (
-        <ErrorState onRetry={retryLoad} />
+        <ErrorState message={error.message} onRetry={() => void retryLoad()} />
       ) : isInitializing ? (
         <SalesListSkeleton />
       ) : filtered.length === 0 ? (
@@ -234,7 +244,7 @@ export default function SalesListPage() {
                       </td>
                       <td className="px-3 py-3 font-semibold text-zinc-900">{formatARS(sale.total)}</td>
                       <td className="px-3 py-3 text-zinc-600">
-                        {sale.products.reduce((sum, p) => sum + p.quantity, 0)} ud.
+                        {sale.itemCount ?? sale.products.reduce((sum, p) => sum + p.quantity, 0)} ud.
                       </td>
                       <td className="px-3 py-3">
                         <Badge tone={getPaymentStatusTone(sale.paymentStatus)}>
@@ -279,7 +289,7 @@ export default function SalesListPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    archiveSale(sale.id);
+                                    void archiveSale(sale.id);
                                     setOpenMenuId(null);
                                   }}
                                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
@@ -322,7 +332,7 @@ export default function SalesListPage() {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-500">{sale.products.reduce((s, p) => s + p.quantity, 0)} productos</span>
+                  <span className="text-zinc-500">{sale.itemCount ?? sale.products.reduce((s, p) => s + p.quantity, 0)} productos</span>
                   <span className="font-bold text-zinc-900">{formatARS(sale.total)}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
@@ -337,7 +347,7 @@ export default function SalesListPage() {
                   {isSaleArchivable(sale) && (
                     <button
                       type="button"
-                      onClick={() => archiveSale(sale.id)}
+                      onClick={() => void archiveSale(sale.id)}
                       className="text-xs font-semibold text-zinc-600 hover:text-accent"
                     >
                       Archivar
@@ -378,13 +388,13 @@ function SalesListSkeleton() {
   );
 }
 
-function ErrorState({ onRetry }: { onRetry: () => void }) {
+function ErrorState({ message, onRetry }: { message?: string; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center gap-4 rounded-3xl border border-red-100 bg-red-50 py-16 text-center shadow-sm">
       <ShoppingBag aria-hidden size={40} className="text-red-300" />
       <div>
         <p className="text-lg font-semibold text-zinc-800">No pudimos cargar las ventas</p>
-        <p className="mt-1 text-sm text-zinc-500">Reintentá la carga del listado.</p>
+        <p className="mt-1 text-sm text-zinc-500">{message ?? "Reintentá la carga del listado."}</p>
       </div>
       <Button variant="secondary" size="sm" onClick={onRetry}>
         <RefreshCw aria-hidden size={16} />

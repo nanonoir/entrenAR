@@ -33,7 +33,8 @@ type OrderFormPageProps = {
 
 export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
   const router = useRouter();
-  const { createSale, createPurchaseOrder, updateSale } = useAdminSalesStore();
+  const { createManualSale, createPurchaseOrder, updateSale } = useAdminSalesStore();
+  const isStoreLoading = useAdminSalesStore((state) => state.isLoading);
   const [productDrawerOpen, setProductDrawerOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,21 +104,33 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
 
         if (mode === "create") {
           if (data.paymentOption === "unpaid") {
-            const orderId = createPurchaseOrder({ customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, source: data.source, shippingAddress, products, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
+            const orderId = await createPurchaseOrder({ customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, source: data.source, shippingAddress, products, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
+            if (!orderId) {
+              setSubmitError(useAdminSalesStore.getState().error?.message ?? "No se pudo crear la orden. Intentá nuevamente.");
+              return;
+            }
             router.push(`/admin/ventas/ordenes/${orderId}`);
           } else {
-            const saleId = createSale({ customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, shippingAddress, products, paymentStatus: data.paymentOption, source: data.source, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
-            router.push(`/admin/ventas/${saleId}`);
+            const sale = await createManualSale({ customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, shippingAddress, products, paymentStatus: data.paymentOption, source: data.source, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
+            if (!sale) {
+              setSubmitError(useAdminSalesStore.getState().error?.message ?? "No se pudo registrar la venta. Intentá nuevamente.");
+              return;
+            }
+            router.push(`/admin/ventas/${sale.id}`);
           }
         } else if (existingSale) {
-          updateSale(existingSale.id, { customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, shippingAddress, products, paymentStatus: data.paymentOption === "unpaid" ? "pending" : data.paymentOption, source: data.source, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
+          const updated = await updateSale(existingSale.id, { customer: { firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dniOrCuil: data.dniOrCuil }, shippingAddress, products, paymentStatus: data.paymentOption === "unpaid" ? "pending" : data.paymentOption, source: data.source, discountType: data.discountType, discountValue: data.discountValue, shippingCost: Number(data.shippingCost), subtotal, total, notes: data.notes });
+          if (!updated) {
+            setSubmitError(useAdminSalesStore.getState().error?.message ?? "No se pudieron guardar los cambios. Intentá nuevamente.");
+            return;
+          }
           router.push(`/admin/ventas/${existingSale.id}`);
         }
       } finally {
         setIsSubmitting(false);
       }
     },
-    [mode, existingSale, createSale, createPurchaseOrder, updateSale, router, subtotal, total],
+    [mode, existingSale, createManualSale, createPurchaseOrder, updateSale, router, subtotal, total],
   );
 
   const handleInvalidSubmit = useCallback(
@@ -161,7 +174,7 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
 
         <FormActions>
           <Button type="button" variant="secondary" size="md" onClick={handleCancel}>Cancelar</Button>
-          <Button type="submit" variant="primary" size="md" disabled={isSubmitting}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : submitLabel}</Button>
+          <Button type="submit" variant="primary" size="md" disabled={isSubmitting || isStoreLoading}>{isSubmitting || isStoreLoading ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : submitLabel}</Button>
         </FormActions>
       </form>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -82,8 +82,11 @@ function getArchivedFinalStatus(sale: AdminSale) {
 export default function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const sale = useAdminSalesStore((s) => s.sales.find((sale) => sale.id === id));
-  const { cancelSale, reopenSale, archiveSale, markPaymentReceived, markPacked, markUnpacked, markShipped, updateShippingAddress } =
-    useAdminSalesStore();
+  const { cancelSale, reopenSale, archiveSale, confirmSale, packSale, unpackSale, shipSale, updateShippingAddress } = useAdminSalesStore();
+  const fetchSale = useAdminSalesStore((s) => s.fetchSale);
+  const isInitializing = useAdminSalesStore((s) => s.isInitializing);
+  const isLoading = useAdminSalesStore((s) => s.isLoading);
+  const error = useAdminSalesStore((s) => s.error);
 
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [cancelDrawerOpen, setCancelDrawerOpen] = useState(false);
@@ -105,12 +108,23 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
     country: "Argentina",
     notes: "",
   });
+  const requestedSaleId = useRef<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    if ((!sale || sale.products.length === 0) && requestedSaleId.current !== id) {
+      requestedSaleId.current = id;
+      void fetchSale(id);
+    }
+  }, [fetchSale, id, sale]);
+
   if (!sale) {
+    if (isInitializing) {
+      return <div className="mx-auto max-w-4xl py-12 text-center text-sm text-zinc-500">Cargando venta…</div>;
+    }
     return (
       <div className="mx-auto max-w-4xl py-12 text-center">
-        <p className="text-lg font-semibold text-zinc-800">Venta no encontrada</p>
+        <p className="text-lg font-semibold text-zinc-800">{error?.message ?? "Venta no encontrada"}</p>
         <Link href="/admin/ventas" className="mt-3 inline-block text-sm text-accent underline">
           Volver al listado
         </Link>
@@ -127,25 +141,27 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
     ? { href: "/admin/ventas/archivados", label: "Volver a archivados" }
     : { href: "/admin/ventas", label: "Volver a ventas" };
 
-  function handleCancel() {
+  async function handleCancel() {
     setCancelSubmitAttempted(true);
     if (!cancelReason.trim()) {
       cancelReasonRef.current?.focus();
       return;
     }
-    cancelSale(sale!.id, cancelReason, { restoreStock: cancelRestoreStock, sendEmail: cancelSendEmail });
+    const updated = await cancelSale(sale!.id, cancelReason, { restoreStock: cancelRestoreStock, sendEmail: cancelSendEmail });
+    if (!updated) return;
     setCancelDrawerOpen(false);
     setCancelReason("");
     setCancelSubmitAttempted(false);
   }
 
-  function handleReopen() {
-    reopenSale(sale!.id);
+  async function handleReopen() {
+    await reopenSale(sale!.id);
   }
 
-  function handleArchive() {
+  async function handleArchive() {
     if (!archivable) return;
-    archiveSale(sale!.id);
+    const archived = await archiveSale(sale!.id);
+    if (!archived) return;
     setMoreMenuOpen(false);
     router.push("/admin/ventas");
   }
@@ -170,7 +186,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
     setShippingDraft((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSaveShippingAddress() {
+  async function handleSaveShippingAddress() {
     setShippingSubmitAttempted(true);
     const nextAddress: SaleAddress = {
       street: shippingDraft.street.trim(),
@@ -186,12 +202,14 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
     if (!nextAddress.street || !nextAddress.number || !nextAddress.city || !nextAddress.province || !nextAddress.postalCode) {
       return;
     }
-    updateShippingAddress(sale!.id, nextAddress);
+    const updated = await updateShippingAddress(sale!.id, nextAddress);
+    if (!updated) return;
     setShippingDrawerOpen(false);
   }
 
   return (
     <div className="mx-auto max-w-6xl">
+      {error ? <div role="alert" className="mb-4 rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale">{error.message}</div> : null}
       <div className="mb-6 grid gap-2">
         <AdminPageHeader title={isReadOnly ? "Venta archivada" : sale.number} description={formatShortDate(sale.createdAt)} tag={isReadOnly ? "Ventas archivadas" : "Ventas"} backLink={detailBackLink}>
           {isReadOnly ? (
@@ -214,7 +232,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
               <Printer aria-hidden size={16} />
             </Button>
           ) : isCancelled ? (
-            <Button variant="secondary" size="sm" onClick={handleReopen}>
+            <Button variant="secondary" size="sm" onClick={() => void handleReopen()} disabled={isLoading}>
               <RefreshCw aria-hidden size={14} />
               Re-Abrir
             </Button>
@@ -238,7 +256,8 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                     {archivable && (
                       <button
                         type="button"
-                        onClick={handleArchive}
+                        onClick={() => void handleArchive()}
+                        disabled={isLoading}
                         className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                       >
                         <Archive aria-hidden size={14} />
@@ -348,7 +367,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                 )}
               </div>
               {sale.paymentStatus === "pending" && !isReadOnly && (
-                <Button variant="primary" size="sm" onClick={() => markPaymentReceived(sale.id)}>
+                 <Button variant="primary" size="sm" onClick={() => void confirmSale(sale.id)} disabled={isLoading}>
                   Marcar como recibido
                 </Button>
               )}
@@ -369,7 +388,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                     <Printer aria-hidden size={14} />
                     Imprimir
                   </Button>
-                  <Button variant="primary" size="sm" onClick={() => markPacked(sale.id)}>
+                   <Button variant="primary" size="sm" onClick={() => void packSale(sale.id)} disabled={isLoading}>
                     <Package aria-hidden size={14} />
                     Marcar como empaquetado
                   </Button>
@@ -382,11 +401,11 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                     <Printer aria-hidden size={14} />
                     Imprimir
                   </Button>
-                  <Button variant="primary" size="sm" onClick={() => markShipped(sale.id)}>
+                   <Button variant="primary" size="sm" onClick={() => void shipSale(sale.id)} disabled={isLoading}>
                     <Truck aria-hidden size={14} />
                     Notificar envío
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => markUnpacked(sale.id)}>
+                   <Button variant="ghost" size="sm" onClick={() => void unpackSale(sale.id)} disabled={isLoading}>
                     Desempaquetar
                   </Button>
                 </>
@@ -574,11 +593,12 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
 
           {/* Actions */}
           <div className="flex flex-col gap-2 pt-2">
-            <Button
+             <Button
               type="button"
               variant="danger"
               size="md"
-              onClick={handleCancel}
+               onClick={() => void handleCancel()}
+              disabled={isLoading}
             >
               Cancelar venta
             </Button>
@@ -670,7 +690,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-2 border-t border-zinc-100 p-5">
-            <Button type="button" variant="primary" size="md" onClick={handleSaveShippingAddress}>
+             <Button type="button" variant="primary" size="md" onClick={() => void handleSaveShippingAddress()} disabled={isLoading}>
               Guardar
             </Button>
             <Button type="button" variant="ghost" size="md" onClick={() => setShippingDrawerOpen(false)}>

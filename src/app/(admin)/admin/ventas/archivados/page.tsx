@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Archive, Download, Search } from "lucide-react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import {
@@ -42,8 +42,17 @@ function getArchivedFinalStatus(sale: AdminSale) {
 
 export default function ArchivedSalesPage() {
   const sales = useAdminSalesStore((s) => s.sales);
+  const fetchSales = useAdminSalesStore((s) => s.fetchSales);
+  const isInitializing = useAdminSalesStore((s) => s.isInitializing);
+  const hasLoaded = useAdminSalesStore((s) => s.hasLoaded);
+  const source = useAdminSalesStore((s) => s.source);
+  const error = useAdminSalesStore((s) => s.error);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ArchivedFilter>("all");
+
+  useEffect(() => {
+    if (source === "api" || !hasLoaded) void fetchSales({ limit: 100 });
+  }, [fetchSales, hasLoaded, source]);
 
   const archivedSales = sales.filter((sale) => sale.archived);
   const filtered = archivedSales.filter((sale) => {
@@ -121,7 +130,11 @@ export default function ArchivedSalesPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {error ? (
+        <div role="alert" className="rounded-3xl border border-red-100 bg-red-50 py-16 text-center text-sm font-medium text-red-700">{error.message}</div>
+      ) : isInitializing ? (
+        <div className="rounded-3xl border border-zinc-200 bg-white py-16 text-center text-sm text-zinc-500">Cargando ventas archivadas…</div>
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-3xl border border-zinc-200 bg-white py-16 text-center shadow-sm">
           <Archive aria-hidden size={40} className="text-zinc-300" />
           <div>
@@ -155,7 +168,7 @@ export default function ArchivedSalesPage() {
                       <td className="px-3 py-3 text-zinc-600">{formatShortDate(sale.createdAt)}</td>
                       <td className="px-3 py-3 font-medium text-zinc-800">{sale.customer.firstName} {sale.customer.lastName}</td>
                       <td className="px-3 py-3 font-semibold text-zinc-900">{formatARS(sale.total)}</td>
-                      <td className="px-3 py-3 text-zinc-600">{sale.products.reduce((sum, product) => sum + product.quantity, 0)} ud.</td>
+                       <td className="px-3 py-3 text-zinc-600">{sale.itemCount ?? sale.products.reduce((sum, product) => sum + product.quantity, 0)} ud.</td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {(() => {
@@ -186,7 +199,7 @@ export default function ArchivedSalesPage() {
                   })()}
                 </div>
                 <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-zinc-500">{sale.products.reduce((sum, product) => sum + product.quantity, 0)} productos</span>
+                   <span className="text-zinc-500">{sale.itemCount ?? sale.products.reduce((sum, product) => sum + product.quantity, 0)} productos</span>
                   <span className="font-bold text-zinc-900">{formatARS(sale.total)}</span>
                 </div>
               </div>
