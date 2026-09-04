@@ -17,6 +17,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { WishlistModule } from "./modules/wishlist/wishlist.module";
 import { CheckoutModule } from "./modules/checkout/checkout.module";
+import { CustomersModule } from "./modules/customers/customers.module";
 import { PurchaseOrdersModule } from "./modules/purchase-orders/purchase-orders.module";
 import { SalesModule } from "./modules/sales/sales.module";
 import { SuppliersModule } from "./modules/suppliers/suppliers.module";
@@ -46,6 +47,7 @@ import { SuppliersModule } from "./modules/suppliers/suppliers.module";
     InventoryModule,
     WishlistModule,
     CheckoutModule,
+    CustomersModule,
     SalesModule,
     SuppliersModule,
     PurchaseOrdersModule,
