@@ -1,5 +1,10 @@
 import { accountApiConfig } from "@/lib/api/config";
 import type { AccountApiIssue } from "@/types/account";
+import {
+  clearAccountAccessToken,
+  getAccountAccessToken,
+  setAccountAccessToken,
+} from "./access-token";
 
 const ACCOUNT_API_HTTP_METHOD = {
   DELETE: "DELETE",
@@ -60,19 +65,7 @@ export interface AccountApiClient {
   request<T>(path: string, options?: AccountApiRequestOptions): Promise<T>;
 }
 
-let accountAccessToken: string | null = null;
-
-export function getAccountAccessToken(): string | null {
-  return accountAccessToken;
-}
-
-export function setAccountAccessToken(accessToken: string): void {
-  accountAccessToken = accessToken.trim() || null;
-}
-
-export function clearAccountAccessToken(): void {
-  accountAccessToken = null;
-}
+export { clearAccountAccessToken, getAccountAccessToken, setAccountAccessToken } from "./access-token";
 
 export function toAccountApiError(
   error: unknown,
