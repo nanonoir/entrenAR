@@ -29,6 +29,18 @@ export interface CreateInventoryHistoryInput extends InventoryState {
   variantId?: string;
 }
 
+export interface InventoryStockItem {
+  productId: string;
+  quantity: number;
+  variantId?: string | null;
+}
+
+export interface InventoryIncrementOptions {
+  actorId?: string;
+  origin: string;
+  reason?: string;
+}
+
 export interface InventoryHistoryPageRow extends CreateInventoryHistoryInput {
   createdAt: Date;
   id: string;
@@ -188,6 +200,60 @@ export class InventoryRepository {
     return this.deductForCheckout(transaction, productId, variantId, quantity);
   }
 
+  async restoreStockForItems(
+    transaction: TransactionClient,
+    items: readonly InventoryStockItem[],
+    options: Omit<InventoryIncrementOptions, "origin"> & { origin?: string } = {},
+  ): Promise<void> {
+    await this.incrementStockForItems(transaction, items, {
+      ...options,
+      origin: options.origin ?? INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION,
+    });
+  }
+
+  async incrementStockForItems(
+    transaction: TransactionClient,
+    items: readonly InventoryStockItem[],
+    options: InventoryIncrementOptions,
+  ): Promise<void> {
+    for (const item of items) {
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) continue;
+
+      const target = await this.findTarget(transaction, item.productId, item.variantId ?? undefined);
+      if (!target) {
+        throw new Error(`Inventory target ${item.productId}${item.variantId ? `/${item.variantId}` : ""} was not found.`);
+      }
+
+      if (target.stockMode === StockMode.INFINITE) continue;
+
+      const targetId = target.kind === INVENTORY_TARGET_KIND.PRODUCT ? target.productId : target.variantId;
+      const updated = target.stockMode === StockMode.OUT_OF_STOCK
+        ? await this.restoreOutOfStockTarget(transaction, targetId, item.quantity, target.kind)
+        : await this.incrementTrackedTarget(transaction, target, item.quantity);
+
+      if (!updated) {
+        const current = await this.findTarget(transaction, item.productId, item.variantId ?? undefined);
+        if (current?.stockMode === StockMode.INFINITE) continue;
+        throw new Error(`Inventory target ${item.productId}${item.variantId ? `/${item.variantId}` : ""} changed before restoration.`);
+      }
+
+      const next = await this.findTarget(transaction, item.productId, item.variantId ?? undefined);
+      if (!next) throw new Error("Inventory target disappeared after stock restoration.");
+
+      await this.createHistory(transaction, {
+        actorId: options.actorId,
+        delta: item.quantity,
+        operation: InventoryOperation.ADD,
+        origin: options.origin,
+        productId: next.productId,
+        quantity: next.quantity,
+        reason: options.reason,
+        stockMode: next.stockMode,
+        variantId: next.variantId,
+      });
+    }
+  }
+
   async replaceState(
     transaction: TransactionClient,
     target: InventoryTarget,
@@ -264,5 +330,38 @@ export class InventoryRepository {
       })),
       total,
     };
+  }
+
+  private async incrementTrackedTarget(
+    transaction: TransactionClient,
+    target: InventoryTarget,
+    quantity: number,
+  ): Promise<boolean> {
+    const where = target.kind === INVENTORY_TARGET_KIND.PRODUCT
+      ? { id: target.productId, stockMode: StockMode.TRACKED }
+      : { id: target.variantId, productId: target.productId, stockMode: StockMode.TRACKED };
+    const data = { quantity: { increment: quantity } };
+    const result = target.kind === INVENTORY_TARGET_KIND.PRODUCT
+      ? await transaction.product.updateMany({ data, where })
+      : await transaction.productVariant.updateMany({ data, where });
+
+    return result.count === 1;
+  }
+
+  private async restoreOutOfStockTarget(
+    transaction: TransactionClient,
+    targetId: string | undefined,
+    quantity: number,
+    kind: InventoryTargetKind,
+  ): Promise<boolean> {
+    if (!targetId) return false;
+
+    const data = { quantity, stockMode: StockMode.TRACKED };
+    const where = { id: targetId, stockMode: StockMode.OUT_OF_STOCK };
+    const result = kind === INVENTORY_TARGET_KIND.PRODUCT
+      ? await transaction.product.updateMany({ data, where })
+      : await transaction.productVariant.updateMany({ data, where });
+
+    return result.count === 1;
   }
 }
