@@ -128,6 +128,165 @@ export class CustomersService {
     return toCustomerResponseDto(customer);
   }
 
+  async anonymizeCustomer(id: unknown, actor?: CustomerActor): Promise<CustomerResponseDto> {
+    const customerId = parse(customerIdSchema, id);
+    const existing = await this.customersRepository.findById(customerId);
+
+    if (!existing) {
+      throw this.customerNotFound();
+    }
+
+    if (existing.isAnonymized) {
+      return toCustomerResponseDto(existing);
+    }
+
+    const anonymizedName = `Cliente eliminado (${customerId})`;
+    return this.customersRepository.transaction(async (transaction) => {
+      const current = await this.customersRepository.findById(transaction, customerId);
+      if (!current) {
+        throw this.customerNotFound();
+      }
+
+      if (current.isAnonymized) {
+        return toCustomerResponseDto(current);
+      }
+
+      const updatedCustomer = await transaction.customer.update({
+        data: {
+          dniOrCuil: null,
+          email: "",
+          fullName: anonymizedName,
+          isAnonymized: true,
+          notes: null,
+          phone: null,
+          userId: null,
+        },
+        include: customerDetailInclude,
+        where: { id: customerId },
+      });
+
+      await transaction.customerAddress.deleteMany({ where: { customerId } });
+      const orders = await transaction.order.findMany({
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+        where: { customerId },
+      });
+
+      for (const order of orders) {
+        await transaction.order.update({
+          data: {
+            customerDni: null,
+            customerEmail: "",
+            customerFirstName: "Cliente",
+            customerLastName: "eliminado",
+            customerPhone: null,
+            customerSnapshot: {
+              email: "",
+              fullName: anonymizedName,
+              id: customerId,
+              isAnonymized: true,
+            },
+            shippingAddressSnapshot: Prisma.JsonNull,
+          },
+          where: { id: order.id },
+        });
+
+        await transaction.orderHistory.create({
+          data: {
+            actorId: actor?.id ?? actor?.userId ?? null,
+            actorRole: actor?.role ?? Role.ADMIN,
+            description: CUSTOMER_ANONYMIZATION_DESCRIPTION,
+            metadata: {
+              description: CUSTOMER_ANONYMIZATION_DESCRIPTION,
+              type: "SALE_UPDATED",
+            },
+            orderId: order.id,
+            title: "Customer data anonymized",
+            type: OrderHistoryEventType.NOTE_ADDED,
+          },
+        });
+      }
+
+      return toCustomerResponseDto({
+        ...updatedCustomer,
+        address: null,
+        dniOrCuil: null,
+        email: "",
+        fullName: anonymizedName,
+        isAnonymized: true,
+        notes: null,
+        phone: null,
+        userId: null,
+      });
+    });
+  }
+
+  async exportCustomersListCsv(query: unknown): Promise<string> {
+    const parsed = parse(customerListQuerySchema, query);
+    const customers = await this.findAllCustomers(parsed);
+    const rows = customers.map((customer) => {
+      const summary = toCustomerDetailResponseDto(customer).summary;
+      const anonymized = customer.isAnonymized;
+
+      return csvRow([
+        customer.id,
+        anonymized ? `Cliente eliminado (${customer.id})` : customer.fullName,
+        anonymized ? "" : customer.email,
+        anonymized ? "" : customer.phone,
+        anonymized ? "" : customer.dniOrCuil,
+        anonymized ? "" : customer.address?.country,
+        anonymized ? "" : customer.address?.provinceOrState,
+        anonymized ? "" : customer.address?.city,
+        anonymized ? "" : formatCustomerAddress(customer.address),
+        summary.totalSpent,
+        summary.ordersCount,
+        summary.lastOrder ? `${summary.lastOrder.number} ${summary.lastOrder.date}` : "",
+        toIsoDate(customer.firstInteractionDate),
+      ]);
+    });
+
+    return `\uFEFF${[csvRow(CUSTOMER_LIST_CSV_HEADER), ...rows].join("\n")}`;
+  }
+
+  async exportCustomerDetailCsv(id: unknown): Promise<string> {
+    const customerId = parse(customerIdSchema, id);
+    const customer = await this.customersRepository.findById(customerId);
+
+    if (!customer) {
+      throw this.customerNotFound();
+    }
+
+    if (customer.isAnonymized) {
+      throw new BadRequestException({
+        code: ERROR_CODE.CUSTOMER_ANONYMIZED,
+        message: "No se puede exportar el detalle de un cliente anonimizado.",
+        ok: false,
+      });
+    }
+
+    const summary = toCustomerDetailResponseDto(customer).summary;
+    const lines = [
+      csvRow(["Campo", "Valor"]),
+      csvRow(["ID", customer.id]),
+      csvRow(["Nombre y apellido", customer.fullName]),
+      csvRow(["E-mail", customer.email]),
+      csvRow(["Teléfono", customer.phone]),
+      csvRow(["DNI/CUIL", customer.dniOrCuil]),
+      csvRow(["Primera interacción", toIsoDate(customer.firstInteractionDate)]),
+      csvRow(["Dirección de envío", formatCustomerAddress(customer.address)]),
+      csvRow(["Total consumido", summary.totalSpent]),
+      csvRow(["Cantidad de ventas", summary.ordersCount]),
+      csvRow(["Última compra", summary.lastOrder ? `${summary.lastOrder.number} ${summary.lastOrder.date}` : ""]),
+      csvRow(["Notas internas", customer.notes]),
+      csvRow([
+        "Historial de ventas",
+        customer.orders.map((order) => `${order.number} ${toIsoDate(order.createdAt)} ${Number(order.total)}`).join(" | "),
+      ]),
+    ];
+
+    return `\uFEFF${lines.join("\n")}`;
+  }
+
   async isEmailAvailable(email: string, excludeCustomerId?: string): Promise<boolean> {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = await this.customersRepository.findByActiveEmail(normalizedEmail, excludeCustomerId);
@@ -162,6 +321,26 @@ export class CustomersService {
       message: "Ya existe un cliente activo con ese e-mail.",
       ok: false,
     });
+  }
+
+  private async findAllCustomers(query: CustomerListQuery): Promise<CustomerListRecord[]> {
+    const customers: CustomerListRecord[] = [];
+    let page = 1;
+
+    while (true) {
+      const result = await this.customersRepository.findMany({
+        ...query,
+        limit: CUSTOMER_EXPORT_PAGE_SIZE,
+        page,
+      });
+      customers.push(...result.items);
+
+      if (customers.length >= result.total || result.items.length === 0) {
+        return customers;
+      }
+
+      page += 1;
+    }
   }
 }
 
@@ -212,4 +391,28 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
     message: "Request validation failed.",
     ok: false,
   });
+}
+
+type CsvValue = string | number | null | undefined;
+
+function csvRow(values: readonly CsvValue[]): string {
+  return values.map(escapeCsvCell).join(";");
+}
+
+function escapeCsvCell(value: CsvValue): string {
+  const rawText = String(value ?? "");
+  const text = /^[=+\-@]/.test(rawText) ? `'${rawText}` : rawText;
+  return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function formatCustomerAddress(address: CustomerDetailRecord["address"]): string {
+  if (!address) return "Sin dirección cargada";
+
+  const firstLine = `${address.street} ${address.number}${address.floorOrApartment ? `, ${address.floorOrApartment}` : ""}`.trim();
+  const secondLine = [address.neighborhood, address.city, address.provinceOrState, address.country].filter(Boolean).join(", ");
+  return [firstLine, address.postalCode ? `CP ${address.postalCode}` : undefined, secondLine].filter(Boolean).join(" · ");
+}
+
+function toIsoDate(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
