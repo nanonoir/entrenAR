@@ -67,7 +67,7 @@ const item = z.object({
 }));
 
 export const createManualSaleSchema = z.object({
-  currency: text(8).default("ARS"), customer, deliverySnapshot: jsonObject.default({}), deliveryType: z.enum([OrderDeliveryType.SHIPPING, OrderDeliveryType.PICKUP]).default(OrderDeliveryType.SHIPPING),
+  currency: text(8).default("ARS"), customer, customerId: id.optional(), deliverySnapshot: jsonObject.default({}), deliveryType: z.enum([OrderDeliveryType.SHIPPING, OrderDeliveryType.PICKUP]).default(OrderDeliveryType.SHIPPING),
   discountAmount: money.default(0), discountSnapshot: jsonObject.default({}), internalNotes: text(2_000).optional(), items: z.array(item).min(1).max(500), paymentMethodId: id.default("manual"),
   paymentMethodSnapshot: jsonObject.default({}), paymentOptionId: id.optional(), paymentStatus: paymentStatus.default(PaymentStatus.PENDING), shippingAddress: jsonObject.optional(), shippingCost: money.default(0), source: text(120).optional(), subtotal: money, total: money,
 }).strict();

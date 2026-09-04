@@ -51,6 +51,7 @@ export class AdminSaleSummaryResponseDto {
   @ApiProperty({ format: "date-time" }) createdAt!: string;
   @ApiProperty() currency!: string;
   @ApiProperty({ type: AdminSaleCustomerResponseDto }) customer!: AdminSaleCustomerResponseDto;
+  @ApiPropertyOptional() customerId?: string;
   @ApiProperty({ enum: Object.values(OrderDeliveryType) }) deliveryType!: OrderDeliveryType;
   @ApiProperty() id!: string;
   @ApiProperty() isArchived!: boolean;
@@ -101,6 +102,7 @@ export class AdminSaleListResponseDto {
 export class CreateManualSaleRequestDto {
   @ApiPropertyOptional({ default: "ARS" }) currency?: string;
   @ApiProperty({ type: AdminSaleCustomerResponseDto }) customer!: AdminSaleCustomerResponseDto;
+  @ApiPropertyOptional() customerId?: string;
   @ApiPropertyOptional({ type: Object }) deliverySnapshot?: Record<string, unknown>;
   @ApiPropertyOptional({ enum: Object.values(OrderDeliveryType), default: OrderDeliveryType.SHIPPING }) deliveryType?: OrderDeliveryType;
   @ApiPropertyOptional({ default: 0 }) discountAmount?: number;
