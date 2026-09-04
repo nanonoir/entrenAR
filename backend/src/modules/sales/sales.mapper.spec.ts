@@ -5,7 +5,7 @@ import {
   OrderStatus,
   PaymentStatus,
 } from "../../generated/prisma/enums";
-import { toAdminSaleDetailDto, type SalesOrderRecord } from "./sales.mapper";
+import { toAdminSaleDetailDto, toAdminSaleSummaryDto, type SalesOrderRecord } from "./sales.mapper";
 
 describe("sales mapper", () => {
   it("returns immutable customer, item, payment, and delivery snapshots", () => {
@@ -72,6 +72,10 @@ describe("sales mapper", () => {
     });
 
     expect(toAdminSaleDetailDto(order).history.map((event) => event.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("preserves the linked customer id in sale responses", () => {
+    expect(toAdminSaleSummaryDto(makeOrder({ customerId: "customer-1" })).customerId).toBe("customer-1");
   });
 });
 
