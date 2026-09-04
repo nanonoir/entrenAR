@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Copy, Eye, Link as LinkIcon, Package, Plus, Trash2 } from "lucide-react";
+import { Copy, Eye, Link as LinkIcon, Package, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useEffect } from "react";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { formatARS, formatShortDate } from "@/lib/data/admin/sales-flow/helpers";
@@ -13,9 +14,19 @@ const MOCK_PAYMENT_LINK = "https://pagos.entrenar.ar/link/placeholder";
 export default function PurchaseOrdersPage() {
   const purchaseOrders = useAdminSalesStore((s) => s.purchaseOrders);
   const deletePurchaseOrder = useAdminSalesStore((s) => s.deletePurchaseOrder);
+  const fetchPurchaseOrders = useAdminSalesStore((s) => s.fetchPurchaseOrders);
+  const isInitializing = useAdminSalesStore((s) => s.isInitializing);
+  const hasLoaded = useAdminSalesStore((s) => s.hasLoaded);
+  const source = useAdminSalesStore((s) => s.source);
+  const error = useAdminSalesStore((s) => s.error);
+  const retryLoad = useAdminSalesStore((s) => s.retryLoad);
   const addToast = useAdminToastStore((s) => s.addToast);
 
   const pendingOrders = purchaseOrders.filter((o) => o.status === "pending");
+
+  useEffect(() => {
+    if (source === "api" || !hasLoaded) void fetchPurchaseOrders();
+  }, [fetchPurchaseOrders, hasLoaded, source]);
 
   async function handleCopyPaymentLink() {
     try {
@@ -42,7 +53,15 @@ export default function PurchaseOrdersPage() {
         </LinkButton>
       </div>
 
-      {pendingOrders.length === 0 ? (
+      {error ? (
+        <div role="alert" className="flex flex-col items-center gap-4 rounded-3xl border border-red-100 bg-red-50 py-16 text-center shadow-sm">
+          <RefreshCw aria-hidden size={32} className="text-red-300" />
+          <p className="text-sm font-medium text-red-700">{error.message}</p>
+          <button type="button" onClick={() => void retryLoad()} className="text-sm font-semibold text-accent underline">Reintentar</button>
+        </div>
+      ) : isInitializing ? (
+        <div className="rounded-3xl border border-zinc-200 bg-white py-16 text-center text-sm text-zinc-500">Cargando órdenes…</div>
+      ) : pendingOrders.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-3xl border border-zinc-200 bg-white py-16 text-center shadow-sm">
           <Package aria-hidden size={40} className="text-zinc-300" />
           <div>
@@ -107,7 +126,7 @@ export default function PurchaseOrdersPage() {
                         <button
                           type="button"
                           aria-label={`Eliminar ${order.id}`}
-                          onClick={() => deletePurchaseOrder(order.id)}
+                          onClick={() => void deletePurchaseOrder(order.id)}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-red-50 hover:text-red-600"
                         >
                           <Trash2 aria-hidden size={16} />
@@ -155,7 +174,7 @@ export default function PurchaseOrdersPage() {
                 <Link href={`/admin/ventas/ordenes/${order.id}`} aria-label={`Ver detalle de ${order.id}`} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950">
                   <Eye aria-hidden size={16} />
                 </Link>
-                <button type="button" aria-label={`Eliminar ${order.id}`} onClick={() => deletePurchaseOrder(order.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-red-50 hover:text-red-600">
+                <button type="button" aria-label={`Eliminar ${order.id}`} onClick={() => void deletePurchaseOrder(order.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-red-50 hover:text-red-600">
                   <Trash2 aria-hidden size={16} />
                 </button>
               </div>

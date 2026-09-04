@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
@@ -38,15 +38,30 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
   const { id } = use(params);
   const order = useAdminSalesStore((s) => s.purchaseOrders.find((o) => o.id === id));
   const convertOrderToSale = useAdminSalesStore((s) => s.convertOrderToSale);
+  const fetchPurchaseOrder = useAdminSalesStore((s) => s.fetchPurchaseOrder);
+  const isInitializing = useAdminSalesStore((s) => s.isInitializing);
+  const isLoading = useAdminSalesStore((s) => s.isLoading);
+  const error = useAdminSalesStore((s) => s.error);
   const addToast = useAdminToastStore((s) => s.addToast);
   const [copied, setCopied] = useState(false);
   const [converting, setConverting] = useState(false);
+  const requestedOrderId = useRef<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    if ((!order || order.products.length === 0) && requestedOrderId.current !== id) {
+      requestedOrderId.current = id;
+      void fetchPurchaseOrder(id);
+    }
+  }, [fetchPurchaseOrder, id, order]);
+
   if (!order) {
+    if (isInitializing) {
+      return <div className="mx-auto max-w-4xl py-12 text-center text-sm text-zinc-500">Cargando orden…</div>;
+    }
     return (
       <div className="mx-auto max-w-4xl py-12 text-center">
-        <p className="text-lg font-semibold text-zinc-800">Orden no encontrada</p>
+        <p className="text-lg font-semibold text-zinc-800">{error?.message ?? "Orden no encontrada"}</p>
         <Link href="/admin/ventas/ordenes" className="mt-3 inline-block text-sm text-accent underline">
           Volver a órdenes
         </Link>
@@ -80,8 +95,8 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
   async function handleConvert() {
     setConverting(true);
     try {
-      const newSaleId = convertOrderToSale(order!.id);
-      router.push(`/admin/ventas/${newSaleId}`);
+      const newSaleId = await convertOrderToSale(order!.id);
+      if (newSaleId) router.push(`/admin/ventas/${newSaleId}`);
     } finally {
       setConverting(false);
     }
@@ -89,13 +104,14 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-4xl">
+      {error ? <div role="alert" className="mb-4 rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale">{error.message}</div> : null}
       <div className="mb-6">
         <AdminPageHeader title="Detalle de la orden" description={`${order.id} · ${formatShortDate(order.createdAt)}`} tag="Órdenes de compra" backLink={{ href: "/admin/ventas/ordenes", label: "Volver a órdenes" }}>
           <Badge tone="warning">Pendiente</Badge>
           <Button
             variant="primary"
             size="sm"
-            disabled={converting}
+            disabled={converting || isLoading}
             onClick={handleConvert}
           >
             <Check aria-hidden size={14} />
