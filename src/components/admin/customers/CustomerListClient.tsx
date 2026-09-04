@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Filter, Plus, Search, Users } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +19,13 @@ import { customerExportFilename, downloadCsv } from "@/components/admin/customer
 
 export function CustomerListClient() {
   const customers = useAdminCustomersStore((state) => state.customers);
+  const dataSource = useAdminCustomersStore((state) => state.dataSource);
+  const error = useAdminCustomersStore((state) => state.error);
+  const fallbackMessage = useAdminCustomersStore((state) => state.fallbackMessage);
+  const fetchCustomers = useAdminCustomersStore((state) => state.fetchCustomers);
+  const hasLoaded = useAdminCustomersStore((state) => state.hasLoaded);
+  const isLoading = useAdminCustomersStore((state) => state.isLoading);
+  const retryLoad = useAdminCustomersStore((state) => state.retryLoad);
   const sales = useAdminSalesStore((state) => state.sales);
   const addToast = useAdminToastStore((state) => state.addToast);
   const [search, setSearch] = useState("");
@@ -28,7 +35,11 @@ export function CustomerListClient() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
 
-  const summaries = useMemo(() => customers.reduce<Record<string, CustomerSalesSummary>>((acc, customer) => ({ ...acc, [customer.id]: buildCustomerSalesSummary(customer.id, sales) }), {}), [customers, sales]);
+  useEffect(() => {
+    if (dataSource === "api" && !hasLoaded) void fetchCustomers({ limit: 100 });
+  }, [dataSource, fetchCustomers, hasLoaded]);
+
+  const summaries = useMemo(() => customers.reduce<Record<string, CustomerSalesSummary>>((acc, customer) => ({ ...acc, [customer.id]: customer.summary ?? buildCustomerSalesSummary(customer.id, sales) }), {}), [customers, sales]);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return customers
@@ -78,7 +89,9 @@ export function CustomerListClient() {
           <Button type="button" variant="secondary" onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}><Filter aria-hidden size={16} />Filtros</Button>
         </div>
       </div>
-      {customers.length === 0 || filtered.length === 0 ? <CustomersEmptyState hasFilters={hasFilters} onClear={clearFilters} /> : <><CustomerTable customers={filtered} summaries={summaries} sortDirection={sortDirection} onSort={() => setSortDirection((current) => current === "desc" ? "asc" : "desc")} onEmail={setEmailCustomer} /><div className="grid min-w-0 gap-3 lg:hidden">{filtered.map((customer) => <CustomerListCard key={customer.id} customer={customer} summary={summaries[customer.id]} onEmail={setEmailCustomer} />)}</div><p className="text-sm text-zinc-500">Mostrando 1-{filtered.length} clientes de {filtered.length}</p></>}
+      {fallbackMessage ? <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{fallbackMessage}</p> : null}
+      {error ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale"><span>{error}</span><Button type="button" variant="secondary" size="sm" onClick={() => void retryLoad()}>Reintentar</Button></div> : null}
+      {isLoading && customers.length === 0 ? <p role="status" className="rounded-3xl border border-zinc-200 bg-white px-4 py-12 text-center text-sm text-zinc-500">Cargando clientes…</p> : customers.length === 0 || filtered.length === 0 ? <CustomersEmptyState hasFilters={hasFilters} onClear={clearFilters} /> : <><CustomerTable customers={filtered} summaries={summaries} sortDirection={sortDirection} onSort={() => setSortDirection((current) => current === "desc" ? "asc" : "desc")} onEmail={setEmailCustomer} /><div className="grid min-w-0 gap-3 lg:hidden">{filtered.map((customer) => <CustomerListCard key={customer.id} customer={customer} summary={summaries[customer.id]} onEmail={setEmailCustomer} />)}</div><p className="text-sm text-zinc-500">Mostrando 1-{filtered.length} clientes de {filtered.length}</p></>}
       <CustomerFilterDrawer customers={customers} open={filterOpen} draftFilters={draftFilters} onDraftChange={setDraftFilters} onClose={() => setFilterOpen(false)} onApply={() => { setFilters(draftFilters); setFilterOpen(false); }} onClear={clearFilters} />
       <CustomerEmailModal open={Boolean(emailCustomer)} customer={emailCustomer} onClose={() => setEmailCustomer(null)} />
     </div>
