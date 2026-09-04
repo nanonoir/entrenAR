@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { Prisma } from "../../generated/prisma/client";
-import { CartStatus, OrderDeliveryType, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { CartStatus, OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 import type { TransactionClient } from "./checkout-cart.repository";
 
 export const checkoutOrderInclude = {
@@ -102,6 +102,9 @@ export class CheckoutOrderRepository {
       customerSnapshot: input.customerSnapshot,
       deliverySnapshot: input.deliverySnapshot,
       deliveryType: input.deliveryType,
+      shippingStatus: input.deliveryType === OrderDeliveryType.PICKUP
+        ? OrderShippingStatus.PICKUP
+        : OrderShippingStatus.TO_PACK,
       discountAmount: input.discountAmount,
       discountSnapshot: input.discountSnapshot,
       number: input.number,

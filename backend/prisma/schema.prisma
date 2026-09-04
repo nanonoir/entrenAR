@@ -147,6 +147,42 @@ enum OrderDeliveryType {
   PICKUP
 }
 
+enum OrderShippingStatus {
+  TO_PACK
+  TO_SHIP
+  SHIPPED
+  DELIVERED
+  PICKUP
+  CANCELLED
+}
+
+enum OrderHistoryEventType {
+  ORDER_CREATED
+  PAYMENT_RECEIVED
+  PACKAGE_PACKED
+  PACKAGE_UNPACKED
+  PACKAGE_SHIPPED
+  PACKAGE_DELIVERED
+  ORDER_CANCELLED
+  ORDER_REOPENED
+  ORDER_ARCHIVED
+  ORDER_UNARCHIVED
+  NOTE_ADDED
+  ORDER_CONVERTED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum CheckoutIdempotencyStatus {
   PENDING
   COMPLETED
@@ -619,8 +655,25 @@ model Order {
   userId                  String?
   cartId                  String?
   checkoutSessionId       String?                  @unique
+  sourceOrderId            String?
   status                  OrderStatus              @default(PENDING)
   deliveryType            OrderDeliveryType
+  shippingStatus           OrderShippingStatus      @default(TO_PACK)
+  shippingTrackingCode    String?
+  shippingCarrier         String?
+  shippingTrackingUrl     String?
+  isArchived              Boolean                  @default(false)
+  archivedAt              DateTime?
+  internalNotes           String?
+  cancellationReason      String?
+  previousStatus          OrderStatus?
+  previousPaymentStatus   PaymentStatus?
+  previousShippingStatus  OrderShippingStatus?
+  confirmedAt             DateTime?
+  packedAt                DateTime?
+  shippedAt               DateTime?
+  deliveredAt             DateTime?
+  cancelledAt             DateTime?
   currency                String                   @default("ARS")
   customerEmail           String
   customerFirstName       String
@@ -645,10 +698,17 @@ model Order {
   payment                 OrderPayment?
   idempotencyRecords      CheckoutIdempotencyKey[]
   couponRedemptions       CouponRedemption[]
+  history                 OrderHistory[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([cartId])
+  @@index([sourceOrderId])
+  @@index([shippingStatus, createdAt])
+  @@index([isArchived, status, createdAt])
+  @@index([shippingTrackingCode])
+  @@index([shippingCarrier])
+  @@index([customerEmail])
 }
 
 model OrderItem {
@@ -690,6 +750,79 @@ model OrderPayment {
 
   @@index([status, createdAt])
   @@index([paymentMethodId])
+}
+
+model OrderHistory {
+  id          String                 @id @default(cuid())
+  orderId     String
+  type        OrderHistoryEventType
+  title       String
+  description String?
+  actorId     String?
+  actorRole   Role?
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+  order       Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  code           String          @unique
+  contactName    String?
+  email          String?
+  phone          String?
+  notes          String?
+  status         SupplierStatus  @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  purchaseOrders PurchaseOrder[]
+
+  @@index([name])
+  @@index([status, name])
+}
+
+model PurchaseOrder {
+  id           String              @id @default(cuid())
+  orderNumber  String              @unique
+  supplierId   String
+  status       PurchaseOrderStatus @default(DRAFT)
+  notes        String?
+  subtotal     Decimal             @db.Decimal(12, 2)
+  tax          Decimal             @db.Decimal(12, 2)
+  shippingCost Decimal             @db.Decimal(12, 2)
+  total        Decimal             @db.Decimal(12, 2)
+  expectedDate DateTime?
+  receivedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  supplier     Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items        PurchaseOrderItem[]
+
+  @@index([supplierId, createdAt])
+  @@index([status, expectedDate])
+  @@index([receivedAt])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  variantId       String?
+  sku             String
+  title           String
+  quantity        Int
+  unitCost        Decimal       @db.Decimal(12, 2)
+  totalCost       Decimal       @db.Decimal(12, 2)
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@index([variantId])
 }
 
 model CheckoutIdempotencyKey {

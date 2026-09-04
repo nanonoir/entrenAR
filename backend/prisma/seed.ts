@@ -16,6 +16,7 @@ import {
   StockMode,
 } from "../src/generated/prisma/enums";
 import { seedCheckout } from "./fixtures/checkout-fixtures";
+import { seedSalesCrm } from "./fixtures/sales-crm-fixtures";
 
 const ADMIN_PASSWORD_SALT_ROUNDS = 12;
 const CATALOG_SETTINGS_ID = "singleton";
@@ -485,6 +486,7 @@ async function main(): Promise<void> {
     await seedCatalog(prisma);
     await seedCommerce(prisma);
     await seedCheckout(prisma);
+    await seedSalesCrm(prisma);
   } finally {
     await prisma.$disconnect();
   }
