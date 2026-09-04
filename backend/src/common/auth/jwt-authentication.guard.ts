@@ -86,3 +86,5 @@ export class JwtAuthenticationGuard implements CanActivate {
     });
   }
 }
+
+export { JwtAuthenticationGuard as JwtAuthGuard };
