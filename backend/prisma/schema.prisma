@@ -128,6 +128,7 @@ enum CheckoutRecoveryStatus {
   SENT
   MANUAL
   RECOVERED
+  DISCARDED
 }
 
 enum OrderStatus {
@@ -663,27 +664,55 @@ model CartItem {
 }
 
 model CheckoutSession {
-  id              String                 @id @default(cuid())
-  tokenHash       String                 @unique
-  cartId          String
-  userId          String?
-  status          CheckoutSessionStatus  @default(ACTIVE)
-  recoveryStatus  CheckoutRecoveryStatus @default(PENDING)
-  snapshotData    Json                   @default("{}")
-  lastActivityAt  DateTime               @default(now())
-  lastEmailSentAt DateTime?
-  abandonedAt     DateTime?
-  completedAt     DateTime?
-  expiresAt       DateTime?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  cart            Cart                   @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  user            User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  order           Order?
+  id                String                 @id @default(cuid())
+  tokenHash         String                 @unique
+  cartId            String
+  userId            String?
+  status            CheckoutSessionStatus  @default(ACTIVE)
+  recoveryStatus    CheckoutRecoveryStatus @default(PENDING)
+  recoveryTokenHash String?                @unique
+  recoveryExpiresAt DateTime?
+  snapshotData      Json                   @default("{}")
+  lastActivityAt    DateTime               @default(now())
+  lastEmailSentAt   DateTime?
+  abandonedAt       DateTime?
+  completedAt       DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  cart              Cart                   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  user              User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order             Order?
+  history           CheckoutSessionHistory[]
 
   @@index([cartId, status])
   @@index([userId, status])
   @@index([status, abandonedAt])
+}
+
+model CheckoutSessionHistory {
+  id                String         @id @default(cuid())
+  checkoutSessionId String
+  eventType         String
+  actorId           String?
+  actorRole         String?
+  notes             String?
+  metadata          Json           @default("{}")
+  createdAt         DateTime       @default(now())
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
+
+  @@index([checkoutSessionId, createdAt])
+}
+
+model CartRecoverySettings {
+  id             String   @id @default("singleton")
+  isActive       Boolean  @default(true)
+  timing         String   @default("24hs")
+  emailSubject   String   @default("Te guardamos tu carrito en EntrenAR")
+  emailHtmlBody  String   @default("<p>Hola {{nombre}},</p><p>Vimos que dejaste productos en tu carrito.</p><p><a href=\"{{checkoutUrl}}\">Volver a mi carrito</a></p>")
+  emailPlainBody String   @default("Hola {{nombre}},\n\nVimos que dejaste productos en tu carrito.\n\nVolver a mi carrito: {{checkoutUrl}}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Order {

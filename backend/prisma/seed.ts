@@ -16,6 +16,7 @@ import {
   StockMode,
 } from "../src/generated/prisma/enums";
 import { seedCheckout } from "./fixtures/checkout-fixtures";
+import { seedAbandonedCarts } from "./fixtures/abandoned-carts-fixtures";
 import { seedCustomersCrm } from "./fixtures/customers-crm-fixtures";
 import { seedSalesCrm } from "./fixtures/sales-crm-fixtures";
 
@@ -487,6 +488,7 @@ async function main(): Promise<void> {
     await seedCatalog(prisma);
     await seedCommerce(prisma);
     await seedCheckout(prisma);
+    await seedAbandonedCarts(prisma);
     await seedCustomersCrm(prisma);
     await seedSalesCrm(prisma);
   } finally {
