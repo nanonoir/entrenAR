@@ -2,6 +2,10 @@ import { ApiCustomersRepository } from "@/lib/api/admin/customers/api-customers.
 import { MockCustomersRepository } from "@/lib/api/admin/customers/mock-customers.repository";
 import { customersApiConfig } from "@/lib/api/admin/customers/customers-api-config";
 import type { CustomersRepository } from "@/lib/api/admin/customers/repository";
+import { ApiAbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/api-abandoned-carts-repository";
+import { MockAbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/mock-abandoned-carts-repository";
+import { abandonedCartsApiConfig } from "@/lib/api/admin/abandoned-carts/abandoned-carts-api-config";
+import type { AbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/repository";
 import { ApiSalesRepository } from "@/lib/api/admin/sales/api-sales.repository";
 import { MockSalesRepository } from "@/lib/api/admin/sales/mock-sales.repository";
 import { salesApiConfig } from "@/lib/api/admin/sales/sales-api-config";
@@ -20,6 +24,7 @@ const configuredCheckoutDataSource = process.env.NEXT_PUBLIC_CHECKOUT_DATA_SOURC
 const configuredAdminSalesMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_SALES?.trim().toLowerCase();
 const configuredAdminCustomersSource = process.env.NEXT_PUBLIC_ADMIN_DATA_SOURCE?.trim().toLowerCase();
 const configuredAdminCustomersMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_CUSTOMERS?.trim().toLowerCase();
+const configuredAdminAbandonedCartsMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_ABANDONED_CARTS?.trim().toLowerCase();
 const defaultApiBaseUrl = "http://localhost:3001/api/v1";
 const configuredAccountApiBaseUrl =
   process.env.NEXT_PUBLIC_ACCOUNT_API_BASE_URL ??
@@ -58,6 +63,7 @@ export const checkoutApiConfig = {
 } as const;
 
 export const adminSalesApiConfig = salesApiConfig;
+export const adminAbandonedCartsApiConfig = abandonedCartsApiConfig;
 
 export function getCatalogDataSource(): DataSource {
   return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
@@ -90,6 +96,12 @@ export function getAdminCustomersDataSource(): DataSource {
   return source === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
 }
 
+export function getAdminAbandonedCartsDataSource(): DataSource {
+  if (configuredAdminAbandonedCartsMock === "true" || configuredAdminAbandonedCartsMock === "1") return DATA_SOURCE.MOCK;
+  if (configuredAdminAbandonedCartsMock === "false" || configuredAdminAbandonedCartsMock === "0") return DATA_SOURCE.API;
+  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+}
+
 export const salesRepository: SalesRepository = getAdminSalesDataSource() === DATA_SOURCE.API
   ? new ApiSalesRepository()
   : new MockSalesRepository();
@@ -98,9 +110,14 @@ export const customersRepository: CustomersRepository = getAdminCustomersDataSou
   ? new ApiCustomersRepository()
   : new MockCustomersRepository();
 
+export const abandonedCartsRepository: AbandonedCartsRepository = getAdminAbandonedCartsDataSource() === DATA_SOURCE.API
+  ? new ApiAbandonedCartsRepository()
+  : new MockAbandonedCartsRepository();
+
 export { DATA_SOURCE };
 export { salesApiConfig };
 export { customersApiConfig };
+export { abandonedCartsApiConfig };
 export const adminCustomersApiConfig = customersApiConfig;
 export type { DataSource };
 
