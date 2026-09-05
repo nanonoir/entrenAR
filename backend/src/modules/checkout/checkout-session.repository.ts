@@ -45,6 +45,14 @@ export class CheckoutSessionRepository {
     });
   }
 
+  async sessionByRecoveryToken(transaction: TransactionClient, rawToken: string, now = new Date()): Promise<CheckoutSessionRecord | null> {
+    const sessions = await transaction.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "CheckoutSession" WHERE "recoveryTokenHash" = ${hashCheckoutToken(rawToken)} AND "recoveryExpiresAt" > ${now} AND "recoveryStatus" IN ('SENT', 'MANUAL') AND "status" = 'ABANDONED' FOR UPDATE`,
+    );
+    const session = sessions[0];
+    return session ? transaction.checkoutSession.findUnique({ select: checkoutSessionSelect, where: { id: session.id } }) : null;
+  }
+
   async activeSessionByCartAndUser(
     transaction: TransactionClient,
     cartId: string,

@@ -130,6 +130,10 @@ export class CheckoutRepository {
     return this.sessionRepository.sessionByToken(transaction, rawToken);
   }
 
+  async sessionByRecoveryToken(transaction: TransactionClient, rawToken: string, now?: Date): Promise<CheckoutSessionRecord | null> {
+    return this.sessionRepository.sessionByRecoveryToken(transaction, rawToken, now);
+  }
+
   async addressByOwner(
     transaction: TransactionClient,
     userId: string,
