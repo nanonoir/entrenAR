@@ -11,6 +11,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AccountModule } from "./modules/account/account.module";
+import { AbandonedCartsModule } from "./modules/abandoned-carts/abandoned-carts.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { CommerceModule } from "./modules/commerce/commerce.module";
 import { HealthModule } from "./modules/health/health.module";
@@ -41,6 +42,7 @@ import { SuppliersModule } from "./modules/suppliers/suppliers.module";
     PrismaModule,
     AuthModule,
     AccountModule,
+    AbandonedCartsModule,
     CatalogModule,
     CommerceModule,
     HealthModule,
