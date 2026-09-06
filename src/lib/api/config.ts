@@ -6,6 +6,10 @@ import { ApiAbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/api
 import { MockAbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/mock-abandoned-carts-repository";
 import { abandonedCartsApiConfig } from "@/lib/api/admin/abandoned-carts/abandoned-carts-api-config";
 import type { AbandonedCartsRepository } from "@/lib/api/admin/abandoned-carts/repository";
+import { ApiStatisticsRepository } from "@/lib/api/admin/statistics/api-statistics-repository";
+import { MockStatisticsRepository } from "@/lib/api/admin/statistics/mock-statistics-repository";
+import { adminStatisticsApiConfig, statisticsApiConfig } from "@/lib/api/admin/statistics/statistics-api-config";
+import type { StatisticsRepository } from "@/lib/api/admin/statistics/repository";
 import { ApiSalesRepository } from "@/lib/api/admin/sales/api-sales.repository";
 import { MockSalesRepository } from "@/lib/api/admin/sales/mock-sales.repository";
 import { salesApiConfig } from "@/lib/api/admin/sales/sales-api-config";
@@ -25,6 +29,7 @@ const configuredAdminSalesMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_SALES?.t
 const configuredAdminCustomersSource = process.env.NEXT_PUBLIC_ADMIN_DATA_SOURCE?.trim().toLowerCase();
 const configuredAdminCustomersMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_CUSTOMERS?.trim().toLowerCase();
 const configuredAdminAbandonedCartsMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_ABANDONED_CARTS?.trim().toLowerCase();
+const configuredAdminStatisticsMock = process.env.NEXT_PUBLIC_USE_MOCK_ADMIN_STATISTICS?.trim().toLowerCase();
 const defaultApiBaseUrl = "http://localhost:3001/api/v1";
 const configuredAccountApiBaseUrl =
   process.env.NEXT_PUBLIC_ACCOUNT_API_BASE_URL ??
@@ -102,6 +107,12 @@ export function getAdminAbandonedCartsDataSource(): DataSource {
   return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
 }
 
+export function getAdminStatisticsDataSource(): DataSource {
+  if (configuredAdminStatisticsMock === "true" || configuredAdminStatisticsMock === "1") return DATA_SOURCE.MOCK;
+  if (configuredAdminStatisticsMock === "false" || configuredAdminStatisticsMock === "0") return DATA_SOURCE.API;
+  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+}
+
 export const salesRepository: SalesRepository = getAdminSalesDataSource() === DATA_SOURCE.API
   ? new ApiSalesRepository()
   : new MockSalesRepository();
@@ -114,10 +125,15 @@ export const abandonedCartsRepository: AbandonedCartsRepository = getAdminAbando
   ? new ApiAbandonedCartsRepository()
   : new MockAbandonedCartsRepository();
 
+export const statisticsRepository: StatisticsRepository = getAdminStatisticsDataSource() === DATA_SOURCE.API
+  ? new ApiStatisticsRepository()
+  : new MockStatisticsRepository();
+
 export { DATA_SOURCE };
 export { salesApiConfig };
 export { customersApiConfig };
 export { abandonedCartsApiConfig };
+export { statisticsApiConfig, adminStatisticsApiConfig };
 export const adminCustomersApiConfig = customersApiConfig;
 export type { DataSource };
 
