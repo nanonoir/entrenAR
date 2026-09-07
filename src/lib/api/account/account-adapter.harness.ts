@@ -32,11 +32,10 @@ async function run(): Promise<void> {
     await runApiStoreScenario();
     return;
   }
-
   await runRepositoryScenario();
   await runMockRollbackScenario();
   await runApiStoreScenarioInChild();
-  console.log("account adapter harness: mock default/API opt-in, DTO mapping, server authority, rollback, loading, empty, error, and legacy reconciliation passed");
+  console.log("account adapter harness: mock/API DTO mapping, server authority, rollback, loading, empty, error, and legacy reconciliation passed");
 }
 
 async function runRepositoryScenario(): Promise<void> {
@@ -45,11 +44,11 @@ async function runRepositoryScenario(): Promise<void> {
   const { getAccountRepository } = await import("./account.repository");
   const { clearAccountAccessToken, getAccountAccessToken, setAccountAccessToken } = await import("./client");
 
-  if (!process.env.NEXT_PUBLIC_DATA_SOURCE && getAccountDataSource() !== DATA_SOURCE.MOCK) {
-    throw new Error("Account mock source must remain the default when no source is configured.");
+  if (getAccountDataSource() !== DATA_SOURCE.API || getAccountRepository() !== getAccountRepository(DATA_SOURCE.API)) {
+    throw new Error("Account API source must be the default.");
   }
   if (getAccountRepository(DATA_SOURCE.MOCK) === getAccountRepository(DATA_SOURCE.API)) {
-    throw new Error("Account API source must require explicit selection.");
+    throw new Error("Account API source must use a distinct repository.");
   }
 
   const calls: ClientCall[] = [];

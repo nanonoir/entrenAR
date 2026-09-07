@@ -32,15 +32,15 @@ async function run(): Promise<void> {
   await runApiRepositoryScenario();
   await runFetchClientScenario();
   await runApiSourceScenarioInChild();
-  console.log("checkout adapter harness: mock default/API opt-in, DTO authority, guest/auth reconciliation, controlled errors, retry, idempotency, and mock fallback passed");
+  console.log("checkout adapter harness: API default/mock repository parity, DTO authority, guest/auth reconciliation, controlled errors, retry, idempotency, and mock fallback passed");
 }
 
 async function runSourceScenario(): Promise<void> {
   const { DATA_SOURCE, getCheckoutDataSource } = await import("@/lib/api/config");
   const { getCheckoutRepository } = await import("./checkout.repository");
 
-  if (!process.env.NEXT_PUBLIC_CHECKOUT_DATA_SOURCE && !process.env.NEXT_PUBLIC_DATA_SOURCE && getCheckoutDataSource() !== DATA_SOURCE.MOCK) {
-    throw new Error("Checkout mock source must remain the default when no source is configured.");
+  if (getCheckoutDataSource() !== DATA_SOURCE.API || getCheckoutRepository() !== getCheckoutRepository(DATA_SOURCE.API)) {
+    throw new Error("Checkout API source must be the default.");
   }
   if (getCheckoutRepository(DATA_SOURCE.MOCK) === getCheckoutRepository(DATA_SOURCE.API)) {
     throw new Error("Checkout API source must use a distinct repository.");

@@ -1,11 +1,15 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { getCatalogDataSource } from "@/lib/api/config";
 import { CatalogApiRepository } from "@/lib/api/catalog/catalog-api.repository";
 import { CatalogApiError } from "@/lib/api/catalog/client";
 import { catalogLoading, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { resolveShopRoute } from "@/lib/data/shop-routes";
 import { resolveProductListing } from "@/lib/product-listing";
+
+const execFileAsync = promisify(execFile);
 
 const migratedCatalogReadPaths = [
   "src/app/(admin)/admin/productos/[id]/page.tsx",
@@ -24,14 +28,6 @@ const migratedCatalogReadPaths = [
 const directCatalogMockImport = /from\s+["']@\/lib\/data\/(?:products|categories|admin\/sales-flow\/mock-products)["']/;
 
 async function assertMockRemovalGuard(): Promise<void> {
-  if (getCatalogDataSource() !== "mock" || getCatalogRepository() !== getCatalogRepository("mock")) {
-    throw new Error("Catalog mock source must remain the default.");
-  }
-
-  if (getCatalogRepository("api") === getCatalogRepository("mock")) {
-    throw new Error("Catalog API source must require explicit selection.");
-  }
-
   const sources = await Promise.all(
     migratedCatalogReadPaths.map(async (path) => ({
       path,
@@ -47,7 +43,13 @@ async function assertMockRemovalGuard(): Promise<void> {
 }
 
 async function run(): Promise<void> {
+  if (process.argv.includes("--source")) {
+    await runSourceScenario();
+    return;
+  }
+
   await assertMockRemovalGuard();
+  await runSourceScenariosInChild();
 
   const mock = getCatalogRepository("mock");
   const mockDetail = await mock.getPublicProductBySlug("whey-protein-isolate-900g");
@@ -184,14 +186,57 @@ async function run(): Promise<void> {
     throw new Error("Loading state mapping failed.");
   }
 
-  const shopRoute = await resolveShopRoute(["productos", "whey-protein-isolate-900g"]);
-  const listing = await resolveProductListing(["suplementos", "proteinas"]);
+  console.log("catalog adapter harness: API default/explicit mock, repository-bound reads, public/admin Decimal and stock mappings, history, loading, empty, and error states passed");
+}
 
-  if (shopRoute.type !== "product" || shopRoute.product.slug !== "whey-protein-isolate-900g" || listing?.context.categorySlug !== "proteinas") {
-    throw new Error("Repository-backed public route mapping failed.");
+async function runSourceScenariosInChild(): Promise<void> {
+  const tsxCli = resolve(process.cwd(), "node_modules/tsx/dist/cli.mjs");
+  const harness = resolve(process.cwd(), "src/lib/api/catalog/catalog-adapter.harness.ts");
+  const api = await execFileAsync(process.execPath, [tsxCli, harness, "--source"], { cwd: process.cwd(), env: withoutDataSource(), maxBuffer: 1_048_576 });
+  if (!api.stdout.includes("catalog source api scenario passed")) throw new Error("Catalog API default scenario did not complete.");
+  const unknown = await execFileAsync(process.execPath, [tsxCli, harness, "--source"], {
+    cwd: process.cwd(),
+    env: { ...withoutDataSource(), NEXT_PUBLIC_DATA_SOURCE: "legacy" },
+    maxBuffer: 1_048_576,
+  });
+  if (!unknown.stdout.includes("catalog source api scenario passed")) throw new Error("Catalog unrecognized source scenario did not complete.");
+  const mock = await execFileAsync(process.execPath, [tsxCli, harness, "--source", "mock"], {
+    cwd: process.cwd(),
+    env: { ...withoutDataSource(), NEXT_PUBLIC_DATA_SOURCE: "mock" },
+    maxBuffer: 1_048_576,
+  });
+  if (!mock.stdout.includes("catalog source mock scenario passed")) throw new Error("Catalog explicit mock scenario did not complete.");
+}
+
+async function runSourceScenario(): Promise<void> {
+  const expected = process.argv.includes("mock") ? "mock" : "api";
+  const { DATA_SOURCE } = await import("@/lib/api/config");
+  if (getCatalogDataSource() !== (expected === "mock" ? DATA_SOURCE.MOCK : DATA_SOURCE.API)) {
+    throw new Error(`Catalog source default mismatch; expected ${expected}.`);
   }
 
-  console.log("catalog adapter harness: mock default/API opt-in, repository-bound reads, public/admin Decimal and stock mappings, history, route reads, loading, empty, and error states passed");
+  if (getCatalogRepository() !== getCatalogRepository(expected)) {
+    throw new Error(`Catalog configured repository did not select ${expected}.`);
+  }
+  if (getCatalogRepository("api") === getCatalogRepository("mock")) {
+    throw new Error("Catalog API and mock repositories must remain distinct.");
+  }
+
+  if (expected === "mock") {
+    const shopRoute = await resolveShopRoute(["productos", "whey-protein-isolate-900g"]);
+    const listing = await resolveProductListing(["suplementos", "proteinas"]);
+    if (shopRoute.type !== "product" || shopRoute.product.slug !== "whey-protein-isolate-900g" || listing?.context.categorySlug !== "proteinas") {
+      throw new Error("Repository-backed public route mapping failed in explicit mock mode.");
+    }
+  }
+
+  console.log(`catalog source ${expected} scenario passed`);
+}
+
+function withoutDataSource(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  delete environment.NEXT_PUBLIC_DATA_SOURCE;
+  return environment;
 }
 
 void run();

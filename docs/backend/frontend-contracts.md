@@ -277,7 +277,7 @@ Frontend stores normalize all failures to `{ ok: false, code, message, issues?, 
 | `src/stores/cart-store.ts` | Persisted preview items only; transient quote/session/completion/error/conflict/retry/idempotency state; quote projection, completion cleanup, guest reconciliation, and logout sync. |
 | `src/components/checkout/*` | Collect intent and render store/repository projections. Components do not call `fetch()` directly or import Prisma/backend code. |
 
-Source selection is deterministic: `NEXT_PUBLIC_CHECKOUT_DATA_SOURCE=api` opts into the API repository; otherwise `NEXT_PUBLIC_DATA_SOURCE=api` may select it globally; every other value defaults to mock. The API base URL uses `NEXT_PUBLIC_CHECKOUT_API_BASE_URL`, then shared API base variables, then `http://localhost:3001/api/v1`. An API error does not silently switch sources.
+Source selection is deterministic: `NEXT_PUBLIC_CHECKOUT_DATA_SOURCE=mock` explicitly selects the mock repository; `api` explicitly selects the API repository; otherwise `NEXT_PUBLIC_DATA_SOURCE` is used, with API as the default for unset or unrecognized values. The API base URL uses `NEXT_PUBLIC_CHECKOUT_API_BASE_URL`, then shared API base variables, then `http://localhost:3001/api/v1`. An API error does not silently switch sources.
 
 ---
 
