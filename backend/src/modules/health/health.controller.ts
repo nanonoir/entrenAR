@@ -8,8 +8,12 @@ import {
 
 import { Public } from "../../common/auth/public.decorator";
 import { ApiErrorResponseDto } from "../../common/errors/api-error-response.dto";
-import { HealthResponseDto } from "./dto/health-response.dto";
-import { HealthService, type HealthResponse } from "./health.service";
+import { AggregateHealthResponseDto, HealthResponseDto } from "./dto/health-response.dto";
+import {
+  HealthService,
+  type AggregateHealthResponse,
+  type HealthResponse,
+} from "./health.service";
 
 @ApiTags("Health")
 @Controller("health")
@@ -35,5 +39,24 @@ export class HealthController {
   })
   async ready(): Promise<HealthResponse> {
     return this.healthService.ready();
+  }
+}
+
+@ApiTags("Health")
+@Controller(["health", "api/v1/health"])
+export class HealthAggregateController {
+  constructor(private readonly healthService: HealthService) {}
+
+  @Public()
+  @Get()
+  @ApiOperation({ summary: "Check whether the API and its database are healthy" })
+  @ApiOkResponse({ description: "The API and PostgreSQL are healthy.", type: AggregateHealthResponseDto })
+  @ApiResponse({
+    description: "SERVICE_UNAVAILABLE: PostgreSQL is unavailable. No connection details are returned.",
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    type: ApiErrorResponseDto,
+  })
+  async aggregate(): Promise<AggregateHealthResponse> {
+    return this.healthService.aggregate();
   }
 }

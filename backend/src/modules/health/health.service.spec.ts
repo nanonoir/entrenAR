@@ -20,11 +20,39 @@ describe("health.service", () => {
     expect(harness.prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
+  it("reports aggregate health with database status and process telemetry", async () => {
+    const harness = createHarness();
+    harness.prisma.$queryRaw.mockResolvedValue([{ result: 1 }]);
+
+    await expect(harness.service.aggregate()).resolves.toEqual({
+      database: "up",
+      ok: true,
+      status: "ok",
+      timestamp: expect.any(String),
+      uptime: expect.any(Number),
+    });
+    expect(harness.prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it("returns a controlled service-unavailable error without database details", async () => {
     const harness = createHarness();
     harness.prisma.$queryRaw.mockRejectedValue(new Error("postgresql://user:secret@unavailable:5432/entrenar"));
 
     await expect(harness.service.ready()).rejects.toMatchObject({
+      response: {
+        code: ERROR_CODE.SERVICE_UNAVAILABLE,
+        message: "Database is unavailable.",
+        ok: false,
+      },
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+    });
+  });
+
+  it("rejects aggregate health when PostgreSQL is unavailable", async () => {
+    const harness = createHarness();
+    harness.prisma.$queryRaw.mockRejectedValue(new Error("postgresql://user:secret@unavailable:5432/entrenar"));
+
+    await expect(harness.service.aggregate()).rejects.toMatchObject({
       response: {
         code: ERROR_CODE.SERVICE_UNAVAILABLE,
         message: "Database is unavailable.",

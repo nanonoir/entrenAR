@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import { Response } from "express";
 
 import { ApiErrorResponse, ApiFieldIssue, ERROR_CODE, ErrorCode } from "../errors/api-error.response";
@@ -8,6 +8,8 @@ type ErrorResponsePayload = Partial<ApiErrorResponse> & { issues?: unknown; mess
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -15,8 +17,34 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const error = this.toResponse(exception, status);
 
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logInternalFailure(exception, request, status);
+    }
+
     response.setHeader("x-request-id", request.requestId ?? "");
     response.status(status).json(error);
+  }
+
+  private logInternalFailure(exception: unknown, request: RequestWithId, status: number): void {
+    this.logger.error(JSON.stringify({
+      message: this.messageForLog(exception),
+      method: request.method,
+      path: request.path || request.originalUrl || request.url || "unknown",
+      requestId: request.requestId ?? "unknown",
+      status,
+    }), exception instanceof Error ? exception.stack : undefined);
+  }
+
+  private messageForLog(exception: unknown): string {
+    if (exception instanceof Error) {
+      return exception.message;
+    }
+
+    if (typeof exception === "string") {
+      return exception;
+    }
+
+    return "Unhandled exception.";
   }
 
   private toResponse(exception: unknown, status: number): ApiErrorResponse {
