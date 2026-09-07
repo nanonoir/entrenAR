@@ -35,6 +35,11 @@ async function bootstrap(): Promise<void> {
   const config = loadAppConfig();
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
+  app.enableShutdownHooks();
+  const server = app.getHttpServer();
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+
   configureHttpApplication(app, config);
 
   if (config.nodeEnv !== "production") {

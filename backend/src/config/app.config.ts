@@ -11,7 +11,9 @@ export type NodeEnvironment = (typeof NODE_ENV)[keyof typeof NODE_ENV];
 export interface AppConfig {
   bodyLimitBytes: number;
   corsOrigin: string;
+  corsOrigins?: string[];
   databaseUrl: string;
+  frontendUrl?: string;
   jwtAccessSecret: string;
   jwtAccessTtlSeconds: number;
   jwtRefreshSecret: string;
@@ -22,10 +24,40 @@ export interface AppConfig {
   throttleTtlSeconds: number;
 }
 
+const DEFAULT_FRONTEND_URL = "http://localhost:3000";
+const httpUrlSchema = z.url({ error: "URL must be a valid URL." }).refine(
+  (value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  },
+  { error: "URL must use the http or https protocol." },
+);
+const corsOriginsSchema = z.string().transform((value, context) => {
+  const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
+  const origins: string[] = [];
+
+  entries.forEach((entry, index) => {
+    const result = httpUrlSchema.safeParse(entry);
+    if (!result.success) {
+      context.addIssue({
+        code: "custom",
+        message: `CORS_ORIGINS entry ${index + 1} must be a valid HTTP(S) URL.`,
+      });
+      return;
+    }
+
+    origins.push(normalizeOrigin(result.data));
+  });
+
+  return origins;
+});
+
 const appConfigSchema = z.object({
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(10_485_760).default(104_857),
-  CORS_ORIGIN: z.url({ error: "CORS_ORIGIN must be a valid URL." }).default("http://localhost:3000"),
+  CORS_ORIGIN: httpUrlSchema.optional(),
+  CORS_ORIGINS: corsOriginsSchema.optional(),
   DATABASE_URL: z.url({ error: "DATABASE_URL must be a valid database URL." }),
+  FRONTEND_URL: httpUrlSchema.optional(),
   JWT_ACCESS_SECRET: z.string().min(32, { error: "JWT_ACCESS_SECRET must contain at least 32 characters." }),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
   JWT_REFRESH_SECRET: z.string().min(32, { error: "JWT_REFRESH_SECRET must contain at least 32 characters." }),
@@ -50,11 +82,18 @@ export function loadAppConfig(environment: EnvironmentVariables = process.env): 
   }
 
   const parsed = result.data;
+  const corsOrigins = uniqueOrigins([
+    ...(parsed.CORS_ORIGINS ?? []),
+    ...(parsed.FRONTEND_URL ? [normalizeOrigin(parsed.FRONTEND_URL)] : []),
+    ...(parsed.CORS_ORIGIN ? [normalizeOrigin(parsed.CORS_ORIGIN)] : []),
+  ]);
 
   return {
     bodyLimitBytes: parsed.BODY_LIMIT_BYTES,
-    corsOrigin: parsed.CORS_ORIGIN,
+    corsOrigin: corsOrigins[0] ?? DEFAULT_FRONTEND_URL,
+    corsOrigins,
     databaseUrl: parsed.DATABASE_URL,
+    frontendUrl: parsed.FRONTEND_URL ? normalizeOrigin(parsed.FRONTEND_URL) : undefined,
     jwtAccessSecret: parsed.JWT_ACCESS_SECRET,
     jwtAccessTtlSeconds: parsed.JWT_ACCESS_TTL_SECONDS,
     jwtRefreshSecret: parsed.JWT_REFRESH_SECRET,
@@ -76,4 +115,12 @@ export function validateEnvironment(environment: Record<string, unknown>): AppCo
   }
 
   return loadAppConfig(values);
+}
+
+function normalizeOrigin(value: string): string {
+  return new URL(value).origin;
+}
+
+function uniqueOrigins(origins: string[]): string[] {
+  return [...new Set(origins.length > 0 ? origins : [DEFAULT_FRONTEND_URL])];
 }
