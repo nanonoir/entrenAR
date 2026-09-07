@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import {
   ApiBearerAuth,
   ApiBody,
@@ -41,12 +42,16 @@ interface RequestWithAuthenticatedUser extends Request {
   user: AccessTokenPayload;
 }
 
+const SENSITIVE_AUTH_THROTTLE_LIMIT = 5;
+const SENSITIVE_AUTH_THROTTLE_TTL_MS = 60_000;
+
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @Throttle({ default: { limit: SENSITIVE_AUTH_THROTTLE_LIMIT, ttl: SENSITIVE_AUTH_THROTTLE_TTL_MS } })
   @Post("register")
   @ApiOperation({ summary: "Register a customer account" })
   @ApiBody({ type: AuthCredentialsDto })
@@ -65,6 +70,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: SENSITIVE_AUTH_THROTTLE_LIMIT, ttl: SENSITIVE_AUTH_THROTTLE_TTL_MS } })
   @Post("login")
   @ApiOperation({ summary: "Authenticate with email and password" })
   @ApiBody({ type: AuthCredentialsDto })
@@ -114,6 +120,7 @@ export class AuthController {
 
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: SENSITIVE_AUTH_THROTTLE_LIMIT, ttl: SENSITIVE_AUTH_THROTTLE_TTL_MS } })
   @Post("forgot-password")
   @ApiOperation({ summary: "Start password recovery without revealing account existence" })
   @ApiBody({ type: ForgotPasswordRequestDto })
