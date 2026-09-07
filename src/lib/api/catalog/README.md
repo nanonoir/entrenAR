@@ -1,6 +1,6 @@
 # Catalog Adapter Compatibility
 
-`NEXT_PUBLIC_DATA_SOURCE` selects the catalog repository. Its only supported values are `mock` (the safe default) and `api`.
+`NEXT_PUBLIC_DATA_SOURCE` selects the catalog repository. `mock` is the explicit offline option; `api` is the default for unset or unrecognized values.
 
 The API repository maps REST DTOs into existing storefront and admin contracts without importing Prisma. Public product URLs always consume the backend `slug`, which is the backend projection of `publicSlug`.
 

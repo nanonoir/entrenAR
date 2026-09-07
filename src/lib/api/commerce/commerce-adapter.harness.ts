@@ -61,7 +61,7 @@ async function run(): Promise<void> {
   await runRepositoryScenario();
   await runFetchClientScenario();
   await runApiStoreScenarioInChild();
-  console.log("commerce adapter harness: mock default/API opt-in, mapping, loading/empty/error states, auth, rollback, nullable weights, source boundaries, and mock retention passed");
+  console.log("commerce adapter harness: API/mock repository parity, mapping, loading/empty/error states, auth, rollback, nullable weights, source boundaries, and mock retention passed");
 }
 
 async function assertMockRemovalGuard(): Promise<void> {
@@ -154,18 +154,17 @@ function isForbiddenFrontendModule(moduleName: string): boolean {
 }
 
 async function runMockDefaultScenarioInChild(): Promise<void> {
-  const environment = { ...process.env };
-  delete environment.NEXT_PUBLIC_DATA_SOURCE;
+  const environment: NodeJS.ProcessEnv = { ...process.env, NEXT_PUBLIC_DATA_SOURCE: "mock" };
   delete environment.NEXT_PUBLIC_COMMERCE_DATA_SOURCE;
   const { stdout } = await runHarnessChild(["--mock-source-scenario"], environment);
-  if (!stdout.includes("commerce adapter mock source scenario passed")) throw new Error("Commerce mock source scenario did not complete.");
+  if (!stdout.includes("commerce adapter mock source scenario passed")) throw new Error("Commerce explicit mock source scenario did not complete.");
 }
 
 async function runMockSourceScenario(): Promise<void> {
   const { DATA_SOURCE, getCommerceDataSource } = await import("../config");
   const { getCommerceRepository } = await import("./commerce.repository");
   if (getCommerceDataSource() !== DATA_SOURCE.MOCK || getCommerceRepository().source !== DATA_SOURCE.MOCK) {
-    throw new Error("Commerce mock source must remain the default when no source is configured.");
+    throw new Error("Commerce explicit mock source selection failed.");
   }
   const mock = getCommerceRepository(DATA_SOURCE.MOCK);
   const api = getCommerceRepository(DATA_SOURCE.API);

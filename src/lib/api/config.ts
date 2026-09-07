@@ -71,7 +71,7 @@ export const adminSalesApiConfig = salesApiConfig;
 export const adminAbandonedCartsApiConfig = abandonedCartsApiConfig;
 
 export function getCatalogDataSource(): DataSource {
-  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(configuredDataSource);
 }
 
 export function getAccountDataSource(): DataSource {
@@ -80,37 +80,37 @@ export function getAccountDataSource(): DataSource {
 
 export function getCommerceDataSource(): DataSource {
   const source = configuredCommerceDataSource ?? configuredDataSource;
-  return source === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(source);
 }
 
 export function getCheckoutDataSource(): DataSource {
   const source = configuredCheckoutDataSource ?? configuredDataSource;
-  return source === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(source);
 }
 
 export function getAdminSalesDataSource(): DataSource {
   if (configuredAdminSalesMock === "true" || configuredAdminSalesMock === "1") return DATA_SOURCE.MOCK;
   if (configuredAdminSalesMock === "false" || configuredAdminSalesMock === "0") return DATA_SOURCE.API;
-  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(configuredDataSource);
 }
 
 export function getAdminCustomersDataSource(): DataSource {
   if (configuredAdminCustomersMock === "true" || configuredAdminCustomersMock === "1") return DATA_SOURCE.MOCK;
   if (configuredAdminCustomersMock === "false" || configuredAdminCustomersMock === "0") return DATA_SOURCE.API;
   const source = configuredAdminCustomersSource ?? configuredDataSource;
-  return source === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(source);
 }
 
 export function getAdminAbandonedCartsDataSource(): DataSource {
   if (configuredAdminAbandonedCartsMock === "true" || configuredAdminAbandonedCartsMock === "1") return DATA_SOURCE.MOCK;
   if (configuredAdminAbandonedCartsMock === "false" || configuredAdminAbandonedCartsMock === "0") return DATA_SOURCE.API;
-  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(configuredDataSource);
 }
 
 export function getAdminStatisticsDataSource(): DataSource {
   if (configuredAdminStatisticsMock === "true" || configuredAdminStatisticsMock === "1") return DATA_SOURCE.MOCK;
   if (configuredAdminStatisticsMock === "false" || configuredAdminStatisticsMock === "0") return DATA_SOURCE.API;
-  return configuredDataSource === DATA_SOURCE.API ? DATA_SOURCE.API : DATA_SOURCE.MOCK;
+  return resolveDataSource(configuredDataSource);
 }
 
 export const salesRepository: SalesRepository = getAdminSalesDataSource() === DATA_SOURCE.API
@@ -136,6 +136,10 @@ export { abandonedCartsApiConfig };
 export { statisticsApiConfig, adminStatisticsApiConfig };
 export const adminCustomersApiConfig = customersApiConfig;
 export type { DataSource };
+
+function resolveDataSource(value: string | undefined): DataSource {
+  return value === DATA_SOURCE.MOCK ? DATA_SOURCE.MOCK : DATA_SOURCE.API;
+}
 
 function normalizeBaseUrl(value: string): string {
   return (value.trim() || defaultApiBaseUrl).replace(/\/$/, "");

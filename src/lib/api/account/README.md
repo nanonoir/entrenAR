@@ -1,6 +1,6 @@
 # Account Adapter Compatibility
 
-`NEXT_PUBLIC_DATA_SOURCE` selects the account repository. `mock` is the safe default; `api` is an explicit opt-in that uses the NestJS account endpoints.
+`NEXT_PUBLIC_DATA_SOURCE` selects the account repository. `mock` is the explicit offline option; `api` is the default for unset or unrecognized values and uses the NestJS account endpoints.
 
 The API repository maps account, address, order, wishlist, and authentication DTOs into the existing storefront contracts. Access tokens remain memory-only, refresh sessions use `credentials: "include"`, public authentication requests suppress stale bearer headers, and malformed responses become controlled adapter errors.
 

@@ -48,9 +48,9 @@ These files act as the current read-only database. They are highly relevant for 
 | Setting | Behavior |
 |---|---|
 | `NEXT_PUBLIC_CHECKOUT_DATA_SOURCE=api` | Explicitly selects `CheckoutApiRepository`. |
-| `NEXT_PUBLIC_CHECKOUT_DATA_SOURCE=mock` or any other value | Selects `MockCheckoutRepository`. |
+| `NEXT_PUBLIC_CHECKOUT_DATA_SOURCE=mock` | Explicitly selects `MockCheckoutRepository`. |
 | `NEXT_PUBLIC_DATA_SOURCE=api` with no checkout-specific override | Selects API for checkout through the shared fallback. |
-| No source configured | Mock remains the default. |
+| No source configured or an unrecognized value | API remains the default. |
 | `NEXT_PUBLIC_CHECKOUT_API_BASE_URL` | Checkout API base URL; falls back through shared API base variables and then `http://localhost:3001/api/v1`. |
 
 Source fallback is configuration-level only. An API transport/configuration error remains a typed `CheckoutApiError`; it does not silently mutate the source to mock mode.
@@ -62,7 +62,7 @@ Source fallback is configuration-level only. An API transport/configuration erro
 | `src/lib/data/checkout.ts` | Static payment-method, bank-transfer, shipping-provider, pickup-point, and checkout-copy reference data | Local-only, read-only mock/reference; no real provider or payment call. |
 | `src/lib/data/products.ts` | Product/variant input for mock quote resolution | Local-only catalog mock; mock repository derives price, SKU, variant, and stock from it. |
 | `src/lib/api/checkout/mock-checkout.repository.ts` | Contract-compatible mock quote/completion adapter | Uses in-memory inventory, session, cart, quote, and idempotency maps per repository instance; not durable. |
-| `src/lib/api/checkout/checkout-adapter.harness.ts` | Executable compatibility boundary | Proves mock default/API opt-in, DTO filtering, authoritative mock values, guest/customer reconciliation, controlled conflicts, refresh retry, idempotency, and source fallback behavior. |
+| `src/lib/api/checkout/checkout-adapter.harness.ts` | Executable compatibility boundary | Proves API default/explicit mock, DTO filtering, authoritative mock values, guest/customer reconciliation, controlled conflicts, refresh retry, idempotency, and source fallback behavior. |
 
 The mock repository deliberately keeps the same intent boundary as the API repository: callers provide line IDs and selections, while the repository returns calculated mock projections. It is not evidence that a real order, payment, stock reservation, webhook, refund, or financial reconciliation occurred.
 
