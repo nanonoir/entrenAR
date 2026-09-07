@@ -10,8 +10,8 @@ import { InlinePriceCell } from "@/components/admin/products-flow/InlinePriceCel
 import {
   formatAdminProductStock,
   getAdminProductStockTone,
-  type AdminProduct,
-} from "@/lib/data/admin/sales-flow/mock-products";
+} from "@/lib/data/admin/product-utils";
+import type { AdminProduct } from "@/types/admin-product";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 import { cn } from "@/lib/utils";
 

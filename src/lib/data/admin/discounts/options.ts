@@ -1,16 +1,28 @@
-import { getAdminProductCategories, getAdminProducts } from "@/lib/data/admin/sales-flow/mock-products";
+import { getCatalogRepository, type CatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { shippingProviderDefinitions } from "@/lib/data/admin/shipping/shipping-config";
 import { getArgentineShippingProvinces } from "@/lib/data/admin/shipping/provinces";
-import type { DiscountSelectOption } from "@/lib/data/admin/discounts/types";
+import type { DiscountSelectOption } from "@/types/discount";
 
-export async function getDiscountProductOptions(): Promise<DiscountSelectOption[]> {
-  const products = await getAdminProducts();
-  return products.map((product) => ({ id: product.id, label: product.name, description: product.categoryName }));
+type DiscountCatalogRepository = Pick<CatalogRepository, "getAdminCategories" | "getAdminProducts">;
+
+export async function getDiscountProductOptions(repository: DiscountCatalogRepository = getCatalogRepository()): Promise<DiscountSelectOption[]> {
+  try {
+    const result = await repository.getAdminProducts();
+    const products = result.status === "success" || result.status === "empty" ? result.data : [];
+    return products.map((product) => ({ id: product.id, label: product.name, description: product.categoryName }));
+  } catch {
+    return [];
+  }
 }
 
-export async function getDiscountCategoryOptions(): Promise<DiscountSelectOption[]> {
-  const categories = await getAdminProductCategories();
-  return categories.map((category) => ({ id: category.id, label: category.name, description: category.parentId ? "Subcategoría" : "Categoría" }));
+export async function getDiscountCategoryOptions(repository: DiscountCatalogRepository = getCatalogRepository()): Promise<DiscountSelectOption[]> {
+  try {
+    const result = await repository.getAdminCategories();
+    const categories = result.status === "success" || result.status === "empty" ? result.data : [];
+    return categories.map((category) => ({ id: category.id, label: category.name, description: category.parentId ? "Subcategoría" : "Categoría" }));
+  } catch {
+    return [];
+  }
 }
 
 export async function getDiscountShippingMethodOptions(): Promise<DiscountSelectOption[]> {
