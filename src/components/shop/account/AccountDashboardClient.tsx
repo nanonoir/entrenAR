@@ -8,8 +8,15 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AccountState } from "@/components/shop/account/AccountState";
 import { AccountLayout } from "@/components/shop/account/dashboard/AccountLayout";
 import { QuickBuyController } from "@/components/shop/quick-buy/QuickBuyController";
+import { toAccountApiError } from "@/lib/api/account/client";
+import { getAccountRepository } from "@/lib/api/account/account.repository";
 import { accountRoutes } from "@/lib/routes";
-import { ACCOUNT_ASYNC_STATUS, ACCOUNT_ROLE } from "@/types/account";
+import {
+  ACCOUNT_ASYNC_STATUS,
+  ACCOUNT_ROLE,
+  type AccountAsyncStatus,
+  type AccountOperationError,
+} from "@/types/account";
 import { useAccountProfileStore } from "@/stores/account-profile-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -40,6 +47,12 @@ export function AccountDashboardClient({ orders, products }: AccountDashboardCli
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [accountOrders, setAccountOrders] = useState(orders);
+  const [ordersError, setOrdersError] = useState<AccountOperationError | null>(null);
+  const [ordersStatus, setOrdersStatus] = useState<AccountAsyncStatus>(
+    orders.length > 0 ? ACCOUNT_ASYNC_STATUS.SUCCESS : ACCOUNT_ASYNC_STATUS.LOADING,
+  );
+  const [ordersAttempt, setOrdersAttempt] = useState(0);
   const routeSection = searchParams.get("seccion");
   const initialSection = isAccountSection(routeSection) ? routeSection : null;
   const [selectedSection, setSelectedSection] = useState<AccountSection | null>(null);
@@ -95,6 +108,58 @@ export function AccountDashboardClient({ orders, products }: AccountDashboardCli
     ]);
   }, [bootstrapProfile, bootstrapWishlist, hydrated, user]);
 
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    if (!user || user.role !== ACCOUNT_ROLE.CUSTOMER) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadOrders() {
+      await Promise.resolve();
+      if (cancelled) {
+        return;
+      }
+
+      setAccountOrders([]);
+      setOrdersStatus(ACCOUNT_ASYNC_STATUS.LOADING);
+      setOrdersError(null);
+
+      try {
+        const nextOrders = await getAccountRepository().listOrders({ limit: 100 });
+        if (cancelled) {
+          return;
+        }
+
+        setAccountOrders(nextOrders);
+        setOrdersStatus(ACCOUNT_ASYNC_STATUS.SUCCESS);
+      } catch (error: unknown) {
+        if (cancelled) {
+          return;
+        }
+
+        setOrdersError(
+          toAccountApiError(
+            error,
+            "ACCOUNT_ORDERS_LOAD_FAILED",
+            "The account orders could not be loaded.",
+          ),
+        );
+        setOrdersStatus(ACCOUNT_ASYNC_STATUS.ERROR);
+      }
+    }
+
+    void loadOrders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, ordersAttempt, user]);
+
   const profile = user ? profilesByEmail[user.email] : null;
   const addresses = user ? addressesByEmail[user.email] ?? [] : [];
   const wishlistProducts = products.filter((product) => wishlistProductIds.includes(product.id));
@@ -127,6 +192,10 @@ export function AccountDashboardClient({ orders, products }: AccountDashboardCli
     });
     setHydrated(false);
     setBootstrapAttempt((attempt) => attempt + 1);
+  }
+
+  function retryOrders() {
+    setOrdersAttempt((attempt) => attempt + 1);
   }
 
   if (!hydrated) {
@@ -183,7 +252,10 @@ export function AccountDashboardClient({ orders, products }: AccountDashboardCli
         onLogout={handleLogout}
         isLoggingOut={isLoggingOut}
         onSelectSection={selectSection}
-        orders={orders}
+        onRetryOrders={retryOrders}
+        orders={accountOrders}
+        ordersError={ordersError}
+        ordersStatus={ordersStatus}
         products={wishlistProducts}
         profile={profile}
         userEmail={user.email}

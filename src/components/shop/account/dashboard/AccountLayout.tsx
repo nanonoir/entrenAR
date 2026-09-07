@@ -4,7 +4,14 @@ import { Container } from "@/components/ui/Container";
 import { AccountSectionPanel } from "@/components/shop/account/dashboard/AccountSectionPanel";
 import { AccountSidebar } from "@/components/shop/account/dashboard/AccountSidebar";
 import { cn } from "@/lib/utils";
-import type { AccountAddress, AccountOrder, AccountProfile, AccountSection } from "@/types/account";
+import type {
+  AccountAddress,
+  AccountAsyncStatus,
+  AccountOperationError,
+  AccountOrder,
+  AccountProfile,
+  AccountSection,
+} from "@/types/account";
 import type { ProductSummary } from "@/types/product";
 
 type AccountLayoutProps = {
@@ -16,7 +23,10 @@ type AccountLayoutProps = {
   onLogout: () => void;
   isLoggingOut: boolean;
   onSelectSection: (section: AccountSection) => void;
+  onRetryOrders: () => void;
   orders: AccountOrder[];
+  ordersError: AccountOperationError | null;
+  ordersStatus: AccountAsyncStatus;
   products: ProductSummary[];
   profile: AccountProfile | null;
   userEmail: string;
@@ -31,7 +41,10 @@ export function AccountLayout({
   onLogout,
   isLoggingOut,
   onSelectSection,
+  onRetryOrders,
   orders,
+  ordersError,
+  ordersStatus,
   products,
   profile,
   userEmail,
@@ -64,7 +77,10 @@ export function AccountLayout({
             activeSection={activeSection}
             addresses={addresses}
             key={profile?.email ?? userEmail}
+            onRetryOrders={onRetryOrders}
             orders={orders}
+            ordersError={ordersError}
+            ordersStatus={ordersStatus}
             products={products}
             profile={profile}
             userEmail={userEmail}

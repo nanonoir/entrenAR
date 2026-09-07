@@ -9,7 +9,6 @@ import {
   type CartStoreSetter,
 } from "@/stores/cart-checkout.actions";
 import type { CheckoutCompletion, CheckoutQuote } from "@/lib/api/checkout/checkout.repository";
-import { getPreviewCartItems } from "@/lib/data/cart-preview";
 import {
   CHECKOUT_ASYNC_STATUS,
   type CheckoutCompletionOptions,
@@ -54,7 +53,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       ...createCartCheckoutActions(set, get),
       activeUserEmail: null,
-      items: getPreviewCartItems(),
+      items: [],
       addItem: (item) =>
         updateCartItems(set, (state) => {
           const existing = state.items.find((cartItem) =>

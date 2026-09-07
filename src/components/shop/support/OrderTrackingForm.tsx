@@ -6,7 +6,7 @@ import { ShipTrackingCard } from "@/components/shop/account/cards/ShipTrackingCa
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { accountOrders } from "@/lib/data/account";
+import { getAccountRepository } from "@/lib/api/account/account.repository";
 import { useUIStore } from "@/stores/ui-store";
 import type { AccountOrder } from "@/types/account";
 
@@ -19,9 +19,14 @@ export function OrderTrackingForm() {
   const [errorText, setErrorText] = useState<string | undefined>();
   const [result, setResult] = useState<AccountOrder | null>(null);
   const [invalidModalOpen, setInvalidModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) {
+      return;
+    }
+
     const normalizedCode = trackingCode.trim().toUpperCase();
     setTrackingCode(normalizedCode);
 
@@ -31,16 +36,26 @@ export function OrderTrackingForm() {
     }
 
     setErrorText(undefined);
-    const matchingOrder = accountOrders.find((order) => order.trackingCode.toUpperCase() === normalizedCode);
+    setResult(null);
+    setIsLoading(true);
 
-    if (!matchingOrder) {
+    try {
+      const orders = await getAccountRepository().listOrders({ limit: 100 });
+      const matchingOrder = orders.find((order) => order.trackingCode.toUpperCase() === normalizedCode);
+
+      if (!matchingOrder) {
+        setInvalidModalOpen(true);
+        return;
+      }
+
+      setInvalidModalOpen(false);
+      setResult(matchingOrder);
+    } catch {
       setResult(null);
       setInvalidModalOpen(true);
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    setInvalidModalOpen(false);
-    setResult(matchingOrder);
   }
 
   function handleLoginClick() {
@@ -64,9 +79,9 @@ export function OrderTrackingForm() {
             trailingIcon={<ShoppingBag aria-hidden size={16} />}
             value={trackingCode}
           />
-          <Button className="w-full sm:w-fit" size="lg" type="submit">
+          <Button aria-busy={isLoading} className="w-full sm:w-fit" size="lg" type="submit">
             <Search aria-hidden size={18} />
-            Verificar pedido
+            {isLoading ? "Buscando pedido..." : "Verificar pedido"}
           </Button>
         </form>
 
