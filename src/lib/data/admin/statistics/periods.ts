@@ -1,4 +1,6 @@
-export type AdminPeriodId = "today" | "current-week" | "last-30-days" | "last-90-days" | "last-12-months" | "all-time";
+import { STATISTICS_PERIOD, type StatisticsPeriod } from "@/lib/api/admin/statistics/types";
+
+export type AdminPeriodId = StatisticsPeriod;
 
 export type AdminPeriodOption = {
   id: AdminPeriodId;
@@ -6,15 +8,14 @@ export type AdminPeriodOption = {
   description: string;
 };
 
-// These values are display options only until backend filtering contracts exist.
-// Mock data MUST remain static and independent from the selected period.
 export const adminPeriodOptions: AdminPeriodOption[] = [
-  { id: "today", label: "Hoy", description: "Vista del día" },
-  { id: "current-week", label: "Semana actual", description: "Selección visual por defecto" },
-  { id: "last-30-days", label: "Este mes / últimos 30 días", description: "Vista mensual" },
-  { id: "last-90-days", label: "Trimestre / últimos 90 días", description: "Vista trimestral" },
-  { id: "last-12-months", label: "Año / últimos 12 meses", description: "Vista anual" },
-  { id: "all-time", label: "Siempre / histórico", description: "Histórico completo" },
+  { id: STATISTICS_PERIOD.TODAY, label: "Hoy", description: "Vista del día" },
+  { id: STATISTICS_PERIOD.CURRENT_WEEK, label: "Semana actual", description: "Selección visual por defecto" },
+  { id: STATISTICS_PERIOD.LAST_30_DAYS, label: "Este mes / últimos 30 días", description: "Vista mensual" },
+  { id: STATISTICS_PERIOD.LAST_90_DAYS, label: "Trimestre / últimos 90 días", description: "Vista trimestral" },
+  { id: STATISTICS_PERIOD.LAST_12_MONTHS, label: "Año / últimos 12 meses", description: "Vista anual" },
+  { id: STATISTICS_PERIOD.ALL_TIME, label: "Siempre / histórico", description: "Histórico completo" },
+  { id: STATISTICS_PERIOD.CUSTOM, label: "Rango personalizado", description: "Elegí un rango de fechas" },
 ];
 
-export const defaultAdminPeriodId: AdminPeriodId = "current-week";
+export const defaultAdminPeriodId: AdminPeriodId = STATISTICS_PERIOD.CURRENT_WEEK;
