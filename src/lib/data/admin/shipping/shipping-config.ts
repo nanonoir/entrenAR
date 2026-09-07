@@ -1,67 +1,22 @@
-export type ShippingProviderId = "andreani" | "correo-argentino";
-export type ShippingConfigStatus = "not_configured" | "configured_inactive" | "active";
-export type ShippingModality = "home_delivery" | "branch_delivery";
-export type PickupCostType = "free" | "fixed";
-export type PickupCoverageType = "all" | "provinces";
+import { DEFAULT_WEIGHT_RANGES } from "@/schemas/admin/shipping-schemas";
+import type { PickupPoint, ShippingProviderConfig, ShippingProviderDefinition } from "@/types/shipping";
 
-export type WeightRange = {
-  id: string;
-  minGrams: number;
-  maxGrams: number;
-  cost: number;
-};
+export type {
+  PickupCostType,
+  PickupCoverageType,
+  PickupPoint,
+  PickupPointAddress,
+  PickupScheduleRange,
+  ShippingConfigStatus,
+  ShippingModality,
+  ShippingOrigin,
+  ShippingProviderConfig,
+  ShippingProviderDefinition,
+  ShippingProviderId,
+  WeightRange,
+} from "@/types/shipping";
 
-export type ShippingProviderConfig = {
-  id: ShippingProviderId;
-  name: string;
-  status: ShippingConfigStatus;
-  enabledModalities: ShippingModality[];
-  origin: {
-    senderName: string;
-    phone: string;
-    email: string;
-    street: string;
-    number: string;
-    city: string;
-    province: string;
-    postalCode: string;
-  };
-  weightRanges: WeightRange[];
-  freeShippingThreshold?: number;
-  updatedAt?: string;
-};
-
-export type PickupScheduleRange = {
-  id: string;
-  day: string;
-  from: string;
-  to: string;
-};
-
-export type PickupPoint = {
-  id: string;
-  name: string;
-  status: ShippingConfigStatus;
-  isMain: boolean;
-  address: {
-    street: string;
-    number: string;
-    city: string;
-    province: string;
-    postalCode: string;
-  };
-  contactName?: string;
-  contactPhone?: string;
-  schedule: PickupScheduleRange[];
-  preparationHours: number;
-  costType: PickupCostType;
-  fixedCost?: number;
-  coverageType: PickupCoverageType;
-  provinces: string[];
-  updatedAt?: string;
-};
-
-export const shippingProviderDefinitions: Array<{ id: ShippingProviderId; name: string; services: string[] }> = [
+export const shippingProviderDefinitions: ShippingProviderDefinition[] = [
   { id: "andreani", name: "Andreani", services: ["Envío a domicilio", "Envío a sucursal"] },
   { id: "correo-argentino", name: "Correo Argentino", services: ["Paquetería nacional", "Retiro en sucursal"] },
 ];
@@ -93,4 +48,3 @@ export const initialPickupPoints: PickupPoint[] = [
 export async function getShippingProviderDefinitions() {
   return shippingProviderDefinitions;
 }
-import { DEFAULT_WEIGHT_RANGES } from "@/schemas/admin/shipping-schemas";
