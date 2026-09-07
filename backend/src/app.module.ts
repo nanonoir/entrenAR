@@ -21,6 +21,7 @@ import { CheckoutModule } from "./modules/checkout/checkout.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { PurchaseOrdersModule } from "./modules/purchase-orders/purchase-orders.module";
 import { SalesModule } from "./modules/sales/sales.module";
+import { StatisticsModule } from "./modules/statistics/statistics.module";
 import { SuppliersModule } from "./modules/suppliers/suppliers.module";
 
 @Module({
@@ -51,6 +52,7 @@ import { SuppliersModule } from "./modules/suppliers/suppliers.module";
     CheckoutModule,
     CustomersModule,
     SalesModule,
+    StatisticsModule,
     SuppliersModule,
     PurchaseOrdersModule,
   ],
