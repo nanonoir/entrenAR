@@ -1,55 +1,15 @@
-export type AdminProductVisibility = "visible" | "hidden";
+import type { AdminProduct, AdminProductCategory } from "@/types/admin-product";
 
-export type AdminProductStock =
-  | { type: "limited"; quantity: number }
-  | { type: "infinite" };
-
-export type AdminProductCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  imageUrl?: string;
-  googleShoppingCategory?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  visibility: AdminProductVisibility;
-  parentId?: string;
-};
-
-export type AdminProduct = {
-  id: string;
-  slug: string;
-  publicSlug: string;
-  name: string;
-  description?: string;
-  sku: string;
-  imageUrl?: string;
-  categoryId: string;
-  categoryIds: string[];
-  categoryName: string;
-  stock: AdminProductStock;
-  salePrice: number;
-  promotionalPrice?: number;
-  tags: string[];
-  brand?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  highlightSections: string[];
-  variantProperties: Array<{ name: string; values: string[] }>;
-  variantCombinations: Array<{ id: string; name: string; sku: string; stock: number | "infinite"; price?: number }>;
-  shippingRequired: boolean;
-  missingLogistics: boolean;
-  weightGrams?: number;
-  heightCm?: number;
-  widthCm?: number;
-  lengthCm?: number;
-  manualOrder: number;
-  visibility: AdminProductVisibility;
-  salesCount: number;
-  createdAt: string;
-  updatedAt: string;
-};
+export type {
+  AdminProduct,
+  AdminProductCategory,
+  AdminProductStock,
+  AdminProductVariant,
+  AdminProductVariantProperty,
+  AdminProductVariantStock,
+  AdminProductVisibility,
+} from "@/types/admin-product";
+export { formatAdminProductStock, getAdminProductStockTone } from "@/lib/data/admin/product-utils";
 
 export const mockAdminProductCategories: AdminProductCategory[] = [
   { id: "cat-supplements", name: "Suplementos", slug: "suplementos", description: "Nutrición deportiva y apoyo al rendimiento.", seoTitle: "Suplementos deportivos", seoDescription: "Suplementos seleccionados para entrenamiento y recuperación.", visibility: "visible" },
@@ -191,17 +151,4 @@ export async function getAdminProductCategories(): Promise<AdminProductCategory[
 
 export async function getAdminProductCategoryById(id: string): Promise<AdminProductCategory | undefined> {
   return mockAdminProductCategories.find((category) => category.id === id);
-}
-
-export function formatAdminProductStock(stock: AdminProductStock): string {
-  if (stock.type === "infinite") return "∞";
-  if (stock.quantity === 0) return "Sin stock";
-  return `${stock.quantity} unidades`;
-}
-
-export function getAdminProductStockTone(stock: AdminProductStock): "neutral" | "success" | "warning" | "sale" {
-  if (stock.type === "infinite") return "success";
-  if (stock.quantity === 0) return "sale";
-  if (stock.quantity <= 10) return "warning";
-  return "success";
 }

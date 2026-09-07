@@ -1,29 +1,7 @@
-import { mockSales } from "@/lib/data/admin/sales-flow/sales";
-import type { AdminSale, SaleAddress, SaleShippingStatus } from "@/lib/data/admin/sales-flow/types";
+import type { AdminSale } from "@/types/sales";
+import type { ShipmentDeliveryType, ShipmentTrackingRecord } from "@/types/shipping";
 
-export type ShipmentDeliveryType = "home_delivery" | "branch_delivery" | "pickup" | "manual";
-
-export type ShipmentTrackingRecord = {
-  id: string;
-  saleId: string;
-  saleNumber: string;
-  recipientName: string;
-  recipientEmail?: string;
-  recipientPhone?: string;
-  address?: SaleAddress;
-  deliveryType: ShipmentDeliveryType;
-  status: SaleShippingStatus;
-  paymentStatus: AdminSale["paymentStatus"];
-  trackingCode?: string;
-  providerName: string;
-  source?: string;
-  shippingCost: number;
-  total: number;
-  createdAt: string;
-  updatedAt: string;
-  products: AdminSale["products"];
-  logisticsSummary: string;
-};
+export type { ShipmentDeliveryType, ShipmentTrackingRecord } from "@/types/shipping";
 
 function getDeliveryType(sale: AdminSale): ShipmentDeliveryType {
   if (sale.shippingStatus === "pickup") return "pickup";
@@ -38,42 +16,45 @@ function getProviderName(type: ShipmentDeliveryType) {
   return type === "home_delivery" ? "Andreani" : "Correo Argentino";
 }
 
-export function deriveShipmentTrackingRecords(sales: AdminSale[] = mockSales): ShipmentTrackingRecord[] {
-  return sales.map((sale) => {
-    const deliveryType = getDeliveryType(sale);
-    const latestEvent = sale.history.at(-1);
-    return {
-      id: sale.id,
-      saleId: sale.id,
-      saleNumber: sale.number,
-      recipientName: `${sale.customer.firstName} ${sale.customer.lastName}`,
-      recipientEmail: sale.customer.email,
-      recipientPhone: sale.customer.phone,
-      address: sale.shippingAddress,
-      deliveryType,
-      status: sale.shippingStatus,
-      paymentStatus: sale.paymentStatus,
-      trackingCode: sale.trackingCode,
-      providerName: getProviderName(deliveryType),
-      source: sale.source,
-      shippingCost: sale.shippingCost,
-      total: sale.total,
-      createdAt: sale.createdAt,
-      updatedAt: latestEvent?.date ?? sale.createdAt,
-      products: sale.products,
-      logisticsSummary: sale.shippingAddress
-        ? `${sale.shippingAddress.city}, ${sale.shippingAddress.province}`
-        : deliveryType === "pickup"
-          ? "Retiro en punto configurado"
-          : "Datos de entrega pendientes",
-    };
-  });
+export function deriveShipmentTrackingRecord(sale: AdminSale): ShipmentTrackingRecord {
+  const deliveryType = getDeliveryType(sale);
+  const latestEvent = sale.history.at(-1);
+
+  return {
+    id: sale.id,
+    saleId: sale.id,
+    saleNumber: sale.number,
+    recipientName: `${sale.customer.firstName} ${sale.customer.lastName}`,
+    recipientEmail: sale.customer.email,
+    recipientPhone: sale.customer.phone,
+    address: sale.shippingAddress,
+    deliveryType,
+    status: sale.shippingStatus,
+    paymentStatus: sale.paymentStatus,
+    trackingCode: sale.trackingCode,
+    providerName: getProviderName(deliveryType),
+    source: sale.source,
+    shippingCost: sale.shippingCost,
+    total: sale.total,
+    createdAt: sale.createdAt,
+    updatedAt: latestEvent?.date ?? sale.createdAt,
+    products: sale.products,
+    logisticsSummary: sale.shippingAddress
+      ? `${sale.shippingAddress.city}, ${sale.shippingAddress.province}`
+      : deliveryType === "pickup"
+        ? "Retiro en punto configurado"
+        : "Datos de entrega pendientes",
+  };
 }
 
-export async function getShipmentTrackingRecords(): Promise<ShipmentTrackingRecord[]> {
-  return deriveShipmentTrackingRecords();
+export function deriveShipmentTrackingRecords(sales: readonly AdminSale[]): ShipmentTrackingRecord[] {
+  return sales.map(deriveShipmentTrackingRecord);
 }
 
-export async function getShipmentTrackingRecordById(id: string): Promise<ShipmentTrackingRecord | undefined> {
-  return deriveShipmentTrackingRecords().find((record) => record.id === id);
+export async function getShipmentTrackingRecords(sales: readonly AdminSale[]): Promise<ShipmentTrackingRecord[]> {
+  return deriveShipmentTrackingRecords(sales);
+}
+
+export async function getShipmentTrackingRecordById(id: string, sales: readonly AdminSale[]): Promise<ShipmentTrackingRecord | undefined> {
+  return deriveShipmentTrackingRecords(sales).find((record) => record.id === id);
 }
