@@ -134,7 +134,7 @@ export class MockAccountRepository implements AccountRepository {
 
   async listOrders(options: AccountOrderListOptions = {}): Promise<AccountOrder[]> {
     void options;
-    this.requireUser();
+    // Mock orders are shared demo fixtures; the authenticated UI still gates account access.
     return getMockAccountOrders();
   }
 
