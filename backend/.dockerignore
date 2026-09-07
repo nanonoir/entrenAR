@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env*
+*.log
+*.tsbuildinfo
+.git
+.gitignore
+src/generated/prisma
+test
+**/*.spec.ts
+**/*.test.ts

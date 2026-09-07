@@ -5,8 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:backend": "npm --prefix backend run build",
+    "build:all": "npm run build && npm run build:backend",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:backend": "npm --prefix backend run test:unit",
+    "test:backend:integration": "npm --prefix backend run test:integration",
+    "test:backend:e2e": "npm --prefix backend run test:e2e",
+    "verify:phase10": "npx tsx scripts/phase10-acceptance.harness.ts",
+    "db:migrate": "npm --prefix backend run db:migrate:dev",
+    "db:seed": "npm --prefix backend run seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
