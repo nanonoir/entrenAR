@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 const requiredEnvironmentVariables = [
   "DATABASE_URL",
   "JWT_ACCESS_SECRET",

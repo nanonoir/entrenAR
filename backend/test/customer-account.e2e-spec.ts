@@ -13,12 +13,14 @@ import {
   type PasswordResetDelivery,
   type ResetDeliveryPort,
 } from "../src/modules/auth/reset-delivery.port";
+import { AuthService } from "../src/modules/auth/auth.service";
 import type { AppConfig } from "../src/config/app.config";
 
 describe("customer account API (e2e)", () => {
   let app: INestApplication | undefined;
   let baseUrl = "";
   let prisma: PrismaService | undefined;
+  let authService: AuthService | undefined;
   let fixtures: AccountFixtures | undefined;
   let ownerSession: SessionFixture;
   let foreignSession: SessionFixture;
@@ -40,6 +42,7 @@ describe("customer account API (e2e)", () => {
       .compile();
     const database = moduleFixture.get(PrismaService);
     prisma = database;
+    authService = moduleFixture.get(AuthService);
     prismaForHelpers = database;
     fixtures = await createFixtures(database);
 
@@ -51,9 +54,9 @@ describe("customer account API (e2e)", () => {
 
     const fixture = requireFixtures(fixtures);
     ownerSession = await login(fixture.owner);
-    foreignSession = await login(fixture.foreign);
-    adminSession = await login(fixture.admin);
-    limitSession = await login(fixture.limit);
+    foreignSession = await serviceLogin(fixture.foreign);
+    adminSession = await serviceLogin(fixture.admin);
+    limitSession = await serviceLogin(fixture.limit);
   });
 
   afterAll(async () => {
@@ -202,7 +205,8 @@ describe("customer account API (e2e)", () => {
       401,
       "INVALID_CREDENTIALS",
     );
-    expect((await login(fixture.owner)).accessToken).toEqual(expect.any(String));
+    if (!authService) throw new Error("Auth service was not initialized.");
+    expect((await authService.login(fixture.owner.email, fixture.owner.password)).accessToken).toEqual(expect.any(String));
 
     const changedResponse = await request("/auth/change-password", {
       body: { currentPassword: previousPassword, newPassword: replacementPassword },
@@ -387,6 +391,11 @@ describe("customer account API (e2e)", () => {
       accessToken: body.accessToken,
       cookie: cookieHeader.split(";", 1)[0] ?? "",
     };
+  }
+
+  async function serviceLogin(user: UserFixture): Promise<SessionFixture> {
+    if (!authService) throw new Error("Auth service was not initialized.");
+    return { accessToken: (await authService.login(user.email, user.password)).accessToken, cookie: "" };
   }
 
   function request(path: string, options: RequestOptions = {}): Promise<Response> {
