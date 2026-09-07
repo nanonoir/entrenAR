@@ -4,6 +4,7 @@ module.exports = {
   passWithNoTests: true,
   rootDir: ".",
   roots: ["<rootDir>/test"],
+  setupFiles: ["<rootDir>/test/setup-e2e-environment.ts"],
   testEnvironment: "node",
   testMatch: ["<rootDir>/test/**/*.integration-spec.ts"],
   testPathIgnorePatterns: ["/dist/", "/node_modules/"],

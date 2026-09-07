@@ -66,10 +66,6 @@ export function catalogData<T>(result: CatalogReadResult<T>, empty: T): T {
     return result.data;
   }
 
-  if (result.status === CATALOG_READ_STATUS.ERROR) {
-    throw new Error(`${result.error.code}: ${result.error.message}`);
-  }
-
   return empty;
 }
 
