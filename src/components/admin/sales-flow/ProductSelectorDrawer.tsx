@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { getAllProductDetails } from "@/lib/data/products";
-import type { SaleProduct } from "@/lib/data/admin/sales-flow/types";
+import { getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+import type { AdminProduct } from "@/types/admin-product";
+import type { SaleProduct } from "@/types/sales";
 import { formatARS } from "@/lib/data/admin/sales-flow/helpers";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
@@ -17,24 +18,60 @@ type ProductSelectorDrawerProps = {
   selectedProductIds: string[];
 };
 
-const catalogProducts = getAllProductDetails();
+const CATALOG_LOAD_STATE = {
+  ERROR: "error",
+  LOADING: "loading",
+  READY: "ready",
+} as const;
 
-function toSaleProduct(productId: string): SaleProduct | undefined {
-  const product = catalogProducts.find((p) => p.id === productId);
-  if (!product) return undefined;
-  const firstVariant = product.variants?.[0];
+type CatalogLoadState = (typeof CATALOG_LOAD_STATE)[keyof typeof CATALOG_LOAD_STATE];
+
+function toSaleProduct(product: AdminProduct): SaleProduct {
+  const firstVariant = product.variantCombinations[0];
+  const unitPrice = firstVariant?.price ?? product.promotionalPrice ?? product.salePrice;
   return {
     productId: product.id,
     variantId: firstVariant?.id,
-    name: firstVariant ? `${product.name} (${firstVariant.label})` : product.name,
+    name: firstVariant ? `${product.name} (${firstVariant.name})` : product.name,
     quantity: 1,
-    unitPrice: firstVariant?.price ?? product.price,
+    unitPrice,
   };
 }
 
 export function ProductSelectorDrawer({ open, onClose, onAdd, selectedProductIds }: ProductSelectorDrawerProps) {
   const [query, setQuery] = useState("");
   const [checkedProductIds, setCheckedProductIds] = useState<string[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<AdminProduct[]>([]);
+  const [catalogLoadState, setCatalogLoadState] = useState<CatalogLoadState>(CATALOG_LOAD_STATE.READY);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (cancelled) return undefined;
+      setCatalogProducts([]);
+      setCatalogLoadState(CATALOG_LOAD_STATE.LOADING);
+      return getCatalogRepository().getAdminProducts();
+    }).then((result) => {
+      if (!result || cancelled) return;
+      if (result.status === "loading") return;
+      if (result.status === "error") {
+        setCatalogLoadState(CATALOG_LOAD_STATE.ERROR);
+        return;
+      }
+
+      setCatalogProducts(result.data);
+      setCatalogLoadState(CATALOG_LOAD_STATE.READY);
+    }).catch(() => {
+      if (!cancelled) setCatalogLoadState(CATALOG_LOAD_STATE.ERROR);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function handleClose() {
     setQuery("");
@@ -45,8 +82,8 @@ export function ProductSelectorDrawer({ open, onClose, onAdd, selectedProductIds
   const filtered = useMemo(() => catalogProducts.filter((p) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
-  }), [query]);
+    return p.name.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q);
+  }), [catalogProducts, query]);
 
   function toggleProduct(productId: string) {
     if (selectedProductIds.includes(productId)) return;
@@ -54,7 +91,10 @@ export function ProductSelectorDrawer({ open, onClose, onAdd, selectedProductIds
   }
 
   function handleConfirm() {
-    const products = checkedProductIds.map(toSaleProduct).filter((product): product is SaleProduct => Boolean(product));
+    const products = checkedProductIds
+      .map((productId) => catalogProducts.find((product) => product.id === productId))
+      .filter((product): product is AdminProduct => Boolean(product))
+      .map(toSaleProduct);
     if (products.length === 0) return;
     onAdd(products);
     handleClose();
@@ -73,7 +113,11 @@ export function ProductSelectorDrawer({ open, onClose, onAdd, selectedProductIds
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
-          {filtered.length === 0 ? (
+          {catalogLoadState === CATALOG_LOAD_STATE.LOADING ? (
+            <p className="py-8 text-center text-sm text-zinc-500">Cargando productos…</p>
+          ) : catalogLoadState === CATALOG_LOAD_STATE.ERROR ? (
+            <p className="py-8 text-center text-sm text-red-600">No se pudieron cargar los productos. Intentá nuevamente.</p>
+          ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">No se encontraron productos.</p>
           ) : (
             <div className="grid gap-1">
@@ -89,8 +133,8 @@ export function ProductSelectorDrawer({ open, onClose, onAdd, selectedProductIds
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-lg">📦</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-zinc-900">{product.name}</span>
-                        <span className="block truncate text-xs text-zinc-500">{product.brand} · {product.categoryName}</span>
-                        <span className="mt-0.5 block text-xs font-semibold text-accent">{formatARS(product.price)}</span>
+                        <span className="block truncate text-xs text-zinc-500">{product.brand ?? "Sin marca"} · {product.categoryName}</span>
+                        <span className="mt-0.5 block text-xs font-semibold text-accent">{formatARS(product.promotionalPrice ?? product.salePrice)}</span>
                       </span>
                       <span className="shrink-0 text-xs font-semibold text-zinc-500">{alreadyAdded ? "Agregado" : checked ? "Seleccionado" : "Seleccionar"}</span>
                     </button>
