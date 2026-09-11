@@ -29,6 +29,22 @@ enum InventoryOperation {
   REPLACE
 }
 
+enum InventoryReferenceType {
+  ORDER
+  PURCHASE_ORDER
+  RECONCILIATION
+}
+
+enum InventoryMovementKind {
+  SALE_DEDUCTION
+  SALE_CANCELLATION_RESTORATION
+  SALE_REOPEN_DEDUCTION
+  CHECKOUT_DEDUCTION
+  PURCHASE_ORDER_RECEIPT
+  RECONCILIATION_BASELINE_DEDUCTION
+  RECONCILIATION_BASELINE_RESTORATION
+}
+
 enum PaymentMethodStatus {
   ACTIVE
   INACTIVE
@@ -135,6 +151,13 @@ enum OrderStatus {
   PENDING
   CONFIRMED
   CANCELLED
+}
+
+enum OrderInventoryPolicy {
+  UNKNOWN
+  NOT_APPLICABLE
+  LEDGER_MANAGED
+  TRANSFERRED
 }
 
 enum PaymentStatus {
@@ -411,22 +434,33 @@ model ProductCategory {
 }
 
 model InventoryHistory {
-  id                String             @id @default(cuid())
-  productId         String
-  variantId         String?
-  operation         InventoryOperation
-  delta             Int?
-  resultingQuantity Int?
-  stockMode         StockMode
-  origin            String
-  actorId           String?
-  reason            String?
-  product           Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
-  variant           ProductVariant?    @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  createdAt         DateTime           @default(now())
+  id                    String                  @id @default(cuid())
+  productId             String
+  variantId             String?
+  operation             InventoryOperation
+  delta                 Int?
+  resultingQuantity     Int?
+  stockMode             StockMode
+  origin                String
+  actorId               String?
+  reason                String?
+  referenceType         InventoryReferenceType?
+  referenceId           String?
+  movementKind          InventoryMovementKind?
+  operationId           String?
+  inventoryEffectId     String?
+  compensatesMovementId String?                 @unique
+  product               Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant               ProductVariant?         @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  compensatesMovement   InventoryHistory?       @relation("InventoryCompensation", fields: [compensatesMovementId], references: [id], onDelete: Restrict)
+  compensatedBy         InventoryHistory?       @relation("InventoryCompensation")
+  createdAt             DateTime                @default(now())
 
   @@index([productId, createdAt])
   @@index([variantId, createdAt])
+  @@index([referenceType, referenceId])
+  @@index([inventoryEffectId])
+  @@index([operationId])
 }
 
 model CatalogSettings {
@@ -723,6 +757,8 @@ model Order {
   cartId                  String?
   checkoutSessionId       String?                  @unique
   sourceOrderId            String?
+  inventoryPolicy          OrderInventoryPolicy     @default(UNKNOWN)
+  inventoryEffectId        String?                  @unique
   status                  OrderStatus              @default(PENDING)
   deliveryType            OrderDeliveryType
   shippingStatus           OrderShippingStatus      @default(TO_PACK)
