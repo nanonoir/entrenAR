@@ -41,6 +41,51 @@ describe("purchase order inventory integration", () => {
     await prisma.purchaseOrder.delete({ where: { id: created.id } }); await prisma.supplier.delete({ where: { id: supplier.id } });
   });
 
+  it("calculates purchase-order money on create and merges draft updates", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const supplier = await suppliers.create({ code: `MONEY-${suffix}`, name: "Money Supplier", status: SupplierStatus.ACTIVE });
+    const input = createPurchaseOrderSchema.parse({
+      supplierId: supplier.id,
+      items: [
+        { productId: `missing-money-a-${suffix}`, quantity: 2, sku: "A", title: "A", unitCost: 100 },
+        { productId: `missing-money-b-${suffix}`, quantity: 3, sku: "B", title: "B", unitCost: 50 },
+      ],
+      tax: 35,
+      shippingCost: 20,
+    });
+    const created = await service.create(input);
+    expect(created.items.map((item) => item.totalCost)).toEqual([200, 150]);
+    expect(created).toMatchObject({ subtotal: 350, tax: 35, shippingCost: 20, total: 405 });
+
+    const shipping = await service.update(created.id, { shippingCost: 200 });
+    expect(shipping).toMatchObject({ subtotal: 350, tax: 35, shippingCost: 200, total: 585 });
+    const tax = await service.update(created.id, { tax: 15 });
+    expect(tax).toMatchObject({ subtotal: 350, tax: 15, shippingCost: 200, total: 565 });
+    const itemUpdate = await service.update(created.id, { items: [{ productId: input.items[0]!.productId, quantity: 4, sku: "A", title: "A", unitCost: 125 }] });
+    expect(itemUpdate).toMatchObject({ subtotal: 500, tax: 15, shippingCost: 200, total: 715 });
+    expect(itemUpdate.items[0]).toMatchObject({ quantity: 4, unitCost: 125, totalCost: 500 });
+
+    await prisma.purchaseOrder.delete({ where: { id: created.id } });
+    await prisma.supplier.delete({ where: { id: supplier.id } });
+  });
+
+  it("serializes concurrent draft partial updates without inconsistent totals", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const supplier = await suppliers.create({ code: `RACE-${suffix}`, name: "Race Supplier", status: SupplierStatus.ACTIVE });
+    const created = await service.create(createPurchaseOrderSchema.parse({
+      supplierId: supplier.id,
+      items: [{ productId: `missing-race-${suffix}`, quantity: 1, sku: "RACE", title: "Race", unitCost: 100 }],
+    }));
+    const results = await Promise.allSettled([service.update(created.id, { tax: 10 }), service.update(created.id, { shippingCost: 20 })]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result): result is PromiseRejectedResult => result.status === "rejected")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({ status: 409 });
+    const final = await service.get(created.id);
+    expect(final.total).toBe(final.subtotal + final.tax + final.shippingCost);
+    await prisma.purchaseOrder.delete({ where: { id: created.id } });
+    await prisma.supplier.delete({ where: { id: supplier.id } });
+  });
+
   it("rolls back the status and prior stock increment when one item is invalid", async () => {
     const suffix = randomUUID().replaceAll("-", ""); const supplier = await suppliers.create({ code: `ROLLBACK-${suffix}`, name: "Rollback Supplier", status: SupplierStatus.ACTIVE }); const productId = `po-rollback-${suffix}`;
     await prisma.product.create({ data: { id: productId, name: "Rollback fixture", publicSlug: `po-rollback-public-${suffix}`, quantity: 1, salePrice: 100, sku: `PO-R-${suffix}`, slug: `po-rollback-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN } });

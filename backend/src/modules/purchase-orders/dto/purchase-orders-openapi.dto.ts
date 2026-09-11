@@ -8,9 +8,12 @@ export class PurchaseOrderItemRequestDto {
   @ApiProperty() quantity!: number;
   @ApiProperty() sku!: string;
   @ApiProperty() title!: string;
-  @ApiPropertyOptional() totalCost?: number;
   @ApiProperty() unitCost!: number;
   @ApiPropertyOptional({ nullable: true }) variantId?: string | null;
+}
+
+export class PurchaseOrderItemResponseDto extends PurchaseOrderItemRequestDto {
+  @ApiProperty() totalCost!: number;
 }
 
 export class PurchaseOrderRequestDto {
@@ -19,17 +22,15 @@ export class PurchaseOrderRequestDto {
   @ApiPropertyOptional({ nullable: true }) notes?: string | null;
   @ApiPropertyOptional() orderNumber?: string;
   @ApiPropertyOptional({ default: 0 }) shippingCost?: number;
-  @ApiPropertyOptional() subtotal?: number;
   @ApiProperty() supplierId!: string;
   @ApiPropertyOptional({ default: 0 }) tax?: number;
-  @ApiPropertyOptional() total?: number;
 }
 
 export class PurchaseOrderResponseDto {
   @ApiProperty({ format: "date-time" }) createdAt!: string;
   @ApiPropertyOptional({ format: "date-time", nullable: true }) expectedDate?: string | null;
   @ApiProperty() id!: string;
-  @ApiProperty({ type: [PurchaseOrderItemRequestDto] }) items!: PurchaseOrderItemRequestDto[];
+  @ApiProperty({ type: [PurchaseOrderItemResponseDto] }) items!: PurchaseOrderItemResponseDto[];
   @ApiPropertyOptional({ nullable: true }) notes?: string | null;
   @ApiProperty() orderNumber!: string;
   @ApiPropertyOptional({ format: "date-time", nullable: true }) receivedAt?: string | null;

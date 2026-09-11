@@ -3,13 +3,15 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { Prisma } from "../../generated/prisma/client";
 import { PurchaseOrderStatus } from "../../generated/prisma/enums";
-import type { CreatePurchaseOrderDto, PurchaseOrderFilterQueryDto, UpdatePurchaseOrderDto } from "./purchase-orders.schemas";
+import type { CreatePurchaseOrderDto, PurchaseOrderFilterQueryDto } from "./purchase-orders.schemas";
 
 export const purchaseOrderInclude = { items: { orderBy: [{ productId: "asc" }, { id: "asc" }] }, supplier: true } satisfies Prisma.PurchaseOrderInclude;
 export type PurchaseOrderRecord = Prisma.PurchaseOrderGetPayload<{ include: typeof purchaseOrderInclude }>;
 export interface PurchaseOrderPageResult { items: PurchaseOrderRecord[]; total: number; }
 export type TransactionClient = Prisma.TransactionClient;
-export interface PurchaseOrderCreateRecord extends Omit<CreatePurchaseOrderDto, "items" | "orderNumber" | "subtotal" | "total"> { items: readonly CreatePurchaseOrderDto["items"][number][]; orderNumber: string; status: PurchaseOrderStatus; subtotal: number; total: number; }
+export interface PurchaseOrderMoneyItem { productId: string; quantity: number; sku: string; title: string; totalCost: Prisma.Decimal; unitCost: Prisma.Decimal; variantId?: string | null; }
+export interface PurchaseOrderCreateRecord extends Omit<CreatePurchaseOrderDto, "items" | "orderNumber" | "tax" | "shippingCost"> { items: readonly PurchaseOrderMoneyItem[]; orderNumber: string; status: PurchaseOrderStatus; subtotal: Prisma.Decimal; total: Prisma.Decimal; tax: Prisma.Decimal; shippingCost: Prisma.Decimal; }
+export interface PurchaseOrderUpdateRecord { expectedDate: Date | null; items: readonly PurchaseOrderMoneyItem[]; notes: string | null; orderNumber: string; shippingCost: Prisma.Decimal; subtotal: Prisma.Decimal; supplierId: string; tax: Prisma.Decimal; total: Prisma.Decimal; }
 
 @Injectable()
 export class PurchaseOrdersRepository {
@@ -28,24 +30,15 @@ export class PurchaseOrdersRepository {
   async create(transaction: TransactionClient, data: PurchaseOrderCreateRecord): Promise<PurchaseOrderRecord> {
     return transaction.purchaseOrder.create({ data: { expectedDate: data.expectedDate ?? null, items: { create: data.items.map((item) => ({ productId: item.productId, quantity: item.quantity, sku: item.sku, title: item.title, totalCost: item.totalCost, unitCost: item.unitCost, variantId: item.variantId ?? null })) }, notes: data.notes ?? null, orderNumber: data.orderNumber, shippingCost: data.shippingCost, status: data.status, subtotal: data.subtotal, supplierId: data.supplierId, tax: data.tax, total: data.total }, include: purchaseOrderInclude });
   }
-  async update(transaction: TransactionClient, id: string, input: UpdatePurchaseOrderDto): Promise<PurchaseOrderRecord> {
-    const items = input.items;
-    const data: Prisma.PurchaseOrderUncheckedUpdateInput = {
-      ...(input.expectedDate === undefined ? {} : { expectedDate: input.expectedDate }),
-      ...(input.notes === undefined ? {} : { notes: input.notes }),
-      ...(input.orderNumber === undefined ? {} : { orderNumber: input.orderNumber }),
-      ...(input.shippingCost === undefined ? {} : { shippingCost: input.shippingCost }),
-      ...(input.subtotal === undefined ? {} : { subtotal: input.subtotal }),
-      ...(input.supplierId === undefined ? {} : { supplierId: input.supplierId }),
-      ...(input.tax === undefined ? {} : { tax: input.tax }),
-      ...(input.total === undefined ? {} : { total: input.total }),
-    };
-    await transaction.purchaseOrder.update({ data, where: { id } });
-    if (items) {
-      await transaction.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
-      await transaction.purchaseOrderItem.createMany({ data: items.map((item) => ({ productId: item.productId, purchaseOrderId: id, quantity: item.quantity, sku: item.sku, title: item.title, totalCost: item.totalCost, unitCost: item.unitCost, variantId: item.variantId ?? null })) });
-    }
-    return this.findByIdIn(transaction, id).then((record) => { if (!record) throw new Error("Updated purchase order was not found."); return record; });
+  async update(transaction: TransactionClient, id: string, input: PurchaseOrderUpdateRecord, expectedUpdatedAt: Date): Promise<PurchaseOrderRecord | null> {
+    const result = await transaction.purchaseOrder.updateMany({
+      data: { expectedDate: input.expectedDate, notes: input.notes, orderNumber: input.orderNumber, shippingCost: input.shippingCost, subtotal: input.subtotal, supplierId: input.supplierId, tax: input.tax, total: input.total },
+      where: { id, status: PurchaseOrderStatus.DRAFT, updatedAt: expectedUpdatedAt },
+    });
+    if (result.count !== 1) return null;
+    await transaction.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
+    await transaction.purchaseOrderItem.createMany({ data: input.items.map((item) => ({ productId: item.productId, purchaseOrderId: id, quantity: item.quantity, sku: item.sku, title: item.title, totalCost: item.totalCost, unitCost: item.unitCost, variantId: item.variantId ?? null })) });
+    return this.findByIdIn(transaction, id);
   }
   async updateStatus(transaction: TransactionClient, id: string, status: PurchaseOrderStatus, receivedAt?: Date | null): Promise<PurchaseOrderRecord> {
     await transaction.purchaseOrder.update({ data: { status, ...(receivedAt === undefined ? {} : { receivedAt }) }, where: { id } });

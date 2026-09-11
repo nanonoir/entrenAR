@@ -2,12 +2,13 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { randomUUID } from "node:crypto";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
+import { addMoney, multiplyMoney, normalizeMoney, type MoneyInput } from "../../common/money/money.utils";
 import { PurchaseOrderStatus } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { InventoryRepository } from "../inventory/inventory.repository";
 import { toSupplierResponse } from "../suppliers/suppliers.service";
 import { PURCHASE_ORDER_COMMAND, type CreatePurchaseOrderDto, type PurchaseOrderFilterQueryDto, type PurchaseOrderListResponseDto, type PurchaseOrderResponseDto, type UpdatePurchaseOrderDto } from "./purchase-orders.schemas";
-import { PurchaseOrdersRepository, type PurchaseOrderRecord, type TransactionClient } from "./purchase-orders.repository";
+import { PurchaseOrdersRepository, type PurchaseOrderMoneyItem, type PurchaseOrderRecord, type PurchaseOrderUpdateRecord, type TransactionClient } from "./purchase-orders.repository";
 import { assertPurchaseOrderEditable, transitionPurchaseOrder } from "./purchase-orders.state-machine";
 
 export interface PurchaseOrderActor { id?: string; }
@@ -29,7 +30,10 @@ export class PurchaseOrdersService {
     return this.purchaseOrdersRepository.transaction(async (transaction) => {
       const current = await this.currentOrThrow(transaction, id);
       try { assertPurchaseOrderEditable(current); } catch (error) { throw this.conflict(error instanceof Error ? error.message : "Purchase order cannot be edited."); }
-      return toPurchaseOrderResponse(await this.purchaseOrdersRepository.update(transaction, id, changes));
+      const merged = mergeDraft(current, changes);
+      const updated = await this.purchaseOrdersRepository.update(transaction, id, recalculate(merged), current.updatedAt);
+      if (!updated) throw this.conflict("Purchase order changed before its financial update could be applied.");
+      return toPurchaseOrderResponse(updated);
     });
   }
   async submit(id: string): Promise<PurchaseOrderResponseDto> { return this.transition(id, PURCHASE_ORDER_COMMAND.SUBMIT); }
@@ -65,7 +69,27 @@ export function toPurchaseOrderResponse(record: PurchaseOrderRecord): PurchaseOr
 }
 
 function createRecord(input: CreatePurchaseOrderDto) {
-  const subtotal = input.subtotal ?? input.items.reduce((sum, item) => sum + item.totalCost, 0);
-  return { ...input, orderNumber: input.orderNumber ?? `PO-${randomUUID()}`, status: PurchaseOrderStatus.DRAFT, subtotal, total: input.total ?? subtotal + input.tax + input.shippingCost };
+  const normalized = recalculate({ ...input, orderNumber: input.orderNumber ?? `PO-${randomUUID()}`, notes: input.notes ?? null, expectedDate: input.expectedDate ?? null, supplierId: input.supplierId });
+  return { ...normalized, status: PurchaseOrderStatus.DRAFT };
 }
 function money(value: { toString(): string } | number): number { const result = Number(value); if (!Number.isFinite(result)) throw new Error("Purchase-order money values must serialize to finite numbers."); return result; }
+
+function mergeDraft(current: PurchaseOrderRecord, changes: UpdatePurchaseOrderDto): PurchaseOrderUpdateRecord {
+  return recalculate({
+    expectedDate: changes.expectedDate === undefined ? current.expectedDate : changes.expectedDate,
+    items: changes.items ?? current.items.map(({ productId, quantity, sku, title, unitCost, variantId }) => ({ productId, quantity, sku, title, unitCost, variantId })),
+    notes: changes.notes === undefined ? current.notes : changes.notes,
+    orderNumber: changes.orderNumber ?? current.orderNumber,
+    shippingCost: changes.shippingCost ?? current.shippingCost,
+    supplierId: changes.supplierId ?? current.supplierId,
+    tax: changes.tax ?? current.tax,
+  });
+}
+
+function recalculate(input: { expectedDate: Date | null; items: readonly { productId: string; quantity: number; sku: string; title: string; unitCost: MoneyInput; variantId?: string | null }[]; notes: string | null; orderNumber: string; shippingCost: MoneyInput; supplierId: string; tax: MoneyInput }): PurchaseOrderUpdateRecord {
+  const items: PurchaseOrderMoneyItem[] = input.items.map((item) => ({ ...item, totalCost: multiplyMoney(item.unitCost, item.quantity), unitCost: normalizeMoney(item.unitCost), variantId: item.variantId ?? null }));
+  const subtotal = items.reduce((sum, item) => addMoney(sum, item.totalCost), normalizeMoney(0));
+  const shippingCost = normalizeMoney(input.shippingCost);
+  const tax = normalizeMoney(input.tax);
+  return { expectedDate: input.expectedDate, items, notes: input.notes, orderNumber: input.orderNumber, shippingCost, subtotal, supplierId: input.supplierId, tax, total: addMoney(addMoney(subtotal, tax), shippingCost) };
+}
