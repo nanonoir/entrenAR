@@ -1,14 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { Prisma } from "../../generated/prisma/client";
-import { OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 import { salesOrderInclude, type OrderHistoryRecord, type SalesOrderRecord } from "./sales.mapper";
 import { SALE_SORT_BY, type CreateManualSale, type SalesListQuery } from "./sales.schemas";
 
 export type TransactionClient = Prisma.TransactionClient;
 export interface SalesPageResult { items: SalesOrderRecord[]; total: number; }
-export interface CreateSaleItemRecord { attributes: Prisma.InputJsonValue; compareAtPrice?: number; lineSubtotal: number; productId: string; productName: string; quantity: number; sku: string; snapshot: Prisma.InputJsonValue; unitPrice: number; variantId?: string; variantName?: string; weightGrams?: number; }
-export interface CreateSaleRecord { currency: string; customerDni?: string; customerEmail: string; customerFirstName: string; customerId?: string; customerLastName: string; customerPhone?: string; customerSnapshot: Prisma.InputJsonValue; deliverySnapshot: Prisma.InputJsonValue; deliveryType: OrderDeliveryType; discountAmount: number; discountSnapshot: Prisma.InputJsonValue; internalNotes?: string; items: readonly CreateSaleItemRecord[]; number: string; paymentMethodId: string; paymentMethodSnapshot: Prisma.InputJsonValue; paymentOptionId?: string; paymentStatus: PaymentStatus; shippingAddressSnapshot?: Prisma.InputJsonValue | null; shippingCost: number; shippingStatus?: OrderShippingStatus; sourceOrderId?: string; status: OrderStatus; subtotal: number; total: number; userId?: string; }
+export interface CreateSaleItemRecord { attributes: Prisma.InputJsonValue; compareAtPrice?: number; lineSubtotal: Prisma.Decimal | number; productId: string; productName: string; quantity: number; sku: string; snapshot: Prisma.InputJsonValue; unitPrice: number; variantId?: string; variantName?: string; weightGrams?: number; }
+export interface CreateSaleRecord { confirmedAt?: Date; currency: string; customerDni?: string; customerEmail: string; customerFirstName: string; customerId?: string; customerLastName: string; customerPhone?: string; customerSnapshot: Prisma.InputJsonValue; deliverySnapshot: Prisma.InputJsonValue; deliveryType: OrderDeliveryType; discountAmount: Prisma.Decimal | number; discountSnapshot: Prisma.InputJsonValue; inventoryEffectId?: string; inventoryPolicy?: OrderInventoryPolicy; internalNotes?: string; items: readonly CreateSaleItemRecord[]; number: string; paymentMethodId: string; paymentMethodSnapshot: Prisma.InputJsonValue; paymentOptionId?: string; paymentStatus: PaymentStatus; shippingAddressSnapshot?: Prisma.InputJsonValue | null; shippingCost: Prisma.Decimal | number; shippingStatus?: OrderShippingStatus; sourceOrderId?: string; status: OrderStatus; subtotal: Prisma.Decimal | number; total: Prisma.Decimal | number; userId?: string; }
+export interface ManualSaleCalculatedValues { discountAmount: Prisma.Decimal; items: readonly ManualSaleCalculatedItem[]; shippingCost: Prisma.Decimal; subtotal: Prisma.Decimal; total: Prisma.Decimal; }
+export interface ManualSaleCalculatedItem { lineSubtotal: Prisma.Decimal; }
 export interface AppendHistoryInput { actorId?: string; actorRole?: "CUSTOMER" | "ADMIN"; description?: string; metadata?: Prisma.InputJsonValue | null; orderId: string; title: string; type: OrderHistoryRecord["type"]; }
 
 @Injectable()
@@ -52,7 +54,7 @@ export class SalesRepository {
         customerSnapshot: input.customerSnapshot, deliverySnapshot: input.deliverySnapshot, deliveryType: input.deliveryType, discountAmount: input.discountAmount, discountSnapshot: input.discountSnapshot, ...(input.internalNotes === undefined ? {} : { internalNotes: input.internalNotes }),
         items: { create: input.items.map((item) => ({ attributes: item.attributes, compareAtPrice: item.compareAtPrice ?? null, lineSubtotal: item.lineSubtotal, productId: item.productId, productName: item.productName, quantity: item.quantity, sku: item.sku, snapshot: item.snapshot, unitPrice: item.unitPrice, variantId: item.variantId ?? null, variantName: item.variantName ?? null, weightGrams: item.weightGrams ?? null })) },
         number: input.number, payment: { create: { amount: input.total, currency: input.currency, paymentMethodId: input.paymentMethodId, paymentMethodSnapshot: input.paymentMethodSnapshot, paymentOptionId: input.paymentOptionId ?? null, status: input.paymentStatus } },
-        ...(input.shippingAddressSnapshot === undefined ? {} : { shippingAddressSnapshot: input.shippingAddressSnapshot === null ? Prisma.JsonNull : input.shippingAddressSnapshot }), shippingCost: input.shippingCost, ...(input.shippingStatus === undefined ? {} : { shippingStatus: input.shippingStatus }),
+        ...(input.confirmedAt === undefined ? {} : { confirmedAt: input.confirmedAt }), ...(input.inventoryEffectId === undefined ? {} : { inventoryEffectId: input.inventoryEffectId }), ...(input.inventoryPolicy === undefined ? {} : { inventoryPolicy: input.inventoryPolicy }), ...(input.shippingAddressSnapshot === undefined ? {} : { shippingAddressSnapshot: input.shippingAddressSnapshot === null ? Prisma.JsonNull : input.shippingAddressSnapshot }), shippingCost: input.shippingCost, ...(input.shippingStatus === undefined ? {} : { shippingStatus: input.shippingStatus }),
         ...(input.sourceOrderId === undefined ? {} : { sourceOrderId: input.sourceOrderId }), status: input.status, subtotal: input.subtotal, total: input.total, ...(input.userId === undefined ? {} : { userId: input.userId }),
       },
       include: salesOrderInclude,
@@ -64,6 +66,43 @@ export class SalesRepository {
   async markOrderConverted(transaction: TransactionClient, orderId: string): Promise<boolean> {
     const result = await transaction.order.updateMany({ data: { status: OrderStatus.CONFIRMED }, where: { id: orderId, status: OrderStatus.PENDING } });
     return result.count === 1;
+  }
+  async assignInventoryOwnership(transaction: TransactionClient, orderId: string, inventoryEffectId: string | undefined): Promise<void> {
+    await transaction.order.update({
+      data: inventoryEffectId
+        ? { inventoryEffectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED }
+        : { inventoryEffectId: null, inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE },
+      where: { id: orderId },
+    });
+  }
+  async transferInventoryOwnership(
+    transaction: TransactionClient,
+    orderId: string,
+    inventoryEffectId: string,
+  ): Promise<boolean> {
+    const result = await transaction.order.updateMany({
+      data: { inventoryEffectId: null, inventoryPolicy: OrderInventoryPolicy.TRANSFERRED, status: OrderStatus.CONFIRMED },
+      where: { id: orderId, inventoryEffectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED, status: OrderStatus.PENDING },
+    });
+    return result.count === 1;
+  }
+  async confirmPaymentIfCurrent(
+    transaction: TransactionClient,
+    orderId: string,
+    expectedStatus: OrderStatus,
+    data: Prisma.OrderUncheckedUpdateInput,
+  ): Promise<boolean> {
+    const payment = await transaction.orderPayment.updateMany({
+      data: { status: PaymentStatus.PAID },
+      where: { orderId, status: PaymentStatus.PENDING },
+    });
+    if (payment.count !== 1) return false;
+
+    const order = await transaction.order.updateMany({
+      data,
+      where: { id: orderId, isArchived: false, status: expectedStatus },
+    });
+    return order.count === 1;
   }
   private async findByIdIn(client: TransactionClient | PrismaService, id: string): Promise<SalesOrderRecord | null> { return client.order.findUnique({ include: salesOrderInclude, where: { id } }); }
   private async findByIdentifierIn(client: TransactionClient | PrismaService, identifier: string): Promise<SalesOrderRecord | null> { return (await this.findByIdIn(client, identifier)) ?? client.order.findUnique({ include: salesOrderInclude, where: { number: identifier } }); }
@@ -84,11 +123,11 @@ export function salesOrderBy(query: SalesListQuery): Prisma.OrderOrderByWithRela
   return [{ [query.sortBy]: direction } as Prisma.OrderOrderByWithRelationInput, { id: direction }];
 }
 
-export function manualSaleRecord(input: CreateManualSale, number: string): CreateSaleRecord {
+export function manualSaleRecord(input: CreateManualSale, number: string, calculated: ManualSaleCalculatedValues): CreateSaleRecord {
   return {
     currency: input.currency, customerDni: input.customer.dni, customerEmail: input.customer.email, customerFirstName: input.customer.firstName, ...(input.customerId === undefined ? {} : { customerId: input.customerId }), customerLastName: input.customer.lastName, customerPhone: input.customer.phone, customerSnapshot: inputJson(input.customer), deliverySnapshot: inputJson(input.deliverySnapshot), deliveryType: input.deliveryType,
-    discountAmount: input.discountAmount, discountSnapshot: inputJson(input.discountSnapshot), ...(input.internalNotes === undefined ? {} : { internalNotes: input.internalNotes }), items: input.items.map((item) => ({ attributes: inputJson(item.attributes), ...(item.compareAtPrice === undefined ? {} : { compareAtPrice: item.compareAtPrice }), lineSubtotal: item.lineSubtotal, productId: item.productId, productName: item.productName, quantity: item.quantity, sku: item.sku, snapshot: inputJson(item.snapshot), unitPrice: item.unitPrice, ...(item.variantId === undefined ? {} : { variantId: item.variantId }), ...(item.variantName === undefined ? {} : { variantName: item.variantName }), ...(item.weightGrams === undefined ? {} : { weightGrams: item.weightGrams }) })), number,
-    paymentMethodId: input.paymentMethodId, paymentMethodSnapshot: inputJson(input.paymentMethodSnapshot), ...(input.paymentOptionId === undefined ? {} : { paymentOptionId: input.paymentOptionId }), paymentStatus: input.paymentStatus, ...(input.shippingAddress === undefined ? {} : { shippingAddressSnapshot: inputJson(input.shippingAddress) }), shippingCost: input.shippingCost, ...(input.deliveryType === OrderDeliveryType.PICKUP ? { shippingStatus: OrderShippingStatus.PICKUP } : {}), status: OrderStatus.CONFIRMED, subtotal: input.subtotal, total: input.total,
+    confirmedAt: new Date(), discountAmount: calculated.discountAmount, discountSnapshot: inputJson(input.discountSnapshot), inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE, ...(input.internalNotes === undefined ? {} : { internalNotes: input.internalNotes }), items: input.items.map((item, index) => ({ attributes: inputJson(item.attributes), ...(item.compareAtPrice === undefined ? {} : { compareAtPrice: item.compareAtPrice }), lineSubtotal: calculated.items[index]!.lineSubtotal, productId: item.productId, productName: item.productName, quantity: item.quantity, sku: item.sku, snapshot: inputJson(item.snapshot), unitPrice: item.unitPrice, ...(item.variantId === undefined ? {} : { variantId: item.variantId }), ...(item.variantName === undefined ? {} : { variantName: item.variantName }), ...(item.weightGrams === undefined ? {} : { weightGrams: item.weightGrams }) })), number,
+    paymentMethodId: input.paymentMethodId, paymentMethodSnapshot: inputJson(input.paymentMethodSnapshot), ...(input.paymentOptionId === undefined ? {} : { paymentOptionId: input.paymentOptionId }), paymentStatus: input.paymentStatus, ...(input.shippingAddress === undefined ? {} : { shippingAddressSnapshot: inputJson(input.shippingAddress) }), shippingCost: calculated.shippingCost, ...(input.deliveryType === OrderDeliveryType.PICKUP ? { shippingStatus: OrderShippingStatus.PICKUP } : {}), status: OrderStatus.CONFIRMED, subtotal: calculated.subtotal, total: calculated.total,
   };
 }
 

@@ -1,7 +1,7 @@
 import { OrderDeliveryType, OrderHistoryEventType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 import { SALE_COMMAND, type SaleCommandType } from "./sales.schemas";
 
-export interface SaleState { deliveryType: OrderDeliveryType; isArchived: boolean; paymentStatus: PaymentStatus | null; previousPaymentStatus?: PaymentStatus | null; previousShippingStatus?: OrderShippingStatus | null; previousStatus?: OrderStatus | null; shippingStatus: OrderShippingStatus; status: OrderStatus; }
+export interface SaleState { confirmedAt?: Date | null; deliveryType: OrderDeliveryType; isArchived: boolean; paymentStatus: PaymentStatus | null; previousPaymentStatus?: PaymentStatus | null; previousShippingStatus?: OrderShippingStatus | null; previousStatus?: OrderStatus | null; shippingStatus: OrderShippingStatus; status: OrderStatus; }
 export interface SaleTransitionOptions { cancellationReason?: string; carrier?: string; now?: Date; trackingCode?: string; trackingUrl?: string; }
 export interface SaleStatePatch { archivedAt?: Date | null; cancelledAt?: Date | null; cancellationReason?: string | null; confirmedAt?: Date | null; deliveredAt?: Date | null; isArchived?: boolean; packedAt?: Date | null; previousPaymentStatus?: PaymentStatus | null; previousShippingStatus?: OrderShippingStatus | null; previousStatus?: OrderStatus | null; shippedAt?: Date | null; shippingCarrier?: string | null; shippingStatus?: OrderShippingStatus; shippingTrackingCode?: string | null; shippingTrackingUrl?: string | null; status?: OrderStatus; }
 export interface SaleTransition { eventType: OrderHistoryEventType; patch: SaleStatePatch; }
@@ -9,7 +9,9 @@ export class SaleTransitionError extends Error { constructor(public readonly com
 
 type LifecycleCommand = Exclude<SaleCommandType, "ADD_NOTE" | "MANUAL_CREATE" | "CONVERT_ORDER_TO_SALE">;
 
-export const canConfirmSale = (state: SaleState) => !state.isArchived && state.status === OrderStatus.PENDING;
+export const canConfirmSale = (state: SaleState) => !state.isArchived
+  && (state.status === OrderStatus.PENDING || state.status === OrderStatus.CONFIRMED)
+  && state.paymentStatus === PaymentStatus.PENDING;
 export const canPackSale = (state: SaleState) => !state.isArchived && state.status === OrderStatus.CONFIRMED && state.shippingStatus === OrderShippingStatus.TO_PACK;
 export const canUnpackSale = (state: SaleState) => !state.isArchived && state.status === OrderStatus.CONFIRMED && state.shippingStatus === OrderShippingStatus.TO_SHIP;
 export const canShipSale = (state: SaleState) => canUnpackSale(state) && state.deliveryType === OrderDeliveryType.SHIPPING;
@@ -37,7 +39,7 @@ export function assertSaleTransition(state: SaleState, command: LifecycleCommand
 export function transitionSale(state: SaleState, command: LifecycleCommand, options: SaleTransitionOptions = {}): SaleTransition {
   assertSaleTransition(state, command);
   const now = options.now ?? new Date();
-  if (command === SALE_COMMAND.CONFIRM) return { eventType: resolveHistoryEventType(command), patch: { confirmedAt: now, status: OrderStatus.CONFIRMED } };
+  if (command === SALE_COMMAND.CONFIRM) return { eventType: resolveHistoryEventType(command), patch: { confirmedAt: state.confirmedAt ?? now, status: OrderStatus.CONFIRMED } };
   if (command === SALE_COMMAND.PACK) return { eventType: resolveHistoryEventType(command), patch: { packedAt: now, shippingStatus: OrderShippingStatus.TO_SHIP } };
   if (command === SALE_COMMAND.UNPACK) return { eventType: resolveHistoryEventType(command), patch: { packedAt: null, shippingStatus: OrderShippingStatus.TO_PACK } };
   if (command === SALE_COMMAND.SHIP) {
