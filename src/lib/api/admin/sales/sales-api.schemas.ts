@@ -196,7 +196,6 @@ export const purchaseOrderListResponseSchema = z.object({
 const saleItemRequestSchema = z.object({
   attributes: snapshotSchema.default({}),
   compareAtPrice: moneySchema.optional(),
-  lineSubtotal: moneySchema.optional(),
   name: requiredText(240).optional(),
   productId: identifierSchema,
   productName: requiredText(240).optional(),
@@ -237,8 +236,6 @@ export const createManualSaleRequestSchema = z.object({
   shippingAddress: snapshotSchema.optional(),
   shippingCost: moneySchema,
   source: requiredText(120).optional(),
-  subtotal: moneySchema,
-  total: moneySchema,
 }).strict();
 
 export const convertOrderToSaleRequestSchema = z.object({
@@ -302,13 +299,9 @@ const purchaseOrderItemRequestSchema = z.object({
   quantity: z.number().int().positive(),
   sku: requiredText(160),
   title: requiredText(240),
-  totalCost: moneySchema.optional(),
   unitCost: moneySchema,
   variantId: identifierSchema.nullable().optional(),
-}).strict().transform((item) => ({
-  ...item,
-  totalCost: item.totalCost ?? roundMoney(item.quantity * Number(item.unitCost)),
-}));
+}).strict();
 
 export const createPurchaseOrderRequestSchema = z.object({
   expectedDate: dateTimeSchema.nullable().optional(),
@@ -316,10 +309,8 @@ export const createPurchaseOrderRequestSchema = z.object({
   notes: z.string().trim().min(1).max(2_000).nullable().optional(),
   orderNumber: requiredText(80).optional(),
   shippingCost: moneySchema,
-  subtotal: moneySchema,
   supplierId: identifierSchema,
   tax: moneySchema,
-  total: moneySchema,
 }).strict();
 
 export const updatePurchaseOrderRequestSchema = z.object({
@@ -328,10 +319,8 @@ export const updatePurchaseOrderRequestSchema = z.object({
   notes: z.string().trim().min(1).max(2_000).nullable().optional(),
   orderNumber: requiredText(80).optional(),
   shippingCost: moneySchema.optional(),
-  subtotal: moneySchema.optional(),
   supplierId: identifierSchema.optional(),
   tax: moneySchema.optional(),
-  total: moneySchema.optional(),
 }).strict().refine(
   (value) => Object.values(value).some((entry) => entry !== undefined),
   "At least one purchase-order field is required.",
@@ -401,7 +390,3 @@ export {
   API_SHIPPING_STATUS,
   API_SUPPLIER_STATUS,
 };
-
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}

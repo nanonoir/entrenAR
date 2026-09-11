@@ -56,7 +56,7 @@ describe("sales CRM administration API (e2e)", () => {
       id: poProductId,
       name: "Sales CRM E2E product",
       publicSlug: `${poProductId}-public`,
-      quantity: 2,
+      quantity: 20,
       salePrice: 100,
       sku: `${poProductId}-sku`,
       slug: `${poProductId}-slug`,
@@ -227,6 +227,43 @@ describe("sales CRM administration API (e2e)", () => {
     }), 409, "CONFLICT");
   });
 
+  it("rejects derived manual-sale fields and derives pickup money from base inputs", async () => {
+    await expectError(await request("/admin/sales", {
+      body: {
+        customer: { email: `forged-${randomUUID()}@example.test`, firstName: "Forged", lastName: "Sale" },
+        items: [{ lineSubtotal: 1, name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100 }],
+        paymentMethodSnapshot: {},
+        subtotal: 1,
+        total: 1,
+      },
+      method: "POST",
+      token: adminToken,
+    }), 400, "VALIDATION_ERROR");
+
+    const response = await request("/admin/sales", {
+      body: {
+        customer: { email: `pickup-${randomUUID()}@example.test`, firstName: "Pickup", lastName: "Sale" },
+        deliveryType: OrderDeliveryType.PICKUP,
+        items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100 }],
+        paymentMethodSnapshot: {},
+        shippingCost: 99,
+      },
+      method: "POST",
+      token: adminToken,
+    });
+
+    expect(response.status).toBe(201);
+    const sale = await json<SaleResponse>(response);
+    saleIds.push(sale.id);
+    expect(sale).toEqual(expect.objectContaining({ shippingStatus: OrderShippingStatus.PICKUP }));
+    const order = await prismaOrThrow().order.findUniqueOrThrow({ include: { payment: true }, where: { id: sale.id } });
+    expect(order.inventoryPolicy).toBe("LEDGER_MANAGED");
+    expect(order.shippingCost.toString()).toBe("0");
+    expect(order.subtotal.toString()).toBe("100");
+    expect(order.total.toString()).toBe("100");
+    expect(order.payment?.amount.toString()).toBe("100");
+  });
+
   it("runs supplier purchase-order lifecycle and records one receipt movement per item", async () => {
     const supplier = await createSupplier(`e2e-po-${randomUUID().replaceAll("-", "")}`);
     const orderNumber = `E2E-PO-${randomUUID().replaceAll("-", "")}`;
@@ -253,6 +290,19 @@ describe("sales CRM administration API (e2e)", () => {
     expect(updatedResponse.status).toBe(200);
     expect((await json<PurchaseOrderResponse>(updatedResponse)).notes).toBe("Updated E2E draft");
 
+    const beforeForgedUpdate = await prismaOrThrow().purchaseOrder.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: created.id } });
+    await expectError(await request(`/admin/purchase-orders/${created.id}`, {
+      body: { subtotal: 1 },
+      method: "PUT",
+      token: adminToken,
+    }), 400, "VALIDATION_ERROR");
+    await expectError(await request(`/admin/purchase-orders/${created.id}`, {
+      body: { total: 1 },
+      method: "PUT",
+      token: adminToken,
+    }), 400, "VALIDATION_ERROR");
+    await expect(prismaOrThrow().purchaseOrder.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: created.id } })).resolves.toEqual(beforeForgedUpdate);
+
     const ordered = await purchaseOrderCommand(created.id, "submit");
     expect(ordered.status).toBe("ORDERED");
     await expectError(await request(`/admin/purchase-orders/${created.id}`, {
@@ -264,7 +314,7 @@ describe("sales CRM administration API (e2e)", () => {
     const received = await purchaseOrderCommand(created.id, "receive");
     expect(received).toEqual(expect.objectContaining({ receivedAt: expect.any(String), status: "RECEIVED" }));
     await expectError(await request(`/admin/purchase-orders/${created.id}/receive`, { body: {}, method: "POST", token: adminToken }), 409, "CONFLICT");
-    await expect(prismaOrThrow().product.findUniqueOrThrow({ select: { quantity: true }, where: { id: poProductId } })).resolves.toEqual({ quantity: 4 });
+    await expect(prismaOrThrow().product.findUniqueOrThrow({ select: { quantity: true }, where: { id: poProductId } })).resolves.toEqual({ quantity: 16 });
     await expect(prismaOrThrow().productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: poVariantId } })).resolves.toEqual({ quantity: 4 });
     await expect(prismaOrThrow().inventoryHistory.count({ where: { origin: "purchase_order", productId: poProductId } })).resolves.toBe(2);
 
@@ -288,15 +338,16 @@ describe("sales CRM administration API (e2e)", () => {
 
   async function createSale(label: string, overrides: Record<string, unknown> = {}): Promise<SaleResponse> {
     const total = typeof overrides.total === "number" ? overrides.total : 100;
+    const baseOverrides = { ...overrides };
+    delete baseOverrides.subtotal;
+    delete baseOverrides.total;
     const response = await request("/admin/sales", {
       body: {
         customer: { email: `${label}@example.test`, firstName: "E2E", lastName: "Customer", phone: "+54 11 5555-5555" },
         items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: total }],
         paymentMethodSnapshot: { source: "e2e" },
         paymentStatus: PaymentStatus.PAID,
-        subtotal: total,
-        total,
-        ...overrides,
+        ...baseOverrides,
       },
       method: "POST",
       token: adminToken,

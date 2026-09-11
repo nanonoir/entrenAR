@@ -107,6 +107,9 @@ export function createSaleFromRequest(
   }));
   const shippingAddress = input.shippingAddress ? toUiAddress(input.shippingAddress) : undefined;
   const discount = discountFromSnapshot(input.discountSnapshot, input.discountAmount);
+  const subtotal = products.reduce((sum, product) => sum + product.quantity * product.unitPrice, 0);
+  const shippingCost = input.deliveryType === "PICKUP" ? 0 : input.shippingCost;
+  const total = Math.max(0, subtotal - input.discountAmount + shippingCost);
   const createdAt = now();
   const sale: AdminSaleDetail = {
     id,
@@ -125,11 +128,11 @@ export function createSaleFromRequest(
     products,
     paymentStatus,
     shippingStatus: input.deliveryType === "PICKUP" ? "pickup" : "to_pack",
-    subtotal: input.subtotal,
+    subtotal,
     ...(discount.type ? { discountType: discount.type } : {}),
     ...(discount.value === undefined ? {} : { discountValue: discount.value }),
-    shippingCost: input.shippingCost,
-    total: input.total,
+    shippingCost,
+    total,
     archived: false,
     ...(input.internalNotes ? { notes: input.internalNotes } : {}),
     history: [makeEvent("sale_created", sourceOrderId ? `Sale created from order ${sourceOrderId}.` : "Manual sale created."), makeEvent(paymentStatus === "received" ? "stock_deducted" : "stock_reserved")],
@@ -143,7 +146,7 @@ export function createSaleFromRequest(
     internalNotes: input.internalNotes,
     items: products.map((product) => ({ ...product })),
     payment: {
-      amount: input.total,
+      amount: total,
       currency: input.currency,
       paymentMethodId: input.paymentMethodId,
       paymentMethodSnapshot: cloneSnapshot(input.paymentMethodSnapshot),

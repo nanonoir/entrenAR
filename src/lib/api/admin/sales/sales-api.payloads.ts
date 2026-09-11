@@ -48,9 +48,7 @@ import {
 export function toCreateManualSalePayload(input: CreateManualSalePayload): CreateManualSaleRequestDto {
   const items = saleItems(input);
   const discountAmount = input.discountAmount ?? calculateDiscount(input.subtotal ?? subtotal(items), input.discountType, input.discountValue);
-  const subtotalValue = input.subtotal ?? subtotal(items);
   const shippingCost = input.shippingCost ?? 0;
-  const total = input.total ?? Math.max(0, subtotalValue - discountAmount + shippingCost);
   const payload = {
     currency: input.currency?.trim() || "ARS",
     customer: {
@@ -77,8 +75,6 @@ export function toCreateManualSalePayload(input: CreateManualSalePayload): Creat
     ...(input.shippingAddress ? { shippingAddress: { ...input.shippingAddress } } : {}),
     shippingCost,
     ...(input.source ? { source: input.source.trim() } : {}),
-    subtotal: subtotalValue,
-    total,
   };
 
   return parsePayload(createManualSaleRequestSchema, payload, "The manual sale payload is invalid.");
@@ -146,7 +142,6 @@ export function toSupplierStatusPayload(status: SupplierStatus): SupplierStatusR
 
 export function toCreatePurchaseOrderPayload(input: CreatePurchaseOrderPayload): CreatePurchaseOrderRequestDto {
   const items = purchaseOrderItems(input);
-  const subtotalValue = input.subtotal ?? items.reduce((sum, item) => sum + itemTotal(item), 0);
   const tax = input.tax ?? 0;
   const shippingCost = input.shippingCost ?? 0;
   const payload = {
@@ -155,10 +150,8 @@ export function toCreatePurchaseOrderPayload(input: CreatePurchaseOrderPayload):
     ...(input.notes === undefined ? {} : { notes: input.notes === null ? null : input.notes.trim() }),
     ...(input.orderNumber?.trim() ? { orderNumber: input.orderNumber.trim() } : {}),
     shippingCost,
-    subtotal: subtotalValue,
     supplierId: input.supplierId.trim(),
     tax,
-    total: input.total ?? subtotalValue + tax + shippingCost,
   };
 
   return parsePayload(createPurchaseOrderRequestSchema, payload, "The purchase-order payload is invalid.");
@@ -171,10 +164,8 @@ export function toUpdatePurchaseOrderPayload(input: Partial<CreatePurchaseOrderP
     ...(input.notes === undefined ? {} : { notes: input.notes === null ? null : input.notes.trim() }),
     ...(input.orderNumber === undefined ? {} : { orderNumber: input.orderNumber.trim() }),
     ...(input.shippingCost === undefined ? {} : { shippingCost: input.shippingCost }),
-    ...(input.subtotal === undefined ? {} : { subtotal: input.subtotal }),
     ...(input.supplierId === undefined ? {} : { supplierId: input.supplierId.trim() }),
     ...(input.tax === undefined ? {} : { tax: input.tax }),
-    ...(input.total === undefined ? {} : { total: input.total }),
   };
 
   return parsePayload(updatePurchaseOrderRequestSchema, payload, "The purchase-order update payload is invalid.");
@@ -246,7 +237,6 @@ function toSaleItemPayload(item: NonNullable<CreateManualSalePayload["items"]>[n
   return {
     attributes: item.attributes ? { ...item.attributes } : {},
     ...(item.compareAtPrice === undefined ? {} : { compareAtPrice: item.compareAtPrice }),
-    lineSubtotal: item.lineSubtotal ?? item.quantity * item.unitPrice,
     name: item.name,
     productId: item.productId.trim(),
     productName: item.productName ?? item.name,
@@ -268,7 +258,6 @@ function purchaseOrderItems(input: Pick<CreatePurchaseOrderPayload, "items" | "p
     quantity: product.quantity,
     sku: product.productId,
     title: product.name,
-    totalCost: product.quantity * product.unitPrice,
     unitCost: product.unitPrice,
     variantId: product.variantId,
   }));
@@ -282,7 +271,6 @@ function toPurchaseOrderItemPayload(item: PurchaseOrderItemPayload) {
     quantity: item.quantity,
     sku: item.sku?.trim() || item.productId.trim(),
     title: title.trim(),
-    ...(item.totalCost === undefined ? {} : { totalCost: item.totalCost }),
     unitCost,
     ...(item.variantId === undefined ? {} : { variantId: item.variantId }),
   };
@@ -323,9 +311,6 @@ function subtotal(items: readonly NonNullable<CreateManualSalePayload["items"]>[
   return items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 }
 
-function itemTotal(item: PurchaseOrderItemPayload): number {
-  return item.totalCost ?? item.quantity * (item.unitCost ?? item.unitPrice ?? 0);
-}
 
 function calculateDiscount(value: number, type?: CreateManualSalePayload["discountType"], amount?: number): number {
   if (!amount || !type) return 0;

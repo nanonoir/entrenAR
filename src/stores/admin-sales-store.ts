@@ -80,6 +80,8 @@ export type CreateSaleInput = {
 
 export type CreatePurchaseOrderInput = Omit<CreatePurchaseOrderPayload, "supplierId"> & {
   supplierId?: string;
+  subtotal?: number;
+  total?: number;
   customer?: SaleCustomer;
   source?: string;
   shippingAddress?: SaleAddress;

@@ -264,7 +264,6 @@ export interface PurchaseOrderItemPayload {
   quantity: number;
   sku?: string;
   title?: string;
-  totalCost?: number;
   unitCost?: number;
   unitPrice?: number;
   variantId?: string | null;
@@ -277,10 +276,8 @@ export interface CreatePurchaseOrderPayload {
   orderNumber?: string;
   products?: readonly SaleProduct[];
   shippingCost?: number;
-  subtotal?: number;
   supplierId: string;
   tax?: number;
-  total?: number;
 }
 
 export interface SalesRepository {
