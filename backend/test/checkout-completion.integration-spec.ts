@@ -12,6 +12,10 @@ import {
   CouponTargetType,
   CouponUsageLimitType,
   Role,
+  InventoryMovementKind,
+  InventoryReferenceType,
+  OrderInventoryPolicy,
+  StockMode,
 } from "../src/generated/prisma/enums";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import { CatalogRepository } from "../src/modules/catalog/catalog.repository";
@@ -110,6 +114,8 @@ describe("checkout completion domain integration", () => {
       prisma.checkoutSession.findFirstOrThrow({ orderBy: { createdAt: "desc" }, where: { userId: owner.id } }),
     ]);
     expect(order.status).toBe("PENDING");
+    expect(order.inventoryPolicy).toBe(OrderInventoryPolicy.LEDGER_MANAGED);
+    expect(order.inventoryEffectId).toEqual(expect.any(String));
     expect(order.userId).toBe(owner.id);
     expect(order.items).toHaveLength(1);
     const orderItem = order.items[0];
@@ -119,7 +125,15 @@ describe("checkout completion domain integration", () => {
     expect(order.payment).toEqual(expect.objectContaining({ paymentMethodId: "bank-transfer", status: "PENDING" }));
     expect(Number(order.payment?.amount)).toBe(150);
     expect(variant?.quantity).toBe(1);
-    expect(history).toEqual([expect.objectContaining({ delta: -1, origin: "checkout", variantId: product.variantId })]);
+    expect(history).toEqual([expect.objectContaining({
+      delta: -1,
+      inventoryEffectId: order.inventoryEffectId,
+      movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+      origin: "checkout",
+      referenceId: order.id,
+      referenceType: InventoryReferenceType.ORDER,
+      variantId: product.variantId,
+    })]);
     expect(idempotency.status).toBe("COMPLETED");
     expect(cart.items).toEqual([]);
     expect(session.status).toBe("COMPLETED");
@@ -241,6 +255,40 @@ describe("checkout completion domain integration", () => {
     await expect(prisma.coupon.findUniqueOrThrow({ where: { id: couponId } })).resolves.toEqual(
       expect.objectContaining({ usageCount: 1 }),
     );
+  });
+
+  it("marks an infinite-only checkout NOT_APPLICABLE without inventory movements", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const owner = await createCheckoutDomainUser(prisma, "infinite-owner", suffix, fixtures);
+    const product = await createCheckoutDomainProduct(prisma, "infinite", suffix, 5, fixtures);
+    await prisma.product.update({ data: { quantity: null, stockMode: StockMode.INFINITE }, where: { id: product.productId } });
+    await prisma.productVariant.update({ data: { quantity: null, stockMode: StockMode.INFINITE }, where: { id: product.variantId } });
+    const cart = await createCheckoutDomainCart(prisma, owner.id, product, 1, undefined, suffix, fixtures, false);
+    const quote = await checkoutService.quote(checkoutQuoteRequestSchema.parse({
+      items: [{ productId: product.productId, quantity: 1, variantId: product.variantId }],
+      shippingMethodId: "andreani:envío-a-domicilio",
+    }), { role: Role.CUSTOMER, userId: owner.id });
+    const response = await checkoutService.complete(checkoutCompleteRequestSchema.parse({
+      address: { city: "Buenos Aires", postalCode: "C1000", province: "Buenos Aires", street: "123 Test Street" },
+      customer: { email: owner.email, firstName: "Infinite", lastName: "Owner" },
+      idempotencyKey: `infinite-${suffix}`,
+      items: [{ productId: product.productId, quantity: 1, variantId: product.variantId }],
+      paymentMethodId: "bank-transfer",
+      paymentOptionId: "direct-transfer",
+      quoteId: quote.quoteId,
+      sessionToken: quote.sessionToken,
+      shippingMethodId: "andreani:envío-a-domicilio",
+    }), { role: Role.CUSTOMER, userId: owner.id });
+
+    const [order, history, persistedCart] = await Promise.all([
+      prisma.order.findUniqueOrThrow({ where: { id: response.orderId } }),
+      prisma.inventoryHistory.findMany({ where: { productId: product.productId } }),
+      prisma.cart.findUniqueOrThrow({ include: { items: true }, where: { id: cart.cartId } }),
+    ]);
+    expect(order.inventoryPolicy).toBe(OrderInventoryPolicy.NOT_APPLICABLE);
+    expect(order.inventoryEffectId).toBeNull();
+    expect(history).toEqual([]);
+    expect(persistedCart.items).toEqual([]);
   });
 
   it("rolls back the idempotency claim and cart state when a coupon is no longer eligible", async () => {

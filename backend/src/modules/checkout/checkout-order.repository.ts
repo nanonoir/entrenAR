@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { Prisma } from "../../generated/prisma/client";
-import { CartStatus, OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { CartStatus, OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 import type { TransactionClient } from "./checkout-cart.repository";
 
 export const checkoutOrderInclude = {
@@ -51,6 +51,8 @@ export interface CheckoutOrderCreateInput {
   deliveryType: OrderDeliveryType;
   discountAmount: number;
   discountSnapshot: Prisma.InputJsonValue;
+  inventoryEffectId?: string;
+  inventoryPolicy: OrderInventoryPolicy;
   items: readonly CheckoutOrderItemCreateInput[];
   number: string;
   payment: CheckoutOrderPaymentCreateInput;
@@ -107,6 +109,8 @@ export class CheckoutOrderRepository {
         : OrderShippingStatus.TO_PACK,
       discountAmount: input.discountAmount,
       discountSnapshot: input.discountSnapshot,
+      inventoryEffectId: input.inventoryEffectId ?? null,
+      inventoryPolicy: input.inventoryPolicy,
       number: input.number,
       ...(input.shippingAddressSnapshot === undefined
         ? {}
@@ -157,6 +161,17 @@ export class CheckoutOrderRepository {
 
   async orderById(transaction: TransactionClient, orderId: string): Promise<CheckoutOrderRecord> {
     return transaction.order.findUniqueOrThrow({ include: checkoutOrderInclude, where: { id: orderId } });
+  }
+
+  async assignInventoryOwnership(
+    transaction: TransactionClient,
+    orderId: string,
+    inventoryEffectId: string,
+  ): Promise<void> {
+    await transaction.order.update({
+      data: { inventoryEffectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED },
+      where: { id: orderId },
+    });
   }
 
   async clearCart(transaction: TransactionClient, cartId: string): Promise<void> {

@@ -4,7 +4,13 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { AppModule } from "../src/app.module";
 import { configureHttpApplication } from "../src/app.setup";
 import { PrismaService } from "../src/common/prisma/prisma.service";
-import { PaymentMethodStatus, ShippingProviderStatus } from "../src/generated/prisma/enums";
+import {
+  InventoryMovementKind,
+  InventoryReferenceType,
+  OrderInventoryPolicy,
+  PaymentMethodStatus,
+  ShippingProviderStatus,
+} from "../src/generated/prisma/enums";
 import {
   configureCheckoutCommerce,
   createCheckoutFixtures,
@@ -147,10 +153,20 @@ describe("checkout completion REST API (e2e)", () => {
     ]);
     expect(order.userId).toBe(fixture.owner.id);
     expect(order.status).toBe("PENDING");
+    expect(order.inventoryPolicy).toBe(OrderInventoryPolicy.LEDGER_MANAGED);
+    expect(order.inventoryEffectId).toEqual(expect.any(String));
     expect(order.items[0]).toEqual(expect.objectContaining({ productName: "Customer fixture product", unitPrice: expect.any(Object) }));
     expect(order.payment).toEqual(expect.objectContaining({ paymentMethodId: "bank-transfer", status: "PENDING" }));
     expect(variant.quantity).toBe(1);
-    expect(history).toEqual([expect.objectContaining({ delta: -1, origin: "checkout", variantId: fixture.customerProduct.variantId })]);
+    expect(history).toEqual([expect.objectContaining({
+      delta: -1,
+      inventoryEffectId: order.inventoryEffectId,
+      movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+      origin: "checkout",
+      referenceId: order.id,
+      referenceType: InventoryReferenceType.ORDER,
+      variantId: fixture.customerProduct.variantId,
+    })]);
     expect(cart.status).toBe("COMPLETED");
     expect(cart.items).toEqual([]);
   });
