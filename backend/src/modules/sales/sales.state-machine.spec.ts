@@ -67,4 +67,14 @@ describe("sales.state-machine", () => {
       OrderHistoryEventType.ORDER_CANCELLED, OrderHistoryEventType.ORDER_REOPENED, OrderHistoryEventType.ORDER_ARCHIVED, OrderHistoryEventType.ORDER_UNARCHIVED,
     ]);
   });
+
+  it("allows confirmation only while the payment is pending, including confirmed unpaid sales", () => {
+    const now = new Date("2026-09-09T12:00:00.000Z");
+    expect(transitionSale({ ...confirmed, confirmedAt: null, paymentStatus: PaymentStatus.PENDING }, SALE_COMMAND.CONFIRM, { now }).patch).toEqual({
+      confirmedAt: now,
+      status: OrderStatus.CONFIRMED,
+    });
+    expect(() => transitionSale(confirmed, SALE_COMMAND.CONFIRM)).toThrow(SaleTransitionError);
+    expect(() => transitionSale({ ...confirmed, paymentStatus: PaymentStatus.REFUNDED }, SALE_COMMAND.CONFIRM)).toThrow(SaleTransitionError);
+  });
 });

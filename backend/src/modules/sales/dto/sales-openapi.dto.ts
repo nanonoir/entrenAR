@@ -26,6 +26,21 @@ export class AdminSaleItemResponseDto {
   @ApiPropertyOptional() weightGrams?: number;
 }
 
+export class CreateManualSaleItemRequestDto {
+  @ApiProperty({ type: Object }) attributes!: Record<string, unknown>;
+  @ApiPropertyOptional() compareAtPrice?: number;
+  @ApiPropertyOptional() name?: string;
+  @ApiProperty() productId!: string;
+  @ApiPropertyOptional() productName?: string;
+  @ApiProperty() quantity!: number;
+  @ApiPropertyOptional() sku?: string;
+  @ApiProperty({ type: Object }) snapshot!: Record<string, unknown>;
+  @ApiProperty() unitPrice!: number;
+  @ApiPropertyOptional() variantId?: string;
+  @ApiPropertyOptional() variantName?: string;
+  @ApiPropertyOptional() weightGrams?: number;
+}
+
 export class AdminSaleHistoryResponseDto {
   @ApiPropertyOptional() actorId?: string;
   @ApiPropertyOptional({ enum: Object.values(Role) }) actorRole?: Role;
@@ -77,7 +92,7 @@ export class AdminSaleDetailResponseDto extends AdminSaleSummaryResponseDto {
   @ApiProperty({ type: Object }) discountSnapshot!: Record<string, unknown>;
   @ApiProperty({ type: [AdminSaleHistoryResponseDto] }) history!: AdminSaleHistoryResponseDto[];
   @ApiPropertyOptional() internalNotes?: string;
-  @ApiProperty({ type: [AdminSaleItemResponseDto] }) items!: AdminSaleItemResponseDto[];
+  @ApiProperty({ type: [CreateManualSaleItemRequestDto] }) items!: CreateManualSaleItemRequestDto[];
   @ApiPropertyOptional({ format: "date-time" }) packedAt?: string;
   @ApiProperty({ type: AdminSalePaymentResponseDto, nullable: true }) payment!: AdminSalePaymentResponseDto | null;
   @ApiPropertyOptional({ enum: Object.values(PaymentStatus) }) previousPaymentStatus?: PaymentStatus;
@@ -116,8 +131,6 @@ export class CreateManualSaleRequestDto {
   @ApiPropertyOptional({ type: Object }) shippingAddress?: Record<string, unknown>;
   @ApiPropertyOptional({ default: 0 }) shippingCost?: number;
   @ApiPropertyOptional() source?: string;
-  @ApiProperty() subtotal!: number;
-  @ApiProperty() total!: number;
 }
 
 export class ConvertOrderToSaleRequestDto {
