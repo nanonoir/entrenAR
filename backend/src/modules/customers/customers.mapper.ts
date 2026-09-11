@@ -84,7 +84,7 @@ export type CustomerRecordWithMetrics = CustomerRecord & {
   totalSpent?: CustomerMetricValue;
 };
 
-export function toCustomerResponseDto(customer: CustomerRecordWithMetrics, _metrics?: CustomerMetrics): CustomerResponseDto {
+export function toCustomerResponseDto(customer: CustomerRecordWithMetrics): CustomerResponseDto {
   if (customer.isAnonymized) {
     return {
       createdAt: customer.createdAt.toISOString(),

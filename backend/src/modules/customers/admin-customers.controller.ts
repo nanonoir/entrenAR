@@ -26,7 +26,6 @@ import {
   CustomerDetailResponseDto,
   CustomerEmailAvailabilityQueryDto,
   CustomerEmailAvailabilityResponseDto,
-  CustomerIdParamDto,
   CustomerListQueryDto,
   CustomerListResponseDto,
   CustomerResponseDto,

@@ -1,5 +1,5 @@
 import { Prisma } from "../src/generated/prisma/client";
-import { OrderHistoryEventType, OrderStatus, PaymentStatus, Role } from "../src/generated/prisma/enums";
+import { OrderHistoryEventType, Role } from "../src/generated/prisma/enums";
 import { customerDetailInclude, CustomersRepository, type CustomerDetailRecord } from "../src/modules/customers/customers.repository";
 import { CustomersService } from "../src/modules/customers/customers.service";
 
