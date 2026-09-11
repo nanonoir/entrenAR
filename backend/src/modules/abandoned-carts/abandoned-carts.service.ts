@@ -4,8 +4,11 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { z } from "zod";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
+import { InventoryMovementKind, InventoryReferenceType } from "../../generated/prisma/enums";
 import type { Prisma } from "../../generated/prisma/client";
-import { CheckoutRecoveryStatus, CheckoutSessionStatus, OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { CheckoutRecoveryStatus, CheckoutSessionStatus, OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
+import { InventoryRepository } from "../inventory/inventory.repository";
 import { toAbandonedCartDetailDto, toAbandonedCartListItemDto, type AbandonedCartDetailDto, type AbandonedCartSessionRecord } from "./abandoned-carts.mapper";
 import { abandonedCartListQuerySchema, convertCartSchema, discardCartSchema, manualRecoverySchema, RECOVERY_STATUS, RECOVERY_TIMING, recoveryTimingSchema, sendRecoveryEmailSchema, updateRecoveryConfigSchema, updateRecoveryTemplateSchema, type AbandonedCartListQuery, type AbandonedCartListResponse, type ConvertCartInput, type DiscardCartInput, type ManualRecoveryInput, type RecoveryTiming, type SendRecoveryEmailInput, type UpdateRecoveryConfigInput, type UpdateRecoveryTemplateInput } from "./abandoned-carts.schemas";
 import { assertRecoveryTransition, isSessionAbandoned, RecoveryTransitionError, resolveTimingThresholdMs } from "./abandoned-carts.state-machine";
@@ -23,7 +26,10 @@ export type ConvertedAbandonedCartDetail = AbandonedCartDetailDto & { orderId: s
 
 @Injectable()
 export class AbandonedCartsService {
-  constructor(private readonly abandonedCartsRepository: AbandonedCartsRepository) {}
+  constructor(
+    private readonly abandonedCartsRepository: AbandonedCartsRepository,
+    private readonly inventoryRepository: InventoryRepository,
+  ) {}
 
   async listAbandonedCarts(query: AbandonedCartListQuery = abandonedCartListQuerySchema.parse({})): Promise<AbandonedCartListResponse> {
     const parsedQuery = parseInput(abandonedCartListQuerySchema, query, "The abandoned-cart list query is invalid.");
@@ -153,7 +159,8 @@ export class AbandonedCartsService {
       if (current.order && current.order.status !== undefined && current.order.status !== OrderStatus.PENDING) {
         throw this.conflict("Only pending orders can be linked to an abandoned-cart recovery.");
       }
-      const orderId = current.order?.id ?? await this.createPendingOrder(transaction, current);
+       const orderId = current.order?.id ?? await this.createPendingOrder(transaction, current);
+       if (!current.order) await this.deductRecoveredCartInventory(transaction, current, orderId, actorId);
       const completedAt = new Date();
       await this.abandonedCartsRepository.updateRecoveryStatus(
         id,
@@ -289,9 +296,10 @@ export class AbandonedCartsService {
         customerPhone: cart.customer.phone ?? null,
         customerSnapshot: jsonInput(customerSnapshot),
         deliverySnapshot: jsonInput(deliverySnapshot),
-        deliveryType,
-        discountAmount,
-        discountSnapshot: jsonInput(discountSnapshot),
+         deliveryType,
+         discountAmount,
+         discountSnapshot: jsonInput(discountSnapshot),
+         inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE,
         number: orderNumber(),
         shippingCost,
         shippingStatus: deliveryType === OrderDeliveryType.PICKUP ? OrderShippingStatus.PICKUP : OrderShippingStatus.TO_PACK,
@@ -334,12 +342,56 @@ export class AbandonedCartsService {
     return order.id;
   }
 
+  private async deductRecoveredCartInventory(
+    transaction: TransactionClient,
+    session: AbandonedCartSessionRecord,
+    orderId: string,
+    actorId: string | undefined,
+  ): Promise<void> {
+    const cart = toAbandonedCartDetailDto(session);
+    const inventoryEffectId = randomBytes(16).toString("hex");
+
+    try {
+      const movements = await this.inventoryRepository.deductStockForItems(
+        transaction,
+        cart.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+        })),
+        {
+          actorId,
+          inventoryEffectId,
+          movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+          operationId: randomBytes(16).toString("hex"),
+          origin: INVENTORY_ORIGIN.ABANDONED_CART_RECOVERY,
+          reason: `Abandoned cart recovery ${orderId}`,
+          referenceId: orderId,
+          referenceType: InventoryReferenceType.ORDER,
+        },
+      );
+
+      if (movements.length > 0) {
+        await transaction.order.update({
+          data: { inventoryEffectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED },
+          where: { id: orderId },
+        });
+      }
+    } catch {
+      throw this.outOfStock();
+    }
+  }
+
   private notFound(): NotFoundException {
     return new NotFoundException({ code: ERROR_CODE.NOT_FOUND, message: "The requested abandoned cart was not found.", ok: false });
   }
 
   private conflict(message: string): ConflictException {
     return new ConflictException({ code: ERROR_CODE.CONFLICT, message, ok: false });
+  }
+
+  private outOfStock(): ConflictException {
+    return new ConflictException({ code: ERROR_CODE.CONFLICT, message: "Insufficient stock for abandoned-cart recovery.", ok: false });
   }
 
   private missingCustomerEmail(): BadRequestException {
