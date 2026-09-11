@@ -8,7 +8,7 @@ import {
 } from "./purchase-orders.schemas";
 
 describe("purchase-order schemas", () => {
-  it("derives item totals and applies creation defaults", () => {
+  it("applies creation defaults while keeping derived fields out of write input", () => {
     const parsed = createPurchaseOrderSchema.parse({
       expectedDate: "2026-09-10",
       items: [{
@@ -27,15 +27,22 @@ describe("purchase-order schemas", () => {
       tax: 0,
     });
     expect(parsed.expectedDate).toEqual(new Date("2026-09-10T00:00:00.000Z"));
-    expect(parsed.items).toEqual([expect.objectContaining({ totalCost: 37.5 })]);
-    expect(purchaseOrderItemSchema.parse({
+    expect(parsed.items).toEqual([expect.objectContaining({ quantity: 3, unitCost: 12.5 })]);
+    expect(purchaseOrderItemSchema.safeParse({
+      productId: "product-1",
+      quantity: 2,
+      sku: "SKU-1",
+      title: "Product one",
+      unitCost: 12.5,
+    }).success).toBe(true);
+    expect(purchaseOrderItemSchema.safeParse({
       productId: "product-1",
       quantity: 2,
       sku: "SKU-1",
       title: "Product one",
       totalCost: 99,
       unitCost: 12.5,
-    }).totalCost).toBe(99);
+    }).success).toBe(false);
   });
 
   it("coerces filters and accepts an empty command payload only", () => {
@@ -74,5 +81,11 @@ describe("purchase-order schemas", () => {
     expect(updatePurchaseOrderSchema.safeParse({ id: "po-1" }).success).toBe(false);
     expect(purchaseOrderFilterQuerySchema.safeParse({ limit: "0" }).success).toBe(false);
     expect(purchaseOrderFilterQuerySchema.safeParse({ status: "unknown" }).success).toBe(false);
+  });
+
+  it.each(["subtotal", "total"])("rejects top-level derived update field %s", (field) => {
+    const payload = { [field]: 999 };
+
+    expect(updatePurchaseOrderSchema.safeParse(payload).success).toBe(false);
   });
 });
