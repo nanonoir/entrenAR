@@ -15,6 +15,7 @@ import {
   CouponTargetType,
   CouponUsageLimitType,
   OrderDeliveryType,
+  OrderInventoryPolicy,
   OrderShippingStatus,
   OrderStatus,
   PaymentStatus,
@@ -191,6 +192,8 @@ export async function seedCheckout(prisma: PrismaClient): Promise<void> {
         couponType: "percentage",
       },
       id: CHECKOUT_FIXTURE.orderId,
+      inventoryEffectId: null,
+      inventoryPolicy: OrderInventoryPolicy.UNKNOWN,
       number: CHECKOUT_FIXTURE.orderNumber,
       shippingAddressSnapshot: {
         city: "Buenos Aires",
@@ -227,6 +230,8 @@ export async function seedCheckout(prisma: PrismaClient): Promise<void> {
         providerName: "Andreani",
       },
       deliveryType: OrderDeliveryType.SHIPPING,
+      inventoryEffectId: null,
+      inventoryPolicy: OrderInventoryPolicy.UNKNOWN,
       discountAmount: "3120.00",
       discountSnapshot: {
         couponCode: CHECKOUT_FIXTURE.couponCode,

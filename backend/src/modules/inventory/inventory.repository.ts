@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { InventoryOperation, StockMode } from "../../generated/prisma/enums";
+import {
+  InventoryMovementKind,
+  InventoryOperation,
+  InventoryReferenceType,
+  StockMode,
+} from "../../generated/prisma/enums";
 import type { Prisma } from "../../generated/prisma/client";
 import { INVENTORY_ORIGIN } from "./inventory.constants";
 import type { InventoryState } from "./inventory.mapper";
@@ -27,6 +32,12 @@ export interface CreateInventoryHistoryInput extends InventoryState {
   productId: string;
   reason?: string;
   variantId?: string;
+  compensatesMovementId?: string;
+  inventoryEffectId?: string;
+  movementKind?: InventoryMovementKind;
+  operationId?: string;
+  referenceId?: string;
+  referenceType?: InventoryReferenceType;
 }
 
 export interface InventoryStockItem {
@@ -39,6 +50,24 @@ export interface InventoryIncrementOptions {
   actorId?: string;
   origin: string;
   reason?: string;
+}
+
+export interface InventoryLedgerContext {
+  inventoryEffectId: string;
+  movementKind: InventoryMovementKind;
+  operationId: string;
+  origin: string;
+  referenceId: string;
+  referenceType: InventoryReferenceType;
+  actorId?: string;
+  reason?: string;
+}
+
+export interface InventoryLedgerMovement {
+  id: string;
+  productId: string;
+  quantity: number;
+  variantId?: string;
 }
 
 export interface InventoryHistoryPageRow extends CreateInventoryHistoryInput {
@@ -200,6 +229,162 @@ export class InventoryRepository {
     return this.deductForCheckout(transaction, productId, variantId, quantity);
   }
 
+  async deductStockForItems(
+    transaction: TransactionClient,
+    items: readonly InventoryStockItem[],
+    context: InventoryLedgerContext,
+  ): Promise<InventoryLedgerMovement[]> {
+    const movements: InventoryLedgerMovement[] = [];
+
+    for (const item of items) {
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        throw new Error("Inventory deductions require a positive integer quantity.");
+      }
+
+      const target = await this.findTarget(transaction, item.productId, item.variantId ?? undefined);
+      if (!target) {
+        throw new Error(`Inventory target ${item.productId}${item.variantId ? `/${item.variantId}` : ""} was not found.`);
+      }
+
+      if (target.stockMode === StockMode.INFINITE) continue;
+
+      const applied = await this.applyLimitedDelta(transaction, target, -item.quantity, item.quantity);
+      if (!applied) {
+        throw new Error(`Insufficient inventory for ${item.productId}${item.variantId ? `/${item.variantId}` : ""}.`);
+      }
+
+      const updated = await this.findTarget(transaction, item.productId, item.variantId ?? undefined);
+      if (!updated) throw new Error("Inventory target disappeared after deduction.");
+
+      const movement = await this.createHistory(transaction, {
+        actorId: context.actorId,
+        delta: -item.quantity,
+        inventoryEffectId: context.inventoryEffectId,
+        movementKind: context.movementKind,
+        operation: InventoryOperation.SUBTRACT,
+        operationId: context.operationId,
+        origin: context.origin,
+        productId: updated.productId,
+        quantity: updated.quantity,
+        reason: context.reason,
+        referenceId: context.referenceId,
+        referenceType: context.referenceType,
+        stockMode: updated.stockMode,
+        variantId: updated.variantId,
+      });
+
+      movements.push({
+        id: movement.id,
+        productId: updated.productId,
+        quantity: item.quantity,
+        ...(updated.variantId ? { variantId: updated.variantId } : {}),
+      });
+    }
+
+    return movements;
+  }
+
+  async restoreUncompensatedDeductions(
+    transaction: TransactionClient,
+    context: InventoryLedgerContext,
+  ): Promise<InventoryLedgerMovement[]> {
+    const deductions = await transaction.inventoryHistory.findMany({
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      where: {
+        compensatedBy: null,
+        inventoryEffectId: context.inventoryEffectId,
+        operation: InventoryOperation.SUBTRACT,
+      },
+    });
+    const restorations: InventoryLedgerMovement[] = [];
+
+    for (const deduction of deductions) {
+      if (!deduction.delta || deduction.delta >= 0) continue;
+
+      const quantity = Math.abs(deduction.delta);
+      const target = await this.findTarget(transaction, deduction.productId, deduction.variantId ?? undefined);
+      if (!target || target.stockMode === StockMode.INFINITE) {
+        throw new Error("Referenced inventory deduction target is incompatible with restoration.");
+      }
+
+      const targetId = target.kind === INVENTORY_TARGET_KIND.PRODUCT ? target.productId : target.variantId;
+      const updated = target.stockMode === StockMode.OUT_OF_STOCK
+        ? await this.restoreOutOfStockTarget(transaction, targetId, quantity, target.kind)
+        : await this.incrementTrackedTarget(transaction, target, quantity);
+      if (!updated) {
+        throw new Error("Referenced inventory deduction target changed before restoration.");
+      }
+
+      const next = await this.findTarget(transaction, deduction.productId, deduction.variantId ?? undefined);
+      if (!next) throw new Error("Inventory target disappeared after restoration.");
+
+      const restoration = await this.createHistory(transaction, {
+        actorId: context.actorId,
+        compensatesMovementId: deduction.id,
+        delta: quantity,
+        inventoryEffectId: context.inventoryEffectId,
+        movementKind: context.movementKind,
+        operation: InventoryOperation.ADD,
+        operationId: context.operationId,
+        origin: context.origin,
+        productId: next.productId,
+        quantity: next.quantity,
+        reason: context.reason,
+        referenceId: context.referenceId,
+        referenceType: context.referenceType,
+        stockMode: next.stockMode,
+        variantId: next.variantId,
+      });
+
+      restorations.push({
+        id: restoration.id,
+        productId: next.productId,
+        quantity,
+        ...(next.variantId ? { variantId: next.variantId } : {}),
+      });
+    }
+
+    return restorations;
+  }
+
+  async reDeductLatestCompensatedDeductions(
+    transaction: TransactionClient,
+    context: InventoryLedgerContext,
+  ): Promise<InventoryLedgerMovement[]> {
+    const latestRestoration = await transaction.inventoryHistory.findFirst({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      where: {
+        compensatesMovementId: { not: null },
+        inventoryEffectId: context.inventoryEffectId,
+        operation: InventoryOperation.ADD,
+      },
+    });
+
+    if (!latestRestoration?.operationId) return [];
+
+    const restorations = await transaction.inventoryHistory.findMany({
+      include: { compensatesMovement: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      where: {
+        compensatesMovementId: { not: null },
+        inventoryEffectId: context.inventoryEffectId,
+        operation: InventoryOperation.ADD,
+        operationId: latestRestoration.operationId,
+      },
+    });
+    const items = restorations.flatMap((restoration) => {
+      const deduction = restoration.compensatesMovement;
+      if (!deduction?.delta || deduction.delta >= 0) return [];
+      return [{
+        productId: deduction.productId,
+        quantity: Math.abs(deduction.delta),
+        ...(deduction.variantId ? { variantId: deduction.variantId } : {}),
+      }];
+    });
+
+    return this.deductStockForItems(transaction, items, context);
+  }
+
   async restoreStockForItems(
     transaction: TransactionClient,
     items: readonly InventoryStockItem[],
@@ -272,15 +457,21 @@ export class InventoryRepository {
   async createHistory(
     transaction: TransactionClient,
     input: CreateInventoryHistoryInput,
-  ): Promise<void> {
-    await transaction.inventoryHistory.create({
+  ): Promise<{ id: string }> {
+    return transaction.inventoryHistory.create({
       data: {
         actorId: input.actorId,
+        compensatesMovementId: input.compensatesMovementId,
         delta: input.delta,
+        inventoryEffectId: input.inventoryEffectId,
+        movementKind: input.movementKind,
         operation: input.operation,
+        operationId: input.operationId,
         origin: input.origin,
         productId: input.productId,
         reason: input.reason,
+        referenceId: input.referenceId,
+        referenceType: input.referenceType,
         resultingQuantity: input.quantity,
         stockMode: input.stockMode,
         variantId: input.variantId,

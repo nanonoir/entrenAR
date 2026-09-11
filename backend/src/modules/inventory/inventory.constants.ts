@@ -12,6 +12,8 @@ export const INVENTORY_STOCK_MODE = {
 export const INVENTORY_ORIGIN = {
   ADMIN_MANUAL: "admin_manual",
   ADMIN_SALES_CANCELLATION: "admin_sales_cancellation",
+  ADMIN_SALES_REOPEN: "admin_sales_reopen",
+  ABANDONED_CART_RECOVERY: "abandoned_cart_recovery",
   CHECKOUT: "checkout",
   PURCHASE_ORDER: "purchase_order",
 } as const;
