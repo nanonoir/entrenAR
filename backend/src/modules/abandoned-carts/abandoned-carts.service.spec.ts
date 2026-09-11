@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { CheckoutRecoveryStatus, CheckoutSessionStatus, OrderStatus } from "../../generated/prisma/enums";
+import { CheckoutRecoveryStatus, CheckoutSessionStatus, InventoryMovementKind, InventoryReferenceType, OrderInventoryPolicy, OrderStatus } from "../../generated/prisma/enums";
+import { InventoryRepository } from "../inventory/inventory.repository";
 import type { Prisma } from "../../generated/prisma/client";
 import type { AbandonedCartSessionRecord } from "./abandoned-carts.mapper";
 import { AbandonedCartsRepository, type TransactionClient } from "./abandoned-carts.repository";
@@ -108,18 +109,35 @@ describe("AbandonedCartsService", () => {
     );
   });
 
-  it("creates a pending order, completes the session, and logs conversion", async () => {
+  it("creates a pending order, deducts the exact tracked variant through the ledger, assigns ownership, and completes the session", async () => {
     const harness = createHarness();
     const current = makeSession({ recoveryStatus: CheckoutRecoveryStatus.MANUAL });
     const updated = makeSession({ recoveryStatus: CheckoutRecoveryStatus.RECOVERED, status: CheckoutSessionStatus.COMPLETED });
     harness.repository.findById.mockResolvedValueOnce(current).mockResolvedValueOnce(updated);
     (harness.transaction.order.create as unknown as jest.Mock).mockResolvedValue({ id: "order-1" });
+    harness.inventoryRepository.deductStockForItems.mockResolvedValue([{ id: "movement-1", productId: "product-1", quantity: 1, variantId: "variant-1" }]);
 
     const result = await harness.service.convertAbandonedCart(current.id, { notes: "Recovered by phone" }, "admin-1", "ADMIN");
 
     expect(result).toMatchObject({ id: current.id, orderId: "order-1", recoveryStatus: CheckoutRecoveryStatus.RECOVERED });
     expect(harness.transaction.order.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ checkoutSessionId: current.id, status: OrderStatus.PENDING }),
+      data: expect.objectContaining({ checkoutSessionId: current.id, inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE, status: OrderStatus.PENDING }),
+    }));
+    expect(harness.inventoryRepository.deductStockForItems).toHaveBeenCalledWith(
+      expect.anything(),
+      [{ productId: "product-1", quantity: 1, variantId: "variant-1" }],
+      expect.objectContaining({
+        actorId: "admin-1",
+        inventoryEffectId: expect.any(String),
+        movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+        origin: "abandoned_cart_recovery",
+        referenceId: "order-1",
+        referenceType: InventoryReferenceType.ORDER,
+      }),
+    );
+    expect(harness.transaction.order.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { inventoryEffectId: expect.any(String), inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED },
+      where: { id: "order-1" },
     }));
     expect(harness.repository.updateRecoveryStatus).toHaveBeenCalledWith(
       current.id,
@@ -136,6 +154,20 @@ describe("AbandonedCartsService", () => {
       { orderId: "order-1" },
       expect.anything(),
     );
+  });
+
+  it("returns a conflict before recovery completion when inventory is insufficient", async () => {
+    const harness = createHarness();
+    const current = makeSession({ recoveryStatus: CheckoutRecoveryStatus.PENDING });
+    harness.repository.findById.mockResolvedValue(current);
+    (harness.transaction.order.create as unknown as jest.Mock).mockResolvedValue({ id: "order-1" });
+    harness.inventoryRepository.deductStockForItems.mockRejectedValue(new Error("Insufficient inventory for product-1/variant-1."));
+
+    await expect(harness.service.convertAbandonedCart(current.id, {}, "admin-1", "ADMIN"))
+      .rejects.toMatchObject({ status: 409 });
+
+    expect(harness.repository.updateRecoveryStatus).not.toHaveBeenCalled();
+    expect(harness.repository.appendHistoryEvent).not.toHaveBeenCalled();
   });
 
   it("requires a discard reason and rejects terminal discard transitions", async () => {
@@ -172,13 +204,18 @@ describe("AbandonedCartsService", () => {
 });
 
 function createHarness() {
-  const transaction = { cart: { update: jest.fn() }, checkoutSession: { updateMany: jest.fn() }, order: { create: jest.fn() }, orderItem: { createMany: jest.fn() }, orderPayment: { create: jest.fn() } } as unknown as TransactionClient;
+  const transaction = { cart: { update: jest.fn() }, checkoutSession: { updateMany: jest.fn() }, order: { create: jest.fn(), update: jest.fn() }, orderItem: { createMany: jest.fn() }, orderPayment: { create: jest.fn() } } as unknown as TransactionClient;
   const repository = { appendHistoryEvent: jest.fn(), findById: jest.fn(), findMany: jest.fn(), getSettings: jest.fn(), runInTransaction: jest.fn((callback: (client: TransactionClient) => Promise<unknown>) => callback(transaction)), updateRecoveryEmailSent: jest.fn(), updateRecoveryStatus: jest.fn(), updateSettings: jest.fn() };
-  return { repository, service: new AbandonedCartsService(repository as unknown as AbandonedCartsRepository), transaction };
+  const inventoryRepository = { deductStockForItems: jest.fn() };
+  const ServiceWithInventory = AbandonedCartsService as unknown as new (
+    abandonedCartsRepository: AbandonedCartsRepository,
+    inventoryRepository: InventoryRepository,
+  ) => AbandonedCartsService;
+  return { inventoryRepository, repository, service: new ServiceWithInventory(repository as unknown as AbandonedCartsRepository, inventoryRepository as unknown as InventoryRepository), transaction };
 }
 
 function makeSession(overrides: Partial<AbandonedCartSessionRecord> = {}): AbandonedCartSessionRecord {
-  return { abandonedAt: new Date("2026-09-03T10:00:00.000Z"), cartId: "cart-1", completedAt: null, createdAt: new Date("2026-09-01T10:00:00.000Z"), expiresAt: null, history: [], id: "session-1", lastActivityAt: new Date("2026-09-03T10:00:00.000Z"), lastEmailSentAt: null, recoveryExpiresAt: null, recoveryStatus: CheckoutRecoveryStatus.PENDING, recoveryTokenHash: null, snapshotData: { currency: "ARS", customer: { email: "customer@example.com", firstName: "Test", lastName: "Customer" }, items: [{ lineSubtotal: 125, name: "Whey", productId: "product-1", quantity: 1, unitPrice: 125 }], subtotal: 125, total: 125 }, status: CheckoutSessionStatus.ABANDONED, tokenHash: "session-hash", updatedAt: new Date("2026-09-03T10:00:00.000Z"), userId: null, user: null, order: null, cart: { id: "cart-1", status: "ABANDONED", userId: null, createdAt: new Date(), updatedAt: new Date(), user: null, items: [] }, ...overrides } as unknown as AbandonedCartSessionRecord;
+  return { abandonedAt: new Date("2026-09-03T10:00:00.000Z"), cartId: "cart-1", completedAt: null, createdAt: new Date("2026-09-01T10:00:00.000Z"), expiresAt: null, history: [], id: "session-1", lastActivityAt: new Date("2026-09-03T10:00:00.000Z"), lastEmailSentAt: null, recoveryExpiresAt: null, recoveryStatus: CheckoutRecoveryStatus.PENDING, recoveryTokenHash: null, snapshotData: { currency: "ARS", customer: { email: "customer@example.com", firstName: "Test", lastName: "Customer" }, items: [{ lineSubtotal: 125, name: "Whey", productId: "product-1", quantity: 1, unitPrice: 125, variantId: "variant-1" }], subtotal: 125, total: 125 }, status: CheckoutSessionStatus.ABANDONED, tokenHash: "session-hash", updatedAt: new Date("2026-09-03T10:00:00.000Z"), userId: null, user: null, order: null, cart: { id: "cart-1", status: "ABANDONED", userId: null, createdAt: new Date(), updatedAt: new Date(), user: null, items: [] }, ...overrides } as unknown as AbandonedCartSessionRecord;
 }
 
 function makeSettings(): Prisma.CartRecoverySettingsGetPayload<Record<string, never>> { return { id: "singleton", isActive: true, timing: "24hs", emailSubject: "Saved cart", emailHtmlBody: "<p>Saved</p>", emailPlainBody: "Saved", createdAt: new Date("2026-09-01T00:00:00.000Z"), updatedAt: new Date("2026-09-01T00:00:00.000Z") }; }

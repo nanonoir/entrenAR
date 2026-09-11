@@ -8,7 +8,7 @@ import { loadAppConfig } from "../src/config/app.config";
 import { AppModule } from "../src/app.module";
 import { configureHttpApplication } from "../src/app.setup";
 import { AuthService } from "../src/modules/auth/auth.service";
-import { CartStatus, CheckoutRecoveryStatus, CheckoutSessionStatus, Role } from "../src/generated/prisma/enums";
+import { CartStatus, CheckoutRecoveryStatus, CheckoutSessionStatus, InventoryMovementKind, InventoryOperation, InventoryReferenceType, OrderInventoryPolicy, Role, StockMode } from "../src/generated/prisma/enums";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 
 describe("admin abandoned carts API (e2e)", () => {
@@ -22,6 +22,7 @@ describe("admin abandoned carts API (e2e)", () => {
   let customerEmail = "";
   let password = "";
   let product: ProductFixture | undefined;
+  let originalVariantInventory: VariantInventoryFixture | null = null;
   let originalSettings: RecoverySettings | null = null;
   const sessionIds: string[] = [];
   const cartIds: string[] = [];
@@ -29,6 +30,7 @@ describe("admin abandoned carts API (e2e)", () => {
   let manualSessionId = "";
   let convertSessionId = "";
   let discardSessionId = "";
+  let insufficientSessionId = "";
 
   beforeAll(async () => {
     if (!process.env["DATABASE_URL"]) throw new Error("DATABASE_URL is required for abandoned-cart e2e tests.");
@@ -50,7 +52,7 @@ describe("admin abandoned carts API (e2e)", () => {
         name: true,
         variants: {
           orderBy: { id: "asc" },
-          select: { id: true, name: true, sku: true },
+          select: { id: true, name: true, quantity: true, sku: true, stockMode: true },
           take: 1,
         },
       },
@@ -58,6 +60,8 @@ describe("admin abandoned carts API (e2e)", () => {
     const variant = productRecord?.variants[0];
     if (!productRecord || !variant) throw new Error("The abandoned-cart e2e test requires a seeded product variant.");
     product = { id: productRecord.id, name: productRecord.name, sku: variant.sku, variantId: variant.id, variantName: variant.name };
+    originalVariantInventory = { quantity: variant.quantity, stockMode: variant.stockMode };
+    await database.productVariant.update({ data: { quantity: 1, stockMode: StockMode.TRACKED }, where: { id: variant.id } });
     originalSettings = await database.cartRecoverySettings.findUnique({ where: { id: "singleton" } });
 
     await database.user.createMany({ data: [
@@ -69,6 +73,7 @@ describe("admin abandoned carts API (e2e)", () => {
     manualSessionId = await createFixtureSession(database, "manual");
     convertSessionId = await createFixtureSession(database, "convert");
     discardSessionId = await createFixtureSession(database, "discard");
+    insufficientSessionId = await createFixtureSession(database, "insufficient");
 
     const authService = moduleFixture.get(AuthService);
     adminToken = (await authService.login(adminEmail, password)).accessToken;
@@ -88,6 +93,13 @@ describe("admin abandoned carts API (e2e)", () => {
         await prisma.checkoutSessionHistory.deleteMany({ where: { checkoutSessionId: { in: sessionIds } } });
         await prisma.checkoutSession.deleteMany({ where: { id: { in: sessionIds } } });
         await prisma.cart.deleteMany({ where: { id: { in: cartIds } } });
+        const fixture = product;
+        if (fixture && originalVariantInventory) {
+          await prisma.productVariant.update({
+            data: originalVariantInventory,
+            where: { id: fixture.variantId },
+          });
+        }
         await prisma.refreshToken.deleteMany({ where: { userId: { in: [adminId, customerId] } } });
         await prisma.user.deleteMany({ where: { id: { in: [adminId, customerId] } } });
         if (originalSettings) {
@@ -122,7 +134,7 @@ describe("admin abandoned carts API (e2e)", () => {
     const listResponse = await request(`/admin/abandoned-carts?${query.toString()}`, { token: adminToken });
     expect(listResponse.status).toBe(200);
     const list = await json<AbandonedCartListResponse>(listResponse);
-    expect(list.total).toBe(4);
+    expect(list.total).toBe(5);
     expect(list.items.map((item) => item.id)).toEqual(expect.arrayContaining(sessionIds));
 
     const detailResponse = await request(`/admin/abandoned-carts/${emailSessionId}`, { token: adminToken });
@@ -197,7 +209,25 @@ describe("admin abandoned carts API (e2e)", () => {
     const converted = await json<AbandonedCartActionResponse>(convertResponse);
     expect(converted.cart.recoveryStatus).toBe(CheckoutRecoveryStatus.RECOVERED);
     if (!converted.orderId) throw new Error("The conversion action did not return an order ID.");
-    await expect(prismaOrThrow().order.findUnique({ where: { id: converted.orderId } })).resolves.toEqual(expect.objectContaining({ checkoutSessionId: convertSessionId, status: "PENDING" }));
+    const convertedOrder = await prismaOrThrow().order.findUniqueOrThrow({ where: { id: converted.orderId } });
+    expect(convertedOrder).toEqual(expect.objectContaining({ checkoutSessionId: convertSessionId, inventoryEffectId: expect.any(String), inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED, status: "PENDING" }));
+    await expect(prismaOrThrow().inventoryHistory.findFirst({
+      where: {
+        inventoryEffectId: convertedOrder.inventoryEffectId,
+        movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+        operation: InventoryOperation.SUBTRACT,
+        referenceId: converted.orderId,
+        referenceType: InventoryReferenceType.ORDER,
+        variantId: currentProduct().variantId,
+      },
+    })).resolves.toEqual(expect.objectContaining({ delta: -1, productId: currentProduct().id, variantId: currentProduct().variantId }));
+
+    await expectError(await request(`/admin/abandoned-carts/${insufficientSessionId}/convert`, { body: {}, method: "POST", token: adminToken }), 409, "CONFLICT");
+    await expect(prismaOrThrow().order.findFirst({ where: { checkoutSessionId: insufficientSessionId } })).resolves.toBeNull();
+    await expect(prismaOrThrow().checkoutSession.findUniqueOrThrow({ where: { id: insufficientSessionId } })).resolves.toEqual(expect.objectContaining({
+      recoveryStatus: CheckoutRecoveryStatus.PENDING,
+      status: CheckoutSessionStatus.ABANDONED,
+    }));
 
     await expectError(await request(`/admin/abandoned-carts/${discardSessionId}/discard`, { body: {}, method: "POST", token: adminToken }), 400, "VALIDATION_ERROR");
     await expectError(await request(`/admin/abandoned-carts/${discardSessionId}/discard`, { body: { reason: "no" }, method: "POST", token: adminToken }), 400, "VALIDATION_ERROR");
@@ -294,6 +324,11 @@ interface ProductFixture {
   sku: string;
   variantId: string;
   variantName: string;
+}
+
+interface VariantInventoryFixture {
+  quantity: number | null;
+  stockMode: StockMode;
 }
 
 interface RecoverySettings {
