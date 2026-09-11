@@ -6,6 +6,9 @@ import { CartStatus } from "../../generated/prisma/enums";
 import {
   InventoryRepository,
   type CheckoutStockDeductionResult,
+  type InventoryLedgerContext,
+  type InventoryLedgerMovement,
+  type InventoryStockItem,
   type InventoryTarget,
 } from "../inventory/inventory.repository";
 import {
@@ -238,11 +241,31 @@ export class CheckoutRepository {
     return this.inventoryRepository.deductForCheckout(transaction, productId, variantId, quantity);
   }
 
+  async deductStockForItems(
+    transaction: TransactionClient,
+    items: readonly InventoryStockItem[],
+    context: InventoryLedgerContext,
+  ): Promise<InventoryLedgerMovement[]> {
+    if (!this.inventoryRepository) {
+      throw new Error("InventoryRepository is required for checkout stock deductions.");
+    }
+
+    return this.inventoryRepository.deductStockForItems(transaction, items, context);
+  }
+
   async createPendingOrder(
     transaction: TransactionClient,
     input: CheckoutOrderCreateInput,
   ): Promise<CheckoutOrderRecord> {
     return this.orderRepository.createPendingOrder(transaction, input);
+  }
+
+  async assignInventoryOwnership(
+    transaction: TransactionClient,
+    orderId: string,
+    inventoryEffectId: string,
+  ): Promise<void> {
+    return this.orderRepository.assignInventoryOwnership(transaction, orderId, inventoryEffectId);
   }
 
   async orderById(transaction: TransactionClient, orderId: string): Promise<CheckoutOrderRecord> {

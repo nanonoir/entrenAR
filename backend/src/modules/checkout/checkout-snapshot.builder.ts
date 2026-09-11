@@ -11,6 +11,7 @@ import { ERROR_CODE } from "../../common/errors/api-error.response";
 import type { Prisma } from "../../generated/prisma/client";
 import {
   OrderDeliveryType,
+  OrderInventoryPolicy,
   OrderStatus,
   PaymentStatus,
   Role,
@@ -187,6 +188,7 @@ export class CheckoutSnapshotBuilder {
         ...(line.variant ? { variantId: line.variant.id, variantName: line.variant.name } : {}),
         ...(line.weightGrams === null ? {} : { weightGrams: line.weightGrams }),
       })),
+      inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE,
       number: nextOrderNumber(now),
       payment: {
         amount: calculation.total,

@@ -1,5 +1,5 @@
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { OrderStatus, StockMode } from "../../generated/prisma/enums";
+import { InventoryMovementKind, InventoryReferenceType, OrderInventoryPolicy, OrderStatus } from "../../generated/prisma/enums";
 import { hashCheckoutRequest } from "./checkout.repository";
 import {
   checkoutUnitCatalogProduct,
@@ -48,11 +48,23 @@ describe("CheckoutService", () => {
       unitPrice: 75,
       variantId: "variant-1",
     }));
-    expect(harness.checkoutRepository.deductStockForCheckout).toHaveBeenCalledWith(
+    expect(orderInput).toEqual(expect.objectContaining({
+      inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE,
+    }));
+    expect(harness.checkoutRepository.deductStockForItems).toHaveBeenCalledWith(
       expect.anything(),
-      "product-1",
-      "variant-1",
-      1,
+      [{ productId: "product-1", quantity: 1, variantId: "variant-1" }],
+      expect.objectContaining({
+        inventoryEffectId: expect.any(String),
+        movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+        referenceId: "order-1",
+        referenceType: InventoryReferenceType.ORDER,
+      }),
+    );
+    expect(harness.checkoutRepository.assignInventoryOwnership).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      expect.any(String),
     );
     expect(harness.checkoutRepository.clearCart).toHaveBeenCalledWith(expect.anything(), "cart-1");
     expect(harness.checkoutRepository.completeSession).toHaveBeenCalledWith(expect.anything(), "session-1", expect.any(Date));
@@ -99,23 +111,13 @@ describe("CheckoutService", () => {
     await expect(harness.service.complete(input, harness.customerActor)).resolves.toEqual(storedResponse);
     expect(harness.checkoutRepository.claimIdempotency).not.toHaveBeenCalled();
     expect(harness.checkoutRepository.resolveCart).not.toHaveBeenCalled();
-    expect(harness.checkoutRepository.deductStockForCheckout).not.toHaveBeenCalled();
+    expect(harness.checkoutRepository.deductStockForItems).not.toHaveBeenCalled();
     expect(harness.checkoutRepository.clearCart).not.toHaveBeenCalled();
   });
 
-  it("stops before order creation when the conditional stock deduction loses the race", async () => {
+  it("rolls back completion before cart cleanup when the authoritative inventory deduction loses the race", async () => {
     const harness = createCheckoutUnitHarness();
-    harness.checkoutRepository.deductStockForCheckout.mockResolvedValue({
-      remainingQuantity: 0,
-      status: "out-of-stock",
-      target: {
-        kind: "variant",
-        productId: "product-1",
-        quantity: 0,
-        stockMode: StockMode.TRACKED,
-        variantId: "variant-1",
-      },
-    });
+    harness.checkoutRepository.deductStockForItems.mockRejectedValue(new Error("Insufficient inventory for product-1/variant-1."));
     const input = checkoutCompleteRequestSchema.parse({
       address: { city: "Buenos Aires", postalCode: "C1000", province: "Buenos Aires", street: "123 Test Street" },
       customer: { email: "customer@example.test", firstName: "Checkout", lastName: "Customer" },
@@ -127,9 +129,9 @@ describe("CheckoutService", () => {
     });
 
     await expectCheckoutCode(harness.service.complete(input, harness.customerActor), ERROR_CODE.OUT_OF_STOCK);
-    expect(harness.checkoutRepository.createPendingOrder).not.toHaveBeenCalled();
     expect(harness.checkoutRepository.clearCart).not.toHaveBeenCalled();
     expect(harness.checkoutRepository.completeIdempotency).not.toHaveBeenCalled();
+    expect(harness.checkoutRepository.assignInventoryOwnership).not.toHaveBeenCalled();
   });
 
   it("rejects completion when the server quote snapshot no longer matches current catalog values", async () => {
@@ -157,7 +159,7 @@ describe("CheckoutService", () => {
     });
 
     await expectCheckoutCode(harness.service.complete(completeInput, harness.customerActor), ERROR_CODE.PRICE_CHANGED);
-    expect(harness.checkoutRepository.deductStockForCheckout).not.toHaveBeenCalled();
+    expect(harness.checkoutRepository.deductStockForItems).not.toHaveBeenCalled();
     expect(harness.checkoutRepository.createPendingOrder).not.toHaveBeenCalled();
   });
 });

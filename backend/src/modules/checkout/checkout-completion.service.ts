@@ -5,10 +5,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { Role } from "../../generated/prisma/enums";
-import { CHECKOUT_STOCK_DEDUCTION_STATUS } from "../inventory/inventory.repository";
+import { InventoryMovementKind, InventoryReferenceType, Role } from "../../generated/prisma/enums";
+import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { toCheckoutCompleteResponse } from "./checkout.mapper";
 import {
   checkoutCompleteResponseSchema,
@@ -85,21 +86,6 @@ export class CheckoutCompletionService {
       const calculation = await this.quoteService.calculateQuote(transaction, cart, input, actor, now, true);
       this.assertQuoteContinuity(resolution.session, input.quoteId, calculation, now);
 
-      for (const line of calculation.lines) {
-        const deduction = await this.checkoutRepository.deductStockForCheckout(
-          transaction,
-          line.product.id,
-          line.variant?.id,
-          line.quantity,
-        );
-        if (deduction.status === CHECKOUT_STOCK_DEDUCTION_STATUS.NOT_FOUND) {
-          throw line.variant ? this.variantNotFound() : this.productNotFound();
-        }
-        if (deduction.status === CHECKOUT_STOCK_DEDUCTION_STATUS.OUT_OF_STOCK) {
-          throw this.outOfStock();
-        }
-      }
-
       if (calculation.couponCalculation) {
         const usageApplied = await this.checkoutRepository.incrementCouponUsage(
           transaction,
@@ -117,6 +103,32 @@ export class CheckoutCompletionService {
         now,
       );
       const order = await this.checkoutRepository.createPendingOrder(transaction, orderInput);
+      const inventoryEffectId = randomUUID();
+
+      try {
+        const movements = await this.checkoutRepository.deductStockForItems(
+          transaction,
+          calculation.lines.map((line) => ({
+            productId: line.product.id,
+            quantity: line.quantity,
+            ...(line.variant ? { variantId: line.variant.id } : {}),
+          })),
+          {
+            inventoryEffectId,
+            movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+            operationId: randomUUID(),
+            origin: INVENTORY_ORIGIN.CHECKOUT,
+            reason: `Checkout order ${order.number} placement`,
+            referenceId: order.id,
+            referenceType: InventoryReferenceType.ORDER,
+          },
+        );
+        if (movements.length > 0) {
+          await this.checkoutRepository.assignInventoryOwnership(transaction, order.id, inventoryEffectId);
+        }
+      } catch {
+        throw this.outOfStock();
+      }
 
       if (calculation.couponCalculation) {
         await this.checkoutRepository.createCouponRedemption(transaction, {

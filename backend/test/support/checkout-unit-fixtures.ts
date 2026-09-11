@@ -56,6 +56,8 @@ export function createCheckoutUnitHarness(): CheckoutUnitHarness {
     completeSession: jest.fn(),
     createCouponRedemption: jest.fn(),
     createPendingOrder: jest.fn(),
+    assignInventoryOwnership: jest.fn(),
+    deductStockForItems: jest.fn(),
     deductStockForCheckout: jest.fn(),
     idempotencyByOwnerAndKey: jest.fn(),
     incrementCouponUsage: jest.fn(),
@@ -118,6 +120,10 @@ export function createCheckoutUnitHarness(): CheckoutUnitHarness {
       variantId: "variant-1",
     },
   });
+  checkoutRepository.deductStockForItems.mockResolvedValue([
+    { id: "inventory-movement-1", productId: "product-1", quantity: 1, variantId: "variant-1" },
+  ]);
+  checkoutRepository.assignInventoryOwnership.mockResolvedValue();
   checkoutRepository.incrementCouponUsage.mockResolvedValue(true);
   checkoutRepository.createCouponRedemption.mockResolvedValue();
   checkoutRepository.clearCart.mockResolvedValue();
