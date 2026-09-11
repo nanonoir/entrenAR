@@ -75,8 +75,6 @@ describe("sales schemas", () => {
         quantity: 2,
         unitPrice: 12.5,
       }],
-      subtotal: 25,
-      total: 25,
     });
 
     expect(parsed).toMatchObject({
@@ -89,8 +87,7 @@ describe("sales schemas", () => {
     });
     expect(parsed.items).toEqual([expect.objectContaining({
       attributes: {},
-      lineSubtotal: 25,
-      productId: "product-1",
+       productId: "product-1",
       productName: "Product one",
       quantity: 2,
       sku: "product-1",

@@ -114,6 +114,8 @@ async function runApiScenario(): Promise<void> {
 
   const createCall = calls.find((call) => call.method === "POST" && call.path === "/admin/sales");
   assert(isRecord(createCall?.body) && createCall.body.paymentStatus === "PAID", "Manual sale payload was not normalized for the API.");
+  assert(isRecord(createCall?.body) && !("subtotal" in createCall.body) && !("total" in createCall.body), "Manual sale payload serialized derived order totals.");
+  assert(isRecord(createCall?.body) && Array.isArray(createCall.body.items) && !createCall.body.items.some((item) => isRecord(item) && "lineSubtotal" in item), "Manual sale payload serialized derived line totals.");
 }
 
 async function runSchemaScenario(): Promise<void> {

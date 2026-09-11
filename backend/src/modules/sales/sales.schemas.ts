@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeMoney } from "../../common/money/money.utils";
 import { OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 
 export const SALE_COMMAND = { CONFIRM: "CONFIRM", PACK: "PACK", UNPACK: "UNPACK", SHIP: "SHIP", DELIVER: "DELIVER", CANCEL: "CANCEL", REOPEN: "REOPEN", ARCHIVE: "ARCHIVE", UNARCHIVE: "UNARCHIVE", ADD_NOTE: "ADD_NOTE", MANUAL_CREATE: "MANUAL_CREATE", CONVERT_ORDER_TO_SALE: "CONVERT_ORDER_TO_SALE" } as const;
@@ -9,7 +10,7 @@ export type SaleSortBy = (typeof SALE_SORT_BY)[keyof typeof SALE_SORT_BY];
 export const salesIdentifierSchema = z.string().trim().min(1).max(128);
 const id = salesIdentifierSchema;
 const text = (max = 500) => z.string().trim().min(1).max(max);
-const money = z.number().finite().nonnegative();
+const money = z.number().finite().nonnegative().refine(isSupportedMoney, "Money must have at most two decimal places.");
 const jsonObject = z.record(z.string(), z.unknown());
 const boolQuery = z.preprocess((value) => value === "true" ? true : value === "false" ? false : value, z.boolean());
 const enumQuery = <const T extends readonly [string, ...string[]]>(values: T) => z.preprocess((value) => typeof value === "string" ? value.toUpperCase() : value, z.enum(values));
@@ -55,13 +56,13 @@ export type AddSaleNote = z.output<typeof addSaleNoteSchema>;
 
 const customer = z.object({ dni: text(80).optional(), email: z.email(), firstName: text(160), lastName: text(160), phone: text(80).optional() }).strict();
 const item = z.object({
-  attributes: jsonObject.default({}), compareAtPrice: money.optional(), lineSubtotal: money.optional(), name: text(240).optional(), productId: id,
+  attributes: jsonObject.default({}), compareAtPrice: money.optional(), name: text(240).optional(), productId: id,
   productName: text(240).optional(), quantity: z.number().int().positive(), sku: text(160).optional(), snapshot: jsonObject.default({}), unitPrice: money,
   variantId: id.optional(), variantName: text(160).optional(), weightGrams: z.number().int().nonnegative().optional(),
 }).strict().superRefine((value, context) => {
   if (!value.productName && !value.name) context.addIssue({ code: z.ZodIssueCode.custom, message: "Each sale item requires productName.", path: ["productName"] });
 }).transform((value) => ({
-  attributes: value.attributes, ...(value.compareAtPrice === undefined ? {} : { compareAtPrice: value.compareAtPrice }), lineSubtotal: value.lineSubtotal ?? value.quantity * value.unitPrice,
+  attributes: value.attributes, ...(value.compareAtPrice === undefined ? {} : { compareAtPrice: value.compareAtPrice }),
   productId: value.productId, productName: value.productName ?? value.name!, quantity: value.quantity, sku: value.sku ?? value.productId, snapshot: value.snapshot, unitPrice: value.unitPrice,
   ...(value.variantId === undefined ? {} : { variantId: value.variantId }), ...(value.variantName === undefined ? {} : { variantName: value.variantName }), ...(value.weightGrams === undefined ? {} : { weightGrams: value.weightGrams }),
 }));
@@ -69,7 +70,7 @@ const item = z.object({
 export const createManualSaleSchema = z.object({
   currency: text(8).default("ARS"), customer, customerId: id.optional(), deliverySnapshot: jsonObject.default({}), deliveryType: z.enum([OrderDeliveryType.SHIPPING, OrderDeliveryType.PICKUP]).default(OrderDeliveryType.SHIPPING),
   discountAmount: money.default(0), discountSnapshot: jsonObject.default({}), internalNotes: text(2_000).optional(), items: z.array(item).min(1).max(500), paymentMethodId: id.default("manual"),
-  paymentMethodSnapshot: jsonObject.default({}), paymentOptionId: id.optional(), paymentStatus: paymentStatus.default(PaymentStatus.PENDING), shippingAddress: jsonObject.optional(), shippingCost: money.default(0), source: text(120).optional(), subtotal: money, total: money,
+  paymentMethodSnapshot: jsonObject.default({}), paymentOptionId: id.optional(), paymentStatus: paymentStatus.default(PaymentStatus.PENDING), shippingAddress: jsonObject.optional(), shippingCost: money.default(0), source: text(120).optional(),
 }).strict();
 export type CreateManualSale = z.output<typeof createManualSaleSchema>;
 
@@ -90,3 +91,12 @@ export type SalesCommand =
   | { payload: ReopenSale; type: typeof SALE_COMMAND.REOPEN } | { payload: ArchiveSale; type: typeof SALE_COMMAND.ARCHIVE } | { payload: UnarchiveSale; type: typeof SALE_COMMAND.UNARCHIVE }
   | { payload: AddSaleNote; type: typeof SALE_COMMAND.ADD_NOTE } | { payload: CreateManualSale; type: typeof SALE_COMMAND.MANUAL_CREATE } | { payload: ConvertOrderToSale; type: typeof SALE_COMMAND.CONVERT_ORDER_TO_SALE };
 export type ParsedSalesCommand = z.output<typeof salesCommandSchema>;
+
+function isSupportedMoney(value: number): boolean {
+  try {
+    normalizeMoney(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
