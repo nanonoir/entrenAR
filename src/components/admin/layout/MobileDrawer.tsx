@@ -9,6 +9,7 @@ import { adminFooterActions, adminNavGroups } from "@/lib/data/admin/navigation"
 import type { AdminNavEntry } from "@/lib/data/admin/navigation";
 import { isAdminAccordionActive, isAdminAccordionChildActive, isAdminPathActive } from "@/components/admin/layout/admin-nav-matching";
 import { cn } from "@/lib/utils";
+import { useAdminAuthStore } from "@/stores/admin-auth-store";
 
 type MobileAccordionEntryProps = {
   entry: Extract<AdminNavEntry, { type: "accordion" }>;
@@ -90,6 +91,7 @@ function MobileAccordionEntry({ entry, pathname, onNavigate }: MobileAccordionEn
 
 export function AdminMobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const logout = useAdminAuthStore((state) => state.logout);
 
   return (
     <Drawer open={open} onClose={onClose} title="Menú admin" side="right" className="bg-white">
@@ -132,6 +134,9 @@ export function AdminMobileDrawer({ open, onClose }: { open: boolean; onClose: (
           <div className="grid gap-1">
             {adminFooterActions.map((item) => {
               const Icon = item.icon;
+              if (item.href === "#cerrar-sesion") {
+                return <button key={item.href} type="button" onClick={() => { onClose(); void logout(); }} className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"><Icon aria-hidden size={18} />{item.label}</button>;
+              }
               return (
                 <Link
                   key={item.href}

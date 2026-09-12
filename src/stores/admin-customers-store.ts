@@ -10,6 +10,7 @@ import type { Customer as LegacyCustomer, CustomerAddress } from "@/lib/data/adm
 import { normalizeOptionalField, type CustomerFormValues } from "@/schemas/admin/customer-schema";
 import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { useAdminToastStore } from "@/stores/admin-toast-store";
+import { getAdminSessionGeneration } from "@/lib/api/admin/auth/admin-session-generation";
 
 export type CustomerMutationResult = RepositoryCustomerMutationResult extends infer Result ? Result extends { ok: true; customerId: string } ? { ok: true; customerId: Result["customerId"] } : Result : never;
 
@@ -212,14 +213,15 @@ export function createAdminCustomersStore(options: AdminCustomersStoreOptions = 
       rollback?: () => void,
     ): Promise<void> => {
       const { token, version } = beginOperation(key);
+      const sessionGeneration = getAdminSessionGeneration();
       try {
         const result = await runWithFallback(operation);
-        if (isCurrentOperation(key, version)) {
+        if (sessionGeneration === getAdminSessionGeneration() && isCurrentOperation(key, version)) {
           commit(result);
           set({ error: null });
         }
       } catch (error) {
-        if (isCurrentOperation(key, version)) {
+        if (sessionGeneration === getAdminSessionGeneration() && isCurrentOperation(key, version)) {
           rollback?.();
           const message = toStoreError(error);
           set({ error: message });
