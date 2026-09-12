@@ -5,6 +5,7 @@ import { loadAppConfig, NODE_ENV } from "./app.config";
 
 const validEnvironment = {
   DATABASE_URL: "postgresql://entrenar:password@127.0.0.1:5432/entrenar?schema=public",
+  ADMIN_GATE_SIGNING_SECRET: "gate-secret-with-at-least-thirty-two-characters",
   JWT_ACCESS_SECRET: "access-secret-with-at-least-thirty-two-characters",
   JWT_REFRESH_SECRET: "refresh-secret-with-at-least-thirty-two-characters",
 };
@@ -16,6 +17,10 @@ describe("app.config", () => {
     assert.equal(config.nodeEnv, NODE_ENV.DEVELOPMENT);
     assert.equal(config.port, 3001);
     assert.equal(config.throttleLimit, 100);
+    assert.equal(config.jwtAdminAccessTtlSeconds, 900);
+    assert.equal(config.jwtAdminRefreshTtlSeconds, 1_800);
+    assert.equal(config.refreshConcurrencyToleranceSeconds, 5);
+    assert.equal(config.adminGateSigningSecret, validEnvironment.ADMIN_GATE_SIGNING_SECRET);
     assert.deepEqual(config.corsOrigins, ["http://localhost:3000"]);
   });
 

@@ -16,6 +16,7 @@ import {
   type PublicUser,
 } from "../users/users.service";
 import { passwordSchema } from "./auth.schemas";
+import { RefreshSessionType } from "../../generated/prisma/enums";
 import {
   NoopResetDelivery,
   RESET_DELIVERY_PORT,
@@ -30,10 +31,14 @@ const PASSWORD_RESET_HASH_CONTEXT = "password-reset-token";
 export const PASSWORD_RESET_TOKEN_TTL_SECONDS = 900;
 
 export const REFRESH_COOKIE_NAME = "entrenar_refresh";
+export const ADMIN_REFRESH_COOKIE_NAME = "entrenar_admin_refresh";
 
 export interface AuthSession {
   accessToken: string;
+  accessTokenExpiresAt: Date;
+  idleExpiresAt?: Date;
   refreshToken: string;
+  sessionType: RefreshSessionType;
   user: PublicUser;
 }
 
@@ -60,10 +65,10 @@ export class AuthService {
     private readonly resetDelivery: ResetDeliveryPort = new NoopResetDelivery(),
   ) {}
 
-  getRefreshCookieOptions(): RefreshCookieOptions {
+  getRefreshCookieOptions(sessionType: RefreshSessionType = RefreshSessionType.CUSTOMER): RefreshCookieOptions {
     return {
       httpOnly: true,
-      maxAge: this.configService.getOrThrow("jwtRefreshTtlSeconds", { infer: true }) * 1_000,
+      maxAge: this.refreshTtlSeconds(sessionType) * 1_000,
       path: "/api/v1/auth",
       sameSite: "lax",
       secure: this.configService.getOrThrow("nodeEnv", { infer: true }) === NODE_ENV.PRODUCTION,
@@ -83,11 +88,21 @@ export class AuthService {
   async login(email: string, password: string): Promise<AuthSession> {
     const user = await this.usersService.findByEmail(email);
 
-    if (!user || !(await this.usersService.verifyPassword(password, user.passwordHash))) {
+    if (!user || user.role !== "CUSTOMER" || !(await this.usersService.verifyPassword(password, user.passwordHash))) {
       throw this.invalidCredentials();
     }
 
-    return this.createSession(user);
+    return this.createSession(user, RefreshSessionType.CUSTOMER);
+  }
+
+  async loginAdmin(email: string, password: string): Promise<AuthSession> {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user || user.role !== "ADMIN" || !(await this.usersService.verifyPassword(password, user.passwordHash))) {
+      throw this.invalidCredentials();
+    }
+
+    return this.createSession(user, RefreshSessionType.ADMIN);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<AuthSuccess> {
@@ -184,7 +199,7 @@ export class AuthService {
     return { ok: true };
   }
 
-  async logout(rawRefreshToken: string | undefined): Promise<void> {
+  async logout(rawRefreshToken: string | undefined, sessionType: RefreshSessionType = RefreshSessionType.CUSTOMER): Promise<void> {
     if (!rawRefreshToken) {
       return;
     }
@@ -193,12 +208,13 @@ export class AuthService {
       data: { revokedAt: new Date() },
       where: {
         revokedAt: null,
+        sessionType,
         tokenHash: this.hashRefreshToken(rawRefreshToken),
       },
     });
   }
 
-  async refresh(rawRefreshToken: string | undefined): Promise<AuthSession> {
+  async refresh(rawRefreshToken: string | undefined, sessionType: RefreshSessionType = RefreshSessionType.CUSTOMER): Promise<AuthSession> {
     if (!rawRefreshToken) {
       throw this.unauthorized();
     }
@@ -215,17 +231,47 @@ export class AuthService {
 
     const now = new Date();
 
-    if (storedToken.revokedAt || storedToken.expiresAt <= now) {
+    const storedSessionType = (storedToken as { sessionType?: RefreshSessionType }).sessionType ?? RefreshSessionType.CUSTOMER;
+    const successorTokenHash = (storedToken as { successorTokenHash?: string | null }).successorTokenHash;
+    const successorIssuedAt = (storedToken as { successorIssuedAt?: Date | null }).successorIssuedAt;
+
+    if (storedSessionType !== sessionType) {
+      throw this.unauthorized();
+    }
+
+    if (storedToken.revokedAt) {
+      if (successorTokenHash && successorIssuedAt && this.isWithinConcurrencyTolerance(storedToken.revokedAt, now)) {
+        const successorToken = this.createSuccessorRefreshToken(rawRefreshToken, successorIssuedAt);
+        if (this.hashRefreshToken(successorToken) === successorTokenHash) {
+          const accessToken = await this.createAccessToken(storedToken.user, sessionType);
+          return this.createSessionResponse(
+            storedToken.user,
+            successorToken,
+            sessionType,
+            successorIssuedAt,
+            accessToken,
+          );
+        }
+      }
+
       await this.prisma.refreshToken.updateMany({
         data: { revokedAt: now },
-        where: { revokedAt: null, userId: storedToken.userId },
+        where: { revokedAt: null, sessionType, userId: storedToken.userId },
       });
       throw this.unauthorized();
     }
 
-    const refreshToken = this.createRawRefreshToken();
-    const expiresAt = this.refreshExpiresAt(now);
-    const accessToken = await this.createAccessToken(storedToken.user);
+    if (storedToken.expiresAt <= now) {
+      await this.prisma.refreshToken.updateMany({
+        data: { revokedAt: now },
+        where: { revokedAt: null, sessionType, userId: storedToken.userId },
+      });
+      throw this.unauthorized();
+    }
+
+    const refreshToken = this.createSuccessorRefreshToken(rawRefreshToken, now);
+    const expiresAt = this.refreshExpiresAt(now, sessionType);
+    const accessToken = await this.createAccessToken(storedToken.user, sessionType);
     const rotated = await this.prisma.$transaction(async (transaction) => {
       const revocation = await transaction.refreshToken.updateMany({
         data: { revokedAt: now },
@@ -233,6 +279,7 @@ export class AuthService {
           expiresAt: { gt: now },
           id: storedToken.id,
           revokedAt: null,
+          sessionType,
         },
       });
 
@@ -240,58 +287,82 @@ export class AuthService {
         throw this.unauthorized();
       }
 
-      return transaction.refreshToken.create({
+      const successor = await transaction.refreshToken.create({
         data: {
           expiresAt,
+          sessionType,
           tokenHash: this.hashRefreshToken(refreshToken),
           userId: storedToken.userId,
         },
       });
+
+      await transaction.refreshToken.update({
+        data: { successorIssuedAt: now, successorTokenHash: this.hashRefreshToken(refreshToken) },
+        where: { id: storedToken.id },
+      });
+
+      return successor;
     });
 
     void rotated;
 
-    return {
-      accessToken,
-      refreshToken,
-      user: this.toPublicUser(storedToken.user),
-    };
+    return this.createSessionResponse(storedToken.user, refreshToken, sessionType, now, accessToken);
   }
 
   async register(email: string, password: string): Promise<AuthSession> {
     const user = await this.usersService.createCustomer(email, password);
 
-    return this.createSession(user);
+    return this.createSession(user, RefreshSessionType.CUSTOMER);
   }
 
-  private async createAccessToken(user: AuthUser): Promise<string> {
+  private async createAccessToken(user: AuthUser, sessionType: RefreshSessionType): Promise<string> {
     const payload: AccessTokenPayload = {
       role: user.role,
+      sessionType,
       userId: user.id,
     };
 
     return this.jwtService.signAsync(payload, {
-      expiresIn: this.configService.getOrThrow("jwtAccessTtlSeconds", { infer: true }),
+      expiresIn: this.accessTtlSeconds(sessionType),
     });
   }
 
-  private async createSession(user: AuthUser): Promise<AuthSession> {
+  private async createSession(user: AuthUser, sessionType: RefreshSessionType): Promise<AuthSession> {
     const now = new Date();
     const refreshToken = this.createRawRefreshToken();
     const [accessToken] = await Promise.all([
-      this.createAccessToken(user),
+      this.createAccessToken(user, sessionType),
       this.prisma.refreshToken.create({
         data: {
           expiresAt: this.refreshExpiresAt(now),
+          sessionType,
           tokenHash: this.hashRefreshToken(refreshToken),
           userId: user.id,
         },
       }),
     ]);
 
+    return this.createSessionResponse(user, refreshToken, sessionType, now, accessToken);
+  }
+
+  private createSessionResponse(
+    user: AuthUser,
+    refreshToken: string,
+    sessionType: RefreshSessionType,
+    issuedAt: Date,
+    accessToken: string,
+  ): AuthSession {
+    const accessTtlSeconds = this.accessTtlSeconds(sessionType);
+    const idleExpiresAt = sessionType === RefreshSessionType.ADMIN
+      ? new Date(issuedAt.getTime() + (this.configService.getOrThrow("jwtAdminRefreshTtlSeconds", { infer: true }) ?? 1_800) * 1_000)
+      : undefined;
+
     return {
       accessToken,
+      accessTokenExpiresAt: new Date(issuedAt.getTime() + accessTtlSeconds * 1_000),
+      ...(idleExpiresAt ? { idleExpiresAt } : {}),
       refreshToken,
+      sessionType,
       user: this.toPublicUser(user),
     };
   }
@@ -308,6 +379,13 @@ export class AuthService {
     return this.hashToken(token, "refresh-token");
   }
 
+  private createSuccessorRefreshToken(previousToken: string, issuedAt: Date): string {
+    return createHmac(
+      "sha256",
+      `${this.configService.getOrThrow("jwtRefreshSecret", { infer: true })}:refresh-successor`,
+    ).update(`${previousToken}:${issuedAt.toISOString()}`).digest("base64url");
+  }
+
   private hashPasswordResetToken(token: string): string {
     return this.hashToken(token, PASSWORD_RESET_HASH_CONTEXT);
   }
@@ -319,10 +397,29 @@ export class AuthService {
     ).update(token).digest("hex");
   }
 
-  private refreshExpiresAt(now: Date): Date {
+  private refreshExpiresAt(now: Date, sessionType: RefreshSessionType = RefreshSessionType.CUSTOMER): Date {
     return new Date(
-      now.getTime() + this.configService.getOrThrow("jwtRefreshTtlSeconds", { infer: true }) * 1_000,
+      now.getTime() + (sessionType === RefreshSessionType.ADMIN
+        ? (this.configService.getOrThrow("jwtAdminRefreshTtlSeconds", { infer: true }) ?? 1_800)
+        : this.configService.getOrThrow("jwtRefreshTtlSeconds", { infer: true })) * 1_000,
     );
+  }
+
+  private accessTtlSeconds(sessionType: RefreshSessionType): number {
+    return sessionType === RefreshSessionType.ADMIN
+      ? (this.configService.getOrThrow("jwtAdminAccessTtlSeconds", { infer: true }) ?? 900)
+      : this.configService.getOrThrow("jwtAccessTtlSeconds", { infer: true });
+  }
+
+  private refreshTtlSeconds(sessionType: RefreshSessionType): number {
+    return sessionType === RefreshSessionType.ADMIN
+      ? (this.configService.getOrThrow("jwtAdminRefreshTtlSeconds", { infer: true }) ?? 1_800)
+      : this.configService.getOrThrow("jwtRefreshTtlSeconds", { infer: true });
+  }
+
+  private isWithinConcurrencyTolerance(revokedAt: Date, now: Date): boolean {
+    const tolerance = (this.configService.getOrThrow("refreshConcurrencyToleranceSeconds", { infer: true }) ?? 5) * 1_000;
+    return now.getTime() - revokedAt.getTime() <= tolerance;
   }
 
   private passwordResetExpiresAt(now: Date): Date {

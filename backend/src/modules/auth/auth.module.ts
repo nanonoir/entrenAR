@@ -5,12 +5,13 @@ import { JwtModule } from "@nestjs/jwt";
 import type { AppConfig } from "../../config/app.config";
 import { UsersModule } from "../users/users.module";
 import { AdminAuthController } from "./admin-auth.controller";
+import { AdminAuthLifecycleController } from "./admin-auth-lifecycle.controller";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { NoopResetDelivery, RESET_DELIVERY_PORT } from "./reset-delivery.port";
 
 @Module({
-  controllers: [AdminAuthController, AuthController],
+  controllers: [AdminAuthController, AdminAuthLifecycleController, AuthController],
   exports: [JwtModule],
   imports: [
     ConfigModule,

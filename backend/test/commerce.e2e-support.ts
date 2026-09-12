@@ -59,7 +59,7 @@ export function createCommerceE2eTestContext(): CommerceE2eTestContext {
       records = await createFixtures(prismaOrThrow());
       const service = authServiceOrThrow();
       const [adminSession, customerSession] = await Promise.all([
-        service.login(records.admin.email, records.admin.password),
+        service.loginAdmin(records.admin.email, records.admin.password),
         service.login(records.customer.email, records.customer.password),
       ]);
 

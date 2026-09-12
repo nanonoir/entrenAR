@@ -6,6 +6,7 @@ import { JwtAuthenticationGuard } from "./jwt-authentication.guard";
 import { OPTIONAL_AUTH_METADATA_KEY } from "./optional-auth.decorator";
 import { IS_PUBLIC_KEY } from "./public.decorator";
 import { ROLE } from "../guards/roles.guard";
+import { RefreshSessionType } from "../../generated/prisma/enums";
 
 describe("JwtAuthenticationGuard", () => {
   it("rejects missing or malformed bearer credentials", async () => {
@@ -16,14 +17,14 @@ describe("JwtAuthenticationGuard", () => {
   });
 
   it("validates the token payload and attaches trusted identity to the request", async () => {
-    const jwtService = { verifyAsync: jest.fn().mockResolvedValue({ role: ROLE.ADMIN, userId: "admin-1" }) };
+    const jwtService = { verifyAsync: jest.fn().mockResolvedValue({ role: ROLE.ADMIN, sessionType: RefreshSessionType.ADMIN, userId: "admin-1" }) };
     const guard = createGuard(jwtService);
     const request: RequestWithAuthorization = { headers: { authorization: "Bearer access-token" } };
 
     await expect(guard.canActivate(createContext(request))).resolves.toBe(true);
-    expect(request.user).toEqual({ role: ROLE.ADMIN, userId: "admin-1" });
+    expect(request.user).toEqual({ role: ROLE.ADMIN, sessionType: RefreshSessionType.ADMIN, userId: "admin-1" });
 
-    jwtService.verifyAsync.mockResolvedValue({ role: "UNKNOWN", userId: "admin-1" });
+    jwtService.verifyAsync.mockResolvedValue({ role: "UNKNOWN", sessionType: RefreshSessionType.ADMIN, userId: "admin-1" });
     await expect(guard.canActivate(createContext({ headers: { authorization: "Bearer invalid-payload" } })))
       .rejects.toBeInstanceOf(UnauthorizedException);
   });

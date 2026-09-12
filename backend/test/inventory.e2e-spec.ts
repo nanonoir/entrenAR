@@ -47,7 +47,7 @@ describe("inventory administration (e2e)", () => {
       },
     });
 
-    accessToken = (await moduleFixture.get(AuthService).login(email, password)).accessToken;
+    accessToken = (await moduleFixture.get(AuthService).loginAdmin(email, password)).accessToken;
     app = moduleFixture.createNestApplication({ bodyParser: false });
     configureHttpApplication(app, {
       bodyLimitBytes: 104_857,

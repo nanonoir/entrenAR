@@ -12,6 +12,11 @@ enum Role {
   ADMIN
 }
 
+enum RefreshSessionType {
+  CUSTOMER
+  ADMIN
+}
+
 enum CatalogVisibility {
   VISIBLE
   HIDDEN
@@ -275,15 +280,18 @@ model CustomerAddress {
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  userId    String
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String             @id @default(cuid())
+  tokenHash            String             @unique
+  userId               String
+  sessionType          RefreshSessionType @default(CUSTOMER)
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  successorTokenHash   String?
+  successorIssuedAt    DateTime?
+  createdAt            DateTime           @default(now())
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId, sessionType])
   @@index([expiresAt])
 }
 
