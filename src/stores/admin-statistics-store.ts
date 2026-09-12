@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { statisticsRepository } from "@/lib/api/config";
 import { statisticsQuerySchema, toValidationIssues } from "@/lib/api/admin/statistics/contracts";
 import type { StatisticsRepository } from "@/lib/api/admin/statistics/repository";
+import { getAdminSessionGeneration } from "@/lib/api/admin/auth/admin-session-generation";
 import {
   STATISTICS_PERIOD,
   StatisticsApiError,
@@ -85,17 +86,18 @@ export function createAdminStatisticsStore(options: AdminStatisticsStoreOptions 
       fetcher: (query: ReturnType<typeof buildQuery>) => Promise<StatisticsReportDataMap[TKey]>,
     ): Promise<StatisticsReportDataMap[TKey] | null> => {
       const version = nextVersion(key);
+      const sessionGeneration = getAdminSessionGeneration();
       set(updateReport(key, { data: null, error: null, isLoading: true }));
 
       try {
         const result = await fetcher(buildQuery(get().period, get().customRange));
-        if (isCurrentRequest(key, version)) {
+        if (sessionGeneration === getAdminSessionGeneration() && isCurrentRequest(key, version)) {
           set(updateReport(key, { data: result, error: null, isLoading: false }));
         }
         return result;
       } catch (error) {
         const normalizedError = toStatisticsStoreError(error);
-        if (isCurrentRequest(key, version)) {
+        if (sessionGeneration === getAdminSessionGeneration() && isCurrentRequest(key, version)) {
           set(updateReport(key, { data: null, error: normalizedError, isLoading: false }));
         }
         return null;

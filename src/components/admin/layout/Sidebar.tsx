@@ -9,6 +9,7 @@ import { adminFooterActions, adminNavGroups } from "@/lib/data/admin/navigation"
 import type { AdminNavEntry } from "@/lib/data/admin/navigation";
 import { isAdminAccordionActive, isAdminAccordionChildActive, isAdminPathActive } from "@/components/admin/layout/admin-nav-matching";
 import { cn } from "@/lib/utils";
+import { useAdminAuthStore } from "@/stores/admin-auth-store";
 
 type AccordionEntryProps = {
   entry: Extract<AdminNavEntry, { type: "accordion" }>;
@@ -111,6 +112,7 @@ function AccordionEntry({ entry, pathname, collapsed }: AccordionEntryProps) {
 export function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const logout = useAdminAuthStore((state) => state.logout);
 
   return (
     <aside
@@ -173,6 +175,9 @@ export function AdminSidebar() {
         <div className="grid gap-1">
           {adminFooterActions.map((item) => {
             const Icon = item.icon;
+            if (item.href === "#cerrar-sesion") {
+              return <button key={item.href} type="button" onClick={() => void logout()} title={collapsed ? item.label : undefined} className={cn("flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950", collapsed && "justify-center px-0")}><Icon aria-hidden size={18} /><span className={cn(collapsed && "sr-only")}>{item.label}</span></button>;
+            }
             return (
               <Link
                 key={item.href}

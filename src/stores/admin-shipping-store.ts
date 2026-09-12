@@ -45,6 +45,11 @@ type CommerceShippingSource = ReturnType<typeof getCommerceRepository>["source"]
 let operationSequence = 0;
 const mockOnlyPickupPoints = new Map<string, CommercePickupPoint>();
 
+export function resetAdminShippingState(): void {
+  operationSequence += 1;
+  mockOnlyPickupPoints.clear();
+}
+
 const configuredRepository = getCommerceRepository();
 const initialSource = configuredRepository.source;
 const initialProviders = initialSource === DATA_SOURCE.MOCK
