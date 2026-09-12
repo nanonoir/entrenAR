@@ -1,4 +1,5 @@
 import { AdminLayoutShell } from "@/components/admin/layout/AdminLayoutShell";
+import { AdminBootstrapBoundary } from "@/components/admin/auth/AdminBootstrapBoundary";
 
 export const dynamic = "force-dynamic";
 
@@ -7,5 +8,5 @@ export default function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <AdminLayoutShell>{children}</AdminLayoutShell>;
+  return <AdminBootstrapBoundary><AdminLayoutShell>{children}</AdminLayoutShell></AdminBootstrapBoundary>;
 }
