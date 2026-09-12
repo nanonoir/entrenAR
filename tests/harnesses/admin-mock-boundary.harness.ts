@@ -147,7 +147,7 @@ async function run(): Promise<void> {
     throw new Error(`Admin UI imports entity mock data directly:\n${details}`);
   }
 
-  console.log(`phase10 admin mock gate: passed; scanned ${files.length} admin UI and boundary files`);
+  console.log(`admin mock boundary harness: passed; scanned ${files.length} admin UI and boundary files`);
 }
 
 void run().catch((error: unknown) => {
