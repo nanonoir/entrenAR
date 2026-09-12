@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-import { CouponFormPageClient } from "@/components/admin/discounts/CouponFormPageClient";
-import { getDiscountCategoryOptions, getDiscountProductOptions } from "@/lib/data/admin/discounts/options";
+import { AdminDiscountOptionsBoundary } from "@/components/admin/discounts/AdminDiscountOptionsBoundary";
 
 type CouponRoutePageProps = {
   params: Promise<{ slug: string[] }>;
@@ -9,9 +7,6 @@ type CouponRoutePageProps = {
 export default async function CouponRoutePage({ params }: CouponRoutePageProps) {
   const { slug } = await params;
   const [firstSegment] = slug;
-  const [categoryOptions, productOptions] = await Promise.all([getDiscountCategoryOptions(), getDiscountProductOptions()]);
-
-  if (slug.length !== 1) notFound();
-  if (firstSegment === "nuevo") return <CouponFormPageClient mode="create" categoryOptions={categoryOptions} productOptions={productOptions} />;
-  return <CouponFormPageClient mode="edit" couponId={firstSegment} categoryOptions={categoryOptions} productOptions={productOptions} />;
+  if (slug.length !== 1) return null;
+  return <AdminDiscountOptionsBoundary mode="coupon" {...(firstSegment === "nuevo" ? {} : { id: firstSegment })} />;
 }

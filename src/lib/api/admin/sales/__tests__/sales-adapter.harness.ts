@@ -2,11 +2,7 @@ import { execFile } from "node:child_process";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 
-import {
-  clearAccountAccessToken,
-  getAccountAccessToken,
-  setAccountAccessToken,
-} from "@/lib/api/account/client";
+import { clearAdminAccessToken, getAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
 import {
   FetchSalesApiClient,
   SalesApiError,
@@ -150,18 +146,18 @@ async function runSchemaScenario(): Promise<void> {
 async function runClientScenario(): Promise<void> {
   const calls: FetchCall[] = [];
   let protectedAttempts = 0;
-  setAccountAccessToken("stale-token");
+  setAdminAccessToken("stale-token");
   const client = new FetchSalesApiClient(async (input, init) => {
     const call = fetchCall(input, init);
     calls.push(call);
     if (call.path === "/protected" && protectedAttempts++ === 0) return jsonResponse({ ok: false, code: "UNAUTHORIZED", message: "Expired" }, 401);
-    if (call.path === "/auth/refresh") return jsonResponse({ accessToken: "fresh-token" });
+    if (call.path === "/api/admin-session/refresh") return jsonResponse({ accessToken: "fresh-token" });
     if (call.path === "/protected") return jsonResponse({ ok: true });
     throw new Error(`Unexpected fetch call: ${call.method} ${call.path}`);
   }, "https://sales.test/api/v1");
   const response = await client.get<{ ok: boolean }>("/protected");
-  assert(response.ok && getAccountAccessToken() === "fresh-token", "Authenticated sales client refresh failed.");
-  assert(calls.map((call) => `${call.method} ${call.path}`).join(",") === "GET /protected,POST /auth/refresh,GET /protected", "Sales client retry sequence failed.");
+  assert(response.ok && getAdminAccessToken() === "fresh-token", "Authenticated sales client refresh failed.");
+  assert(calls.map((call) => `${call.method} ${call.path}`).join(",") === "GET /protected,POST /api/admin-session/refresh,GET /protected", "Sales client retry sequence failed.");
 
   const validation = new FetchSalesApiClient(async () => jsonResponse({
     code: "CONFLICT",
@@ -183,7 +179,7 @@ async function runClientScenario(): Promise<void> {
   } catch (error) {
     assert(error instanceof SalesApiError && error.code === "SALES_API_UNAVAILABLE" && error.status === 503, "Network error mapping failed.");
   }
-  clearAccountAccessToken();
+  clearAdminAccessToken();
 }
 
 async function runConfigurationScenario(): Promise<void> {
@@ -346,7 +342,7 @@ function fetchCall(input: RequestInfo | URL, init?: RequestInit): FetchCall {
   return {
     authorization: new Headers(init?.headers).get("authorization"),
     method: init?.method ?? "GET",
-    path: new URL(inputUrl).pathname.replace(/^\/api\/v1/, ""),
+    path: new URL(inputUrl, "http://localhost").pathname.replace(/^\/api\/v1/, ""),
   };
 }
 

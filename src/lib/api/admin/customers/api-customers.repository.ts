@@ -20,7 +20,7 @@ export class ApiCustomersRepository implements CustomersRepository {
   exportCustomerDetailCsv(id: string): Promise<string> { const customerId = parse(customerIdSchema, id, "The customer identifier is invalid."); return this.recover(() => this.client.getText(`${customersApiConfig.endpoints.collection}/${encodeURIComponent(customerId)}/export`), () => this.fallback.exportCustomerDetailCsv(customerId)); }
   isEmailAvailable(email: string, excludeCustomerId?: string): Promise<boolean> { const parsed = parse(customerEmailAvailabilitySchema, { email, ...(excludeCustomerId ? { excludeCustomerId } : {}) }, "The customer email is invalid."); const query = new URLSearchParams({ email: parsed.email }); if (parsed.excludeCustomerId) query.set("excludeCustomerId", parsed.excludeCustomerId); return this.recover(() => this.client.get<unknown>(`${customersApiConfig.endpoints.availability}?${query}`).then((value) => response(customerEmailAvailabilityResponseSchema, value).available), () => this.fallback.isEmailAvailable(parsed.email, parsed.excludeCustomerId)); }
 
-  private async recover<T>(operation: () => Promise<T>, fallback: () => Promise<T>): Promise<T> { try { return await operation(); } catch (error) { if (this.fallbackToMock && isNetworkError(error)) return fallback(); throw error; } }
+  private async recover<T>(operation: () => Promise<T>, _fallback: () => Promise<T>): Promise<T> { return operation(); }
 }
 
 export const getAdminCustomersRepository = (client?: CustomersApiClient): ApiCustomersRepository => new ApiCustomersRepository(client);

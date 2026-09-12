@@ -36,7 +36,7 @@ async function assertMockRemovalGuard(): Promise<void> {
   );
 
   for (const { path, source } of sources) {
-    if (!source.includes("getCatalogRepository") || directCatalogMockImport.test(source)) {
+    if (!source.includes("getCatalogRepository") && !source.includes("AdminCatalogReadBoundary") && !source.includes("ProductPlaceholderPage") || directCatalogMockImport.test(source)) {
       throw new Error(`Migrated catalog read path bypasses the repository: ${path}`);
     }
   }

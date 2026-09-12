@@ -1,4 +1,5 @@
 import { catalogApiConfig } from "@/lib/api/config";
+import { AdminApiClient, AdminApiError } from "@/lib/api/admin/client";
 
 export type CatalogApiErrorPayload = {
   code?: string;
@@ -23,19 +24,29 @@ export interface CatalogApiClient {
 }
 
 export class FetchCatalogApiClient implements CatalogApiClient {
-  async get<T>(path: string, options: { admin?: boolean } = {}): Promise<T> {
-    const headers = new Headers({ Accept: "application/json" });
+  private readonly adminClient: AdminApiClient;
 
-    if (options.admin && catalogApiConfig.adminAccessToken) {
-      headers.set("Authorization", `Bearer ${catalogApiConfig.adminAccessToken}`);
+  constructor(fetchImplementation: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> = fetch) {
+    this.adminClient = new AdminApiClient(fetchImplementation, catalogApiConfig.baseUrl);
+  }
+
+  async get<T>(path: string, options: { admin?: boolean } = {}): Promise<T> {
+    if (options.admin) {
+      try {
+        return await this.adminClient.request<T>(path);
+      } catch (error) {
+        if (error instanceof AdminApiError) throw new CatalogApiError({ code: error.code, message: error.message, status: error.status });
+        throw error;
+      }
     }
+    const headers = new Headers({ Accept: "application/json" });
 
     let response: Response;
 
     try {
       response = await fetch(`${catalogApiConfig.baseUrl}${path}`, {
         headers,
-        next: { revalidate: 0 },
+        cache: "no-store",
       });
     } catch {
       throw new CatalogApiError({

@@ -1,4 +1,4 @@
-import { clearAccountAccessToken, setAccountAccessToken } from "@/lib/api/account/access-token";
+import { clearAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
 
 import { ApiStatisticsRepository } from "../api-statistics-repository";
 import { FetchStatisticsApiClient, StatisticsApiClient } from "../client";
@@ -46,7 +46,7 @@ async function runApiScenario(expected: ReportSet): Promise<ReportSet> {
     const endpoint = call.path.split("/").pop()?.split("?")[0] ?? "";
     return jsonResponse(payloads[endpoint]);
   }, "https://statistics.test/api/v1");
-  setAccountAccessToken("statistics-harness-token");
+  setAdminAccessToken("statistics-harness-token");
   try {
     const repository = new ApiStatisticsRepository(client, new MockStatisticsRepository(), false);
     const result = await reports(repository, { period: "last-90-days", limit: 5 });
@@ -54,7 +54,7 @@ async function runApiScenario(expected: ReportSet): Promise<ReportSet> {
     assert(calls.every((call) => call.query.includes("period=last-90-days") && call.query.includes("limit=5")), "Statistics query parameters were not serialized.");
     return result;
   } finally {
-    clearAccountAccessToken();
+    clearAdminAccessToken();
   }
 }
 
@@ -62,14 +62,14 @@ async function runFallbackScenario(): Promise<void> {
   const noRetryConfig: StatisticsApiConfig = { ...statisticsApiConfig, retryPolicy: { ...statisticsApiConfig.retryPolicy, maxRetries: 0 } };
   const offlineClient = new FetchStatisticsApiClient(async () => { throw new Error("offline"); }, "https://offline.test/api/v1", noRetryConfig);
   const offline = new ApiStatisticsRepository(offlineClient, new MockStatisticsRepository(), true);
-  assert((await offline.getOverview({ period: "today" })).metadata.period === "today", "Offline recovery did not return mock data.");
+  await expectControlledFailure(() => offline.getOverview({ period: "today" }));
 
   const serverClient = new FetchStatisticsApiClient(async () => jsonResponse({ code: "INTERNAL_ERROR", message: "Server unavailable.", ok: false }, 500), "https://server.test/api/v1", noRetryConfig);
   const serverFallback = new ApiStatisticsRepository(serverClient, new MockStatisticsRepository(), true);
-  assert((await serverFallback.getCoupons()).topCoupons.length > 0, "5xx recovery did not return mock data.");
+  await expectControlledFailure(() => serverFallback.getCoupons());
 
   const unexpected = new ApiStatisticsRepository(new UnexpectedStatisticsClient(), new MockStatisticsRepository(), true);
-  assert((await unexpected.getProducts()).topProducts.length > 0, "Unexpected error recovery did not return mock data.");
+  await expectControlledFailure(() => unexpected.getProducts());
 
   const clientError = new FetchStatisticsApiClient(async () => jsonResponse({ code: "VALIDATION_ERROR", message: "Bad query.", ok: false }, 400), "https://client-error.test/api/v1", noRetryConfig);
   try {
@@ -78,6 +78,12 @@ async function runFallbackScenario(): Promise<void> {
   } catch (error) {
     assert(error instanceof StatisticsApiError && error.status === 400 && error.code === "VALIDATION_ERROR", "Controlled 4xx errors were not preserved.");
   }
+}
+
+async function expectControlledFailure(operation: () => Promise<unknown>): Promise<void> {
+  let failed = false;
+  try { await operation(); } catch (error) { failed = true; assert(error instanceof StatisticsApiError || error instanceof Error, "Statistics failure was not controlled."); }
+  assert(failed, "Statistics failure activated mocks.");
 }
 
 class UnexpectedStatisticsClient extends StatisticsApiClient {

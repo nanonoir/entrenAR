@@ -2,7 +2,7 @@ import { ApiCustomersRepository } from "../api-customers.repository";
 import { CustomersApiError, FetchCustomersApiClient } from "../client";
 import { MockCustomersRepository } from "../mock-customers.repository";
 import type { CreateCustomerInput } from "../types";
-import { clearAccountAccessToken, setAccountAccessToken } from "@/lib/api/account/access-token";
+import { clearAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
 
 async function run(): Promise<void> {
   await runMockScenario();
@@ -53,7 +53,7 @@ async function runApiScenario(): Promise<void> {
     throw new Error(`Unexpected API call: ${call.method} ${call.path}`);
   }, "https://customers.test/api/v1");
 
-  setAccountAccessToken("harness-token");
+  setAdminAccessToken("harness-token");
   const repository = new ApiCustomersRepository(client, new MockCustomersRepository(), false);
   const page = await repository.list({ city: "Buenos Aires", limit: 5 });
   const detail = await repository.getById("api-customer");
@@ -66,13 +66,13 @@ async function runApiScenario(): Promise<void> {
   const available = await repository.isEmailAvailable("new@example.com");
   assert(exported.startsWith("\uFEFF") && available, "API export or availability failed.");
   assert(calls.some((call) => call.authorization === "Bearer harness-token"), "API client did not send the auth token.");
-  clearAccountAccessToken();
+  clearAdminAccessToken();
 }
 
 async function runFallbackAndErrorScenarios(): Promise<void> {
   const unavailable = new FetchCustomersApiClient(async () => { throw new Error("offline"); }, "https://customers.test/api/v1");
   const fallback = new ApiCustomersRepository(unavailable, new MockCustomersRepository(), true);
-  assert((await fallback.list({ search: "Camila" })).items[0]?.id === "cus_001", "Network fallback did not use the mock repository.");
+  try { await fallback.list({ search: "Camila" }); throw new Error("Expected network failure to remain fail-closed."); } catch (error) { assert(error instanceof CustomersApiError && error.status === 503, "Network failure activated customer mocks."); }
 
   const business = new FetchCustomersApiClient(async () => jsonResponse({ code: "EMAIL_EXISTS", message: "Email already exists.", ok: false }, 409), "https://customers.test/api/v1");
   try {
