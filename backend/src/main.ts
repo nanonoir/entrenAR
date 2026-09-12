@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { configureHttpApplication } from "./app.setup";
 import { loadAppConfig } from "./config/app.config";
-import { REFRESH_COOKIE_NAME } from "./modules/auth/auth.service";
+import { ADMIN_REFRESH_COOKIE_NAME, REFRESH_COOKIE_NAME } from "./modules/auth/auth.service";
 
 function configureSwagger(app: INestApplication): void {
   const documentConfig = new DocumentBuilder()
@@ -22,6 +22,7 @@ function configureSwagger(app: INestApplication): void {
       "access-token",
     )
     .addCookieAuth(REFRESH_COOKIE_NAME, { in: "cookie", type: "apiKey" }, "refresh-cookie")
+    .addCookieAuth(ADMIN_REFRESH_COOKIE_NAME, { in: "cookie", type: "apiKey" }, "admin-refresh-cookie")
     .build();
   const document = SwaggerModule.createDocument(app, documentConfig);
 

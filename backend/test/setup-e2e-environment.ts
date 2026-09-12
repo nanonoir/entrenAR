@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+process.env.ADMIN_GATE_SIGNING_SECRET ??= "e2e-admin-gate-signing-secret-with-32-chars";
+
 const requiredEnvironmentVariables = [
   "DATABASE_URL",
   "JWT_ACCESS_SECRET",

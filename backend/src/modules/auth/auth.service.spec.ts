@@ -1,4 +1,5 @@
 import { UnauthorizedException } from "@nestjs/common";
+import { createHmac } from "node:crypto";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
@@ -11,6 +12,7 @@ import { ROLE, RolesGuard } from "../../common/guards/roles.guard";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { UsersService, type AuthUser } from "../users/users.service";
 import { AuthService, PASSWORD_RESET_TOKEN_TTL_SECONDS } from "./auth.service";
+import { RefreshSessionType } from "../../generated/prisma/enums";
 
 const ADMIN_USER: AuthUser = {
   birthDate: new Date("1985-04-12T00:00:00.000Z"),
@@ -33,15 +35,16 @@ describe("auth.service", () => {
     harness.users.findByEmail.mockResolvedValue(ADMIN_USER);
     harness.users.verifyPassword.mockResolvedValue(true);
 
-    const session = await harness.service.login(ADMIN_USER.email, "correct-password");
+    const session = await harness.service.loginAdmin(ADMIN_USER.email, "correct-password");
 
     expect(harness.users.verifyPassword).toHaveBeenCalledWith("correct-password", ADMIN_USER.passwordHash);
     expect(harness.jwt.signAsync).toHaveBeenCalledWith(
-      { role: ROLE.ADMIN, userId: ADMIN_USER.id },
-      { expiresIn: 900 },
+      { role: ROLE.ADMIN, sessionType: RefreshSessionType.ADMIN, userId: ADMIN_USER.id },
+       { expiresIn: 900 },
     );
     expect(harness.prisma.refreshToken.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
+        sessionType: RefreshSessionType.ADMIN,
         userId: ADMIN_USER.id,
       }),
     }));
@@ -54,6 +57,96 @@ describe("auth.service", () => {
       }),
     }));
     expect(session.refreshToken).toHaveLength(64);
+    expect(session.sessionType).toBe(RefreshSessionType.ADMIN);
+    expect(session.idleExpiresAt).toEqual(expect.any(Date));
+  });
+
+  it("rejects administrator credentials from the customer login boundary", async () => {
+    const harness = createHarness();
+    harness.users.findByEmail.mockResolvedValue(ADMIN_USER);
+    harness.users.verifyPassword.mockResolvedValue(true);
+
+    await expect(harness.service.login(ADMIN_USER.email, "correct-password")).rejects.toMatchObject({
+      response: { code: ERROR_CODE.INVALID_CREDENTIALS, ok: false },
+      status: 401,
+    });
+    expect(harness.prisma.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it("accepts an immediate ADMIN duplicate refresh without rotating again", async () => {
+    const harness = createHarness();
+    const original = "original-admin-refresh-token";
+    const revokedAt = new Date();
+    const successorIssuedAt = revokedAt;
+    const successor = createHmac(
+      "sha256",
+      "refresh-secret-with-at-least-thirty-two-characters:refresh-successor",
+    ).update(`${original}:${successorIssuedAt.toISOString()}`).digest("base64url");
+    const storedToken = {
+      expiresAt: new Date(Date.now() + 60_000),
+      id: "refresh-token-id",
+      revokedAt,
+      sessionType: RefreshSessionType.ADMIN,
+      successorIssuedAt,
+      successorTokenHash: createHmac(
+        "sha256",
+        "refresh-secret-with-at-least-thirty-two-characters:refresh-token",
+      ).update(successor).digest("hex"),
+      user: ADMIN_USER,
+      userId: ADMIN_USER.id,
+    };
+    harness.prisma.refreshToken.findUnique.mockResolvedValue(storedToken);
+
+    await expect(harness.service.refresh(original, RefreshSessionType.ADMIN)).resolves.toEqual(expect.objectContaining({
+      refreshToken: successor,
+      sessionType: RefreshSessionType.ADMIN,
+    }));
+    expect(harness.transaction.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-context refresh and scopes logout to the presented lineage", async () => {
+    const harness = createHarness();
+    harness.prisma.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      id: "admin-refresh-id",
+      revokedAt: null,
+      sessionType: RefreshSessionType.ADMIN,
+      user: ADMIN_USER,
+      userId: ADMIN_USER.id,
+    });
+
+    await expect(harness.service.refresh("admin-refresh-token")).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(harness.prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+
+    await harness.service.logout("admin-refresh-token", RefreshSessionType.ADMIN);
+    expect(harness.prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      data: { revokedAt: expect.any(Date) },
+      where: {
+        revokedAt: null,
+        sessionType: RefreshSessionType.ADMIN,
+        tokenHash: expect.any(String),
+      },
+    });
+  });
+
+  it("fails closed on a late ADMIN replay without revoking CUSTOMER sessions", async () => {
+    const harness = createHarness();
+    harness.prisma.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      id: "late-admin-refresh-id",
+      revokedAt: new Date(Date.now() - 10_000),
+      sessionType: RefreshSessionType.ADMIN,
+      successorIssuedAt: new Date(Date.now() - 10_000),
+      successorTokenHash: "not-the-successor",
+      user: ADMIN_USER,
+      userId: ADMIN_USER.id,
+    });
+
+    await expect(harness.service.refresh("late-admin-refresh-token", RefreshSessionType.ADMIN)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(harness.prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      data: { revokedAt: expect.any(Date) },
+      where: { revokedAt: null, sessionType: RefreshSessionType.ADMIN, userId: ADMIN_USER.id },
+    });
   });
 
   it("returns an account-aware current-user projection without secrets", async () => {
@@ -381,6 +474,7 @@ function createHarness(nodeEnv: AppConfig["nodeEnv"] = NODE_ENV.TEST): AuthHarne
     },
     refreshToken: {
       create: jest.fn().mockResolvedValue({ id: "rotated-token-id" }),
+      update: jest.fn().mockResolvedValue({ id: "refresh-token-id" }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     user: {
@@ -396,6 +490,7 @@ function createHarness(nodeEnv: AppConfig["nodeEnv"] = NODE_ENV.TEST): AuthHarne
     refreshToken: {
       create: jest.fn().mockResolvedValue({ id: "refresh-token-id" }),
       findUnique: jest.fn(),
+      update: jest.fn().mockResolvedValue({ id: "refresh-token-id" }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
@@ -407,10 +502,13 @@ function createHarness(nodeEnv: AppConfig["nodeEnv"] = NODE_ENV.TEST): AuthHarne
   };
   const config = {
     getOrThrow: jest.fn((key: keyof AppConfig) => {
-      const values: Pick<AppConfig, "jwtAccessTtlSeconds" | "jwtRefreshSecret" | "jwtRefreshTtlSeconds"> & { nodeEnv: AppConfig["nodeEnv"] } = {
+      const values: Pick<AppConfig, "jwtAccessTtlSeconds" | "jwtAdminAccessTtlSeconds" | "jwtAdminRefreshTtlSeconds" | "jwtRefreshSecret" | "jwtRefreshTtlSeconds" | "refreshConcurrencyToleranceSeconds"> & { nodeEnv: AppConfig["nodeEnv"] } = {
         jwtAccessTtlSeconds: 900,
+         jwtAdminAccessTtlSeconds: 900,
+         jwtAdminRefreshTtlSeconds: 1_800,
         jwtRefreshSecret: "refresh-secret-with-at-least-thirty-two-characters",
         jwtRefreshTtlSeconds: 2_592_000,
+         refreshConcurrencyToleranceSeconds: 5,
         nodeEnv,
       };
 
@@ -464,6 +562,7 @@ interface AuthHarness {
     refreshToken: {
       create: jest.Mock;
       findUnique: jest.Mock;
+      update: jest.Mock;
       updateMany: jest.Mock;
     };
   };
@@ -474,6 +573,7 @@ interface AuthHarness {
     };
     refreshToken: {
       create: jest.Mock;
+      update: jest.Mock;
       updateMany: jest.Mock;
     };
     user: {

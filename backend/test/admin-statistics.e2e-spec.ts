@@ -7,7 +7,7 @@ import { configureHttpApplication } from "../src/app.setup";
 import { JwtAuthGuard } from "../src/common/auth/jwt-authentication.guard";
 import { HttpExceptionFilter } from "../src/common/filters/http-exception.filter";
 import { RolesGuard } from "../src/common/guards/roles.guard";
-import { Role } from "../src/generated/prisma/enums";
+import { RefreshSessionType, Role } from "../src/generated/prisma/enums";
 import { AdminStatisticsController } from "../src/modules/statistics/admin-statistics.controller";
 import { StatisticsService } from "../src/modules/statistics/statistics.service";
 import {
@@ -45,8 +45,8 @@ describe("admin statistics API (e2e)", () => {
     }).compile();
 
     const jwt = moduleFixture.get(JwtService);
-    adminToken = await jwt.signAsync({ role: Role.ADMIN, userId: "admin-1" });
-    customerToken = await jwt.signAsync({ role: Role.CUSTOMER, userId: "customer-1" });
+    adminToken = await jwt.signAsync({ role: Role.ADMIN, sessionType: RefreshSessionType.ADMIN, userId: "admin-1" });
+    customerToken = await jwt.signAsync({ role: Role.CUSTOMER, sessionType: RefreshSessionType.CUSTOMER, userId: "customer-1" });
 
     app = moduleFixture.createNestApplication({ bodyParser: false });
     configureHttpApplication(app, testConfig());

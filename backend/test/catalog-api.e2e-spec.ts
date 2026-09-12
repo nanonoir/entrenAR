@@ -94,7 +94,7 @@ describe("catalog administration and public API (e2e)", () => {
     categoryId = visibleCategory.id;
     categorySlug = visibleCategory.slug;
     const authService = moduleFixture.get(AuthService);
-    adminToken = (await authService.login(adminEmail, password)).accessToken;
+    adminToken = (await authService.loginAdmin(adminEmail, password)).accessToken;
     customerToken = (await authService.login(customerEmail, password)).accessToken;
     const nestApp = moduleFixture.createNestApplication({ bodyParser: false });
     configureHttpApplication(nestApp, testConfig());

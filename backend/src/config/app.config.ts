@@ -15,9 +15,13 @@ export interface AppConfig {
   databaseUrl: string;
   frontendUrl?: string;
   jwtAccessSecret: string;
+  adminGateSigningSecret?: string;
   jwtAccessTtlSeconds: number;
+  jwtAdminAccessTtlSeconds?: number;
+  jwtAdminRefreshTtlSeconds?: number;
   jwtRefreshSecret: string;
   jwtRefreshTtlSeconds: number;
+  refreshConcurrencyToleranceSeconds?: number;
   nodeEnv: NodeEnvironment;
   port: number;
   throttleLimit: number;
@@ -59,9 +63,13 @@ const appConfigSchema = z.object({
   DATABASE_URL: z.url({ error: "DATABASE_URL must be a valid database URL." }),
   FRONTEND_URL: httpUrlSchema.optional(),
   JWT_ACCESS_SECRET: z.string().min(32, { error: "JWT_ACCESS_SECRET must contain at least 32 characters." }),
+  ADMIN_GATE_SIGNING_SECRET: z.string().min(32, { error: "ADMIN_GATE_SIGNING_SECRET must contain at least 32 characters." }),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+  JWT_ADMIN_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+  JWT_ADMIN_REFRESH_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(1_800),
   JWT_REFRESH_SECRET: z.string().min(32, { error: "JWT_REFRESH_SECRET must contain at least 32 characters." }),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3_600).max(7_776_000).default(2_592_000),
+  REFRESH_CONCURRENCY_TOLERANCE_SECONDS: z.coerce.number().int().min(1).max(60).default(5),
   NODE_ENV: z.enum([NODE_ENV.DEVELOPMENT, NODE_ENV.PRODUCTION, NODE_ENV.TEST]).default(NODE_ENV.DEVELOPMENT),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   THROTTLE_LIMIT: z.coerce.number().int().min(1).max(1_000).default(100),
@@ -95,9 +103,13 @@ export function loadAppConfig(environment: EnvironmentVariables = process.env): 
     databaseUrl: parsed.DATABASE_URL,
     frontendUrl: parsed.FRONTEND_URL ? normalizeOrigin(parsed.FRONTEND_URL) : undefined,
     jwtAccessSecret: parsed.JWT_ACCESS_SECRET,
+    adminGateSigningSecret: parsed.ADMIN_GATE_SIGNING_SECRET,
     jwtAccessTtlSeconds: parsed.JWT_ACCESS_TTL_SECONDS,
+    jwtAdminAccessTtlSeconds: parsed.JWT_ADMIN_ACCESS_TTL_SECONDS,
+    jwtAdminRefreshTtlSeconds: parsed.JWT_ADMIN_REFRESH_TTL_SECONDS,
     jwtRefreshSecret: parsed.JWT_REFRESH_SECRET,
     jwtRefreshTtlSeconds: parsed.JWT_REFRESH_TTL_SECONDS,
+    refreshConcurrencyToleranceSeconds: parsed.REFRESH_CONCURRENCY_TOLERANCE_SECONDS,
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
     throttleLimit: parsed.THROTTLE_LIMIT,

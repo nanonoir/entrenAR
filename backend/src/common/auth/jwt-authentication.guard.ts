@@ -3,12 +3,14 @@ import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
 
 import { ERROR_CODE } from "../errors/api-error.response";
+import { RefreshSessionType } from "../../generated/prisma/enums";
 import { ROLE, type Role } from "../guards/roles.guard";
 import { OPTIONAL_AUTH_METADATA_KEY } from "./optional-auth.decorator";
 import { IS_PUBLIC_KEY } from "./public.decorator";
 
 export interface AccessTokenPayload {
   role: Role;
+  sessionType: RefreshSessionType;
   userId: string;
 }
 
@@ -74,7 +76,10 @@ export class JwtAuthenticationGuard implements CanActivate {
   private isAccessTokenPayload(payload: AccessTokenPayload): boolean {
     return (
       typeof payload.userId === "string" &&
-      (payload.role === ROLE.ADMIN || payload.role === ROLE.CUSTOMER)
+      (payload.role === ROLE.ADMIN || payload.role === ROLE.CUSTOMER) &&
+      (payload.sessionType === RefreshSessionType.ADMIN || payload.sessionType === RefreshSessionType.CUSTOMER) &&
+      ((payload.role === ROLE.ADMIN && payload.sessionType === RefreshSessionType.ADMIN) ||
+        (payload.role === ROLE.CUSTOMER && payload.sessionType === RefreshSessionType.CUSTOMER))
     );
   }
 
