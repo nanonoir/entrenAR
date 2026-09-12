@@ -18,8 +18,8 @@ const DATA_SOURCE_ENVIRONMENT_KEYS = [
 ] as const;
 
 const HARNESS_PATHS = [
-  "scripts/phase10-admin-mock-gate.harness.ts",
-  "scripts/phase10-shop-mock-gate.harness.ts",
+  "tests/harnesses/admin-mock-boundary.harness.ts",
+  "tests/harnesses/shop-mock-boundary.harness.ts",
   "src/lib/api/catalog/catalog-adapter.harness.ts",
   "src/lib/api/account/account-adapter.harness.ts",
   "src/lib/api/checkout/checkout-adapter.harness.ts",
@@ -39,10 +39,10 @@ async function run(): Promise<void> {
   for (const harnessPath of HARNESS_PATHS) {
     const output = await runHarness(harnessPath);
     const summary = output.trim().split(/\r?\n/).at(-1) ?? "passed";
-    console.log(`phase10 acceptance: ${harnessPath} — ${summary}`);
+    console.log(`frontend acceptance: ${harnessPath} — ${summary}`);
   }
 
-  console.log(`phase10 acceptance harness: passed; API default resolution and ${HARNESS_PATHS.length} harnesses verified`);
+  console.log(`frontend acceptance harness: passed; API default resolution and ${HARNESS_PATHS.length} harnesses verified`);
 }
 
 async function assertApiDefaultDataSource(): Promise<void> {
@@ -64,7 +64,7 @@ async function assertApiDefaultDataSource(): Promise<void> {
       getCatalogDataSource,
       getCheckoutDataSource,
       getCommerceDataSource,
-    } = await import("../src/lib/api/config");
+    } = await import("../../src/lib/api/config");
     const sources = [
       getCatalogDataSource(),
       getAccountDataSource(),
@@ -80,7 +80,7 @@ async function assertApiDefaultDataSource(): Promise<void> {
       throw new Error(`Expected every unset data source to resolve to API; received ${sources.join(", ")}.`);
     }
 
-    console.log("phase10 API default data-source resolution: passed");
+    console.log("API default data-source resolution: passed");
   } finally {
     for (const key of DATA_SOURCE_ENVIRONMENT_KEYS) {
       const value = originalValues.get(key);

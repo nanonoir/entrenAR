@@ -1,8 +1,5 @@
-import { ProductCreateFormPage } from "@/components/admin/products-flow/ProductCreateFormPage";
-import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+import { AdminCatalogReadBoundary } from "@/components/admin/products-flow/AdminCatalogReadBoundary";
 
-export default async function NewProductPage() {
-  const categories = catalogData(await getCatalogRepository().getAdminCategories(), []);
-
-  return <ProductCreateFormPage categories={categories} />;
+export default function NewProductPage() {
+  return <AdminCatalogReadBoundary mode="create" />;
 }

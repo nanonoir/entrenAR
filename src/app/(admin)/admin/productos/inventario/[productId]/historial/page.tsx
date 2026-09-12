@@ -1,12 +1,6 @@
-import { notFound } from "next/navigation";
-import { InventoryHistoryPage } from "@/components/admin/products-flow/inventory/InventoryHistoryPage";
-import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+import { AdminCatalogReadBoundary } from "@/components/admin/products-flow/AdminCatalogReadBoundary";
 
 export default async function StockHistoryRoute({ params }: { params: Promise<{ productId: string }> }) {
   const { productId } = await params;
-  const product = catalogData(await getCatalogRepository().getAdminProductById(productId), null);
-
-  if (!product) notFound();
-
-  return <InventoryHistoryPage product={product} />;
+  return <AdminCatalogReadBoundary mode="history" id={productId} />;
 }

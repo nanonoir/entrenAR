@@ -30,7 +30,7 @@ import {
 
 const ALLOWED_ORIGIN = "https://store.example.test";
 
-describe("Phase 10 production acceptance (e2e)", () => {
+describe("Core platform production acceptance (e2e)", () => {
   let app: INestApplication | undefined;
   let baseUrl = "";
   let prisma: PrismaService | undefined;
@@ -57,7 +57,7 @@ describe("Phase 10 production acceptance (e2e)", () => {
     product = acceptanceProduct;
     guestCart = await createCheckoutDomainCart(database, undefined, acceptanceProduct, 1, `acceptance-session-${suffix}`, suffix, fixtureScope);
 
-    const adminId = `phase10-admin-${suffix}`;
+    const adminId = `acceptance-admin-${suffix}`;
     fixtureScope.userIds.push(adminId);
     await database.user.create({
       data: {
@@ -67,7 +67,7 @@ describe("Phase 10 production acceptance (e2e)", () => {
         role: Role.ADMIN,
       },
     });
-    adminToken = (await moduleFixture.get(AuthService).login(`${adminId}@example.test`, `Phase10-${suffix}-Admin!`)).accessToken;
+    adminToken = (await moduleFixture.get(AuthService).loginAdmin(`${adminId}@example.test`, `Phase10-${suffix}-Admin!`)).accessToken;
 
     const nestApp = moduleFixture.createNestApplication({ bodyParser: false });
     configureHttpApplication(nestApp, testConfig());
@@ -118,7 +118,7 @@ describe("Phase 10 production acceptance (e2e)", () => {
 
   it("sanitizes unexpected 500 responses", async () => {
     const service = healthServiceOrThrow();
-    const internalMessage = "phase10-internal-database-secret";
+    const internalMessage = "acceptance-internal-database-secret";
     const failure = jest.spyOn(service, "aggregate").mockRejectedValueOnce(new Error(internalMessage));
 
     try {
@@ -165,7 +165,7 @@ describe("Phase 10 production acceptance (e2e)", () => {
     const fixture = productOrThrow();
     const cart = guestCartOrThrow();
     const suffix = randomUUID().replaceAll("-", "");
-    const email = `phase10-customer-${suffix}@example.test`;
+    const email = `acceptance-customer-${suffix}@example.test`;
     const password = `Phase10-${suffix}-Customer!`;
 
     const registration = await request("/api/v1/auth/register", { body: { email, password }, method: "POST" });
@@ -199,7 +199,7 @@ describe("Phase 10 production acceptance (e2e)", () => {
       body: {
         address: { city: "Buenos Aires", postalCode: "C1000", province: "Buenos Aires", street: "123 Test Street" },
         customer: { email, firstName: "Phase", lastName: "Customer" },
-        idempotencyKey: `phase10-completion-${suffix}`,
+        idempotencyKey: `acceptance-completion-${suffix}`,
         items: [{ productId: fixture.productId, quantity: 1, variantId: fixture.variantId }],
         paymentMethodId: "bank-transfer",
         paymentOptionId: "direct-transfer",
@@ -221,17 +221,17 @@ describe("Phase 10 production acceptance (e2e)", () => {
   });
 
   function healthServiceOrThrow(): HealthService {
-    if (!healthService) throw new Error("Phase 10 health service was not initialized.");
+    if (!healthService) throw new Error("Acceptance health service was not initialized.");
     return healthService;
   }
 
   function productOrThrow(): DomainProductFixture {
-    if (!product) throw new Error("Phase 10 product fixture was not initialized.");
+    if (!product) throw new Error("Acceptance product fixture was not initialized.");
     return product;
   }
 
   function guestCartOrThrow(): DomainCartFixture {
-    if (!guestCart) throw new Error("Phase 10 guest cart fixture was not initialized.");
+    if (!guestCart) throw new Error("Acceptance guest cart fixture was not initialized.");
     return guestCart;
   }
 

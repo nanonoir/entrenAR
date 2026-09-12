@@ -6,7 +6,7 @@ const configuredBaseUrl = process.env.NEXT_PUBLIC_ADMIN_CUSTOMERS_API_BASE_URL
 
 export const customersApiConfig = {
   baseUrl: normalizeBaseUrl(configuredBaseUrl),
-  fallbackToMock: parseBoolean(process.env.NEXT_PUBLIC_ADMIN_CUSTOMERS_FALLBACK_TO_MOCK ?? "true"),
+  fallbackToMock: false as boolean,
   endpoints: {
     collection: "/admin/customers",
     availability: "/admin/customers/availability",

@@ -102,7 +102,7 @@ async function run(): Promise<void> {
     const details = violations.map((violation) => `- ${violation.file}:${violation.line} ${violation.kind} ${violation.module}`).join("\n");
     throw new Error(`Shop UI imports entity mock data directly:\n${details}`);
   }
-  console.log(`phase10 shop mock gate: passed; scanned ${files.length} shop UI and store files`);
+  console.log(`shop mock boundary harness: passed; scanned ${files.length} shop UI and store files`);
 }
 void run().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : "The shop mock gate failed.");

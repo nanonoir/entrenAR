@@ -229,20 +229,20 @@ async function runRepositoryScenario(): Promise<void> {
 
 async function runFetchClientScenario(): Promise<void> {
   const { CommerceApiError, FetchCommerceApiClient, toCommerceApiError } = await import("./client");
-  const { clearAccountAccessToken, getAccountAccessToken, setAccountAccessToken } = await import("../account/client");
+  const { clearAdminAccessToken, getAdminAccessToken, setAdminAccessToken } = await import("../admin/auth/admin-access-token");
   const calls: FetchCall[] = [];
   let protectedAttempts = 0;
-  setAccountAccessToken("stale-token");
+  setAdminAccessToken("stale-token");
   const client = new FetchCommerceApiClient(async (input, init) => {
     const call = fetchCall(input, init);
     calls.push(call);
     if (call.path === "/protected" && protectedAttempts++ === 0) return jsonResponse({ code: "AUTH_REQUIRED", message: "Sign in required", ok: false }, 401);
-    if (call.path === "/auth/refresh") return jsonResponse({ accessToken: "fresh-token" });
+    if (call.path === "/api/admin-session/refresh") return jsonResponse({ accessToken: "fresh-token" });
     if (call.path === "/protected") return jsonResponse({ ok: true });
     throw new Error(`Unexpected fetch client call: ${call.method} ${call.path}`);
   }, "https://commerce.test/api/v1");
   const protectedResponse = await client.get<{ ok: boolean }>("/protected");
-  if (!protectedResponse.ok || calls.map((call) => `${call.method} ${call.path}`).join(",") !== "GET /protected,POST /auth/refresh,GET /protected" || calls[0]?.authorization !== "Bearer stale-token" || calls[1]?.authorization || calls[2]?.authorization !== "Bearer fresh-token" || getAccountAccessToken() !== "fresh-token") {
+  if (!protectedResponse.ok || calls.map((call) => `${call.method} ${call.path}`).join(",") !== "GET /protected,POST /api/admin-session/refresh,GET /protected" || calls[0]?.authorization !== "Bearer stale-token" || calls[1]?.authorization || calls[2]?.authorization !== "Bearer fresh-token" || getAdminAccessToken() !== "fresh-token") {
     throw new Error("Commerce auth refresh and bearer handling failed.");
   }
 
@@ -254,21 +254,21 @@ async function runFetchClientScenario(): Promise<void> {
     if (!(error instanceof CommerceApiError) || error.code !== "VALIDATION_ERROR" || error.status !== 422 || error.issues[0]?.field !== "code") throw error;
   }
 
-  setAccountAccessToken("stale-token");
+  setAdminAccessToken("stale-token");
   const refreshFailure = new FetchCommerceApiClient(async (input, init) => {
     const call = fetchCall(input, init);
     if (call.path === "/protected") return jsonResponse({ code: "AUTH_REQUIRED", message: "Expired", ok: false }, 401);
-    if (call.path === "/auth/refresh") return jsonResponse({ code: "REFRESH_EXPIRED", message: "Refresh expired", ok: false }, 401);
+    if (call.path === "/api/admin-session/refresh") return jsonResponse({ code: "REFRESH_EXPIRED", message: "Refresh expired", ok: false }, 401);
     throw new Error(`Unexpected refresh failure call: ${init?.method ?? "GET"} ${call.path}`);
   }, "https://commerce.test/api/v1");
   try {
     await refreshFailure.get("/protected");
     throw new Error("Expected refresh failure.");
   } catch (error) {
-    if (!(error instanceof CommerceApiError) || error.code !== "REFRESH_EXPIRED" || getAccountAccessToken() !== null) throw error;
+    if (!(error instanceof CommerceApiError) || error.code !== "REFRESH_EXPIRED" || getAdminAccessToken() !== null) throw error;
   }
   if (toCommerceApiError(new Error("fallback"), "FALLBACK_CODE", "Fallback message").code !== "FALLBACK_CODE") throw new Error("Unknown commerce errors were not controlled.");
-  clearAccountAccessToken();
+  clearAdminAccessToken();
 }
 
 async function runApiStoreScenarioInChild(): Promise<void> {
@@ -285,7 +285,7 @@ async function runApiStoreScenario(): Promise<void> {
 
   globalThis.fetch = async (input, init) => {
     const call = fetchCall(input, init);
-    if (call.path === "/auth/refresh") return jsonResponse({ accessToken: "store-token" });
+    if (call.path === "/api/admin-session/refresh") return jsonResponse({ accessToken: "store-token" });
     if (call.path === "/admin/payment-methods" && call.method === "GET" && holdPaymentRequest) {
       holdPaymentRequest = false;
       return paymentGate.promise;
@@ -535,7 +535,7 @@ function findCall(calls: readonly ClientCall[], method: ApiMethod, path: string)
 
 function fetchCall(input: RequestInfo | URL, init?: RequestInit): FetchCall {
   const inputUrl = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  return { authorization: new Headers(init?.headers).get("authorization"), method: init?.method ?? "GET", path: new URL(inputUrl).pathname.replace(/^\/api\/v1/, "") };
+  return { authorization: new Headers(init?.headers).get("authorization"), method: init?.method ?? "GET", path: new URL(inputUrl, "http://localhost").pathname.replace(/^\/api\/v1/, "") };
 }
 
 function jsonResponse(value: unknown, status = 200): Response {

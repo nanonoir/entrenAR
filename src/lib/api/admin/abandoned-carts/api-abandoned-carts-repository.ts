@@ -136,13 +136,8 @@ export class ApiAbandonedCartsRepository implements AbandonedCartsRepository {
     return { ...(await this.getTemplate()), ...patch };
   }
 
-  private async recover<T>(operation: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      if (this.fallbackToMock && isFallbackEligible(error)) return fallback();
-      throw error;
-    }
+  private async recover<T>(operation: () => Promise<T>, _fallback: () => Promise<T>): Promise<T> {
+    return operation();
   }
 }
 

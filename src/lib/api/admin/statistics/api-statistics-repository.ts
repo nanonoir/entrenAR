@@ -30,13 +30,8 @@ export class ApiStatisticsRepository implements StatisticsRepository {
   getCustomers(query: StatisticsQuery = {}) { const parsed = parseQuery(query); return this.recover(() => this.client.getCustomers(parsed).then((value) => responseData(customersResponseSchema, value)), () => this.fallback.getCustomers(parsed)); }
   getCoupons(query: StatisticsQuery = {}) { const parsed = parseQuery(query); return this.recover(() => this.client.getCoupons(parsed).then((value) => responseData(couponsResponseSchema, value)), () => this.fallback.getCoupons(parsed)); }
 
-  private async recover<T>(operation: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      if (this.fallbackToMock && isFallbackEligible(error)) return fallback();
-      throw error;
-    }
+  private async recover<T>(operation: () => Promise<T>, _fallback: () => Promise<T>): Promise<T> {
+    return operation();
   }
 }
 

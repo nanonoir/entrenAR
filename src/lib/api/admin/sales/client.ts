@@ -1,9 +1,5 @@
 import { salesApiConfig } from "./sales-api-config";
-import {
-  clearAccountAccessToken,
-  getAccountAccessToken,
-  setAccountAccessToken,
-} from "@/lib/api/account/access-token";
+import { AdminApiClient, AdminApiError, type AdminRequestOptions } from "@/lib/api/admin/client";
 
 const SALES_API_HTTP_METHOD = {
   DELETE: "DELETE",
@@ -83,12 +79,12 @@ export function toSalesApiError(
 type FetchImplementation = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export class FetchSalesApiClient implements SalesApiClient {
-  private refreshPromise: Promise<string> | null = null;
+  private readonly adminClient: AdminApiClient;
 
   constructor(
-    private readonly fetchImplementation: FetchImplementation = fetch,
+    fetchImplementation: FetchImplementation = fetch,
     private readonly baseUrl = salesApiConfig.baseUrl,
-  ) {}
+  ) { this.adminClient = new AdminApiClient(fetchImplementation, baseUrl); }
 
   delete<T>(path: string, options: SalesApiMethodOptions = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: SALES_API_HTTP_METHOD.DELETE });
@@ -111,109 +107,16 @@ export class FetchSalesApiClient implements SalesApiClient {
   }
 
   async request<T>(path: string, options: SalesApiRequestOptions = {}): Promise<T> {
-    const response = await this.execute(path, options);
-    const includeAuthorization = options.includeAuthorization !== false;
-
-    if (
-      response.status === 401
-      && includeAuthorization
-      && getAccountAccessToken()
-      && options.retryOnUnauthorized !== false
-      && !isRefreshPath(path)
-    ) {
-      await this.refreshAccessToken();
-      const retryResponse = await this.execute(path, { ...options, retryOnUnauthorized: false });
-      return this.readResponse<T>(retryResponse, includeAuthorization);
-    }
-
-    return this.readResponse<T>(response, includeAuthorization);
-  }
-
-  private async execute(path: string, options: SalesApiRequestOptions): Promise<Response> {
-    const headers = new Headers(options.headers);
-    headers.set("Accept", "application/json");
-
-    const hasBody = options.body !== undefined;
-    if (hasBody) headers.set("Content-Type", "application/json");
-
-    const accessToken = getAccountAccessToken();
-    if (accessToken && options.includeAuthorization !== false) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
-    }
-
-    const requestInit: RequestInit = {
-      cache: "no-store",
-      credentials: "include",
-      headers,
-      method: options.method ?? SALES_API_HTTP_METHOD.GET,
-      signal: options.signal,
-    };
-
-    if (hasBody) requestInit.body = JSON.stringify(options.body);
-
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, requestInit);
-    } catch {
-      throw unavailableError();
+      return await this.adminClient.request<T>(path, toAdminOptions(options));
+    } catch (error) {
+      if (error instanceof AdminApiError) throw new SalesApiError({ code: error.status === 503 ? "SALES_API_UNAVAILABLE" : error.code, issues: error.issues.flatMap((issue) => isRecord(issue) ? [{ code: String(issue.code ?? "INVALID_FIELD"), field: String(issue.field ?? "request"), message: String(issue.message ?? "Invalid value.") }] : []), message: error.message, status: error.status });
+      throw error;
     }
-  }
-
-  private async readResponse<T>(response: Response, clearTokenOnUnauthorized = true): Promise<T> {
-    const payload = await readJson(response);
-
-    if (!response.ok) {
-      if (response.status === 401 && clearTokenOnUnauthorized) clearAccountAccessToken();
-      throw createResponseError(response.status, payload);
-    }
-
-    return payload as T;
-  }
-
-  private refreshAccessToken(): Promise<string> {
-    if (!this.refreshPromise) {
-      this.refreshPromise = this.performRefresh().finally(() => {
-        this.refreshPromise = null;
-      });
-    }
-
-    return this.refreshPromise;
-  }
-
-  private async performRefresh(): Promise<string> {
-    let response: Response;
-
-    try {
-      response = await this.fetchImplementation(`${this.baseUrl}/auth/refresh`, {
-        cache: "no-store",
-        credentials: "include",
-        headers: new Headers({ Accept: "application/json" }),
-        method: SALES_API_HTTP_METHOD.POST,
-      });
-    } catch {
-      clearAccountAccessToken();
-      throw unavailableError();
-    }
-
-    const payload = await readJson(response);
-    if (!response.ok) {
-      clearAccountAccessToken();
-      throw createResponseError(response.status, payload);
-    }
-
-    const accessToken = readAccessToken(payload);
-    if (!accessToken) {
-      clearAccountAccessToken();
-      throw new SalesApiError({
-        code: "SALES_API_INVALID_RESPONSE",
-        message: "The sales API returned an invalid refresh response.",
-        status: 502,
-      });
-    }
-
-    setAccountAccessToken(accessToken);
-    return accessToken;
   }
 }
+
+function toAdminOptions(options: SalesApiRequestOptions): AdminRequestOptions { return { ...options, retryOnUnauthorized: true }; }
 
 export { SALES_API_HTTP_METHOD };
 

@@ -9,7 +9,7 @@ const configuredBaseUrl =
 
 export const abandonedCartsApiConfig = {
   baseUrl: normalizeBaseUrl(configuredBaseUrl),
-  fallbackToMock: parseBoolean(process.env.NEXT_PUBLIC_ADMIN_ABANDONED_CARTS_FALLBACK_TO_MOCK ?? "true"),
+  fallbackToMock: false as boolean,
   endpoints: {
     collection: "/admin/abandoned-carts",
     config: "/admin/abandoned-carts/config",

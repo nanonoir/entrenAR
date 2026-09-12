@@ -1,4 +1,4 @@
-import { clearAccountAccessToken, getAccountAccessToken } from "@/lib/api/account/access-token";
+import { AdminApiClient, AdminApiError, type AdminRequestOptions } from "@/lib/api/admin/client";
 
 import { abandonedCartsApiConfig } from "./abandoned-carts-api-config";
 import type { AbandonedCartsApiIssue } from "./types";
@@ -45,10 +45,11 @@ export interface AbandonedCartsApiClient {
 type FetchImplementation = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export class FetchAbandonedCartsApiClient implements AbandonedCartsApiClient {
+  private readonly adminClient: AdminApiClient;
   constructor(
-    private readonly fetchImplementation: FetchImplementation = fetch,
+    fetchImplementation: FetchImplementation = fetch,
     private readonly baseUrl = abandonedCartsApiConfig.baseUrl,
-  ) {}
+  ) { this.adminClient = new AdminApiClient(fetchImplementation, baseUrl); }
 
   get<T>(path: string, options: AbandonedCartsApiMethodOptions = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: ABANDONED_CARTS_API_HTTP_METHOD.GET });
@@ -63,37 +64,16 @@ export class FetchAbandonedCartsApiClient implements AbandonedCartsApiClient {
   }
 
   private async request<T>(path: string, options: AbandonedCartsApiRequestOptions): Promise<T> {
-    const response = await this.execute(path, options);
-    const payload = await readJson(response);
-    if (!response.ok) {
-      if (response.status === 401 && options.includeAuthorization !== false) clearAccountAccessToken();
-      throw responseError(response.status, payload);
-    }
-    if (isRecord(payload) && payload.ok === false) throw responseError(response.status, payload);
-    return payload as T;
-  }
-
-  private async execute(path: string, options: AbandonedCartsApiRequestOptions): Promise<Response> {
-    const headers = new Headers(options.headers);
-    headers.set("Accept", "application/json");
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
-    const accessToken = getAccountAccessToken();
-    if (accessToken && options.includeAuthorization !== false) headers.set("Authorization", `Bearer ${accessToken}`);
-
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, {
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
-        cache: "no-store",
-        credentials: "include",
-        headers,
-        method: options.method ?? ABANDONED_CARTS_API_HTTP_METHOD.GET,
-        signal: options.signal,
-      });
-    } catch {
-      throw unavailableError();
+      return await this.adminClient.request<T>(path, toAdminOptions(options));
+    } catch (error) {
+      if (error instanceof AdminApiError) throw new AbandonedCartsApiError({ code: error.code, issues: error.issues.flatMap((issue) => isRecord(issue) ? [{ code: String(issue.code ?? "INVALID_FIELD"), field: String(issue.field ?? "request"), message: String(issue.message ?? "Invalid value.") }] : []), message: error.message, status: error.status });
+      throw error;
     }
   }
 }
+
+function toAdminOptions(options: AbandonedCartsApiRequestOptions): AdminRequestOptions { return { ...options, retryOnUnauthorized: true }; }
 
 export function toAbandonedCartsApiError(error: unknown): AbandonedCartsApiError {
   if (error instanceof AbandonedCartsApiError) return error;

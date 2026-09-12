@@ -1,8 +1,5 @@
-import { InventoryPage } from "@/components/admin/products-flow/inventory/InventoryPage";
-import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+import { AdminCatalogReadBoundary } from "@/components/admin/products-flow/AdminCatalogReadBoundary";
 
-export default async function ProductInventoryPage() {
-  const products = catalogData(await getCatalogRepository().getAdminProducts(), []);
-
-  return <InventoryPage products={products} />;
+export default function ProductInventoryPage() {
+  return <AdminCatalogReadBoundary mode="inventory" />;
 }
