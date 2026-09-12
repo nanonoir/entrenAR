@@ -1,7 +1,5 @@
-import { ShippingDiscountsPageClient } from "@/components/admin/discounts/ShippingDiscountsPageClient";
-import { getDiscountCategoryOptions, getDiscountShippingMethodOptions, getDiscountZoneOptions } from "@/lib/data/admin/discounts/options";
+import { AdminDiscountOptionsBoundary } from "@/components/admin/discounts/AdminDiscountOptionsBoundary";
 
-export default async function ShippingDiscountsPage() {
-  const [categoryOptions, shippingMethodOptions, zoneOptions] = await Promise.all([getDiscountCategoryOptions(), getDiscountShippingMethodOptions(), getDiscountZoneOptions()]);
-  return <ShippingDiscountsPageClient categoryOptions={categoryOptions} shippingMethodOptions={shippingMethodOptions} zoneOptions={zoneOptions} />;
+export default function ShippingDiscountsPage() {
+  return <AdminDiscountOptionsBoundary mode="shipping-list" />;
 }

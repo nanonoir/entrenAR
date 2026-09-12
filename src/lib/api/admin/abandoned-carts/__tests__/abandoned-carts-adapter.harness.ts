@@ -1,4 +1,4 @@
-import { clearAccountAccessToken, setAccountAccessToken } from "@/lib/api/account/access-token";
+import { clearAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
 
 import { ApiAbandonedCartsRepository } from "../api-abandoned-carts-repository";
 import { AbandonedCartsApiError, FetchAbandonedCartsApiClient } from "../client";
@@ -52,7 +52,7 @@ async function runApiScenario(): Promise<void> {
     throw new Error(`Unexpected API call: ${call.method} ${call.path}`);
   }, "https://abandoned-carts.test/api/v1");
 
-  setAccountAccessToken("harness-token");
+  setAdminAccessToken("harness-token");
   const repository = new ApiAbandonedCartsRepository(client, new MockAbandonedCartsRepository(), false);
   const page = await repository.list({ limit: 2, status: "PENDING" });
   const detail = await repository.getById("api-cart");
@@ -67,7 +67,7 @@ async function runApiScenario(): Promise<void> {
   assert(manual.cart.recoveryStatus === "MANUAL" && converted.orderId === "order-1" && discarded.cart.recoveryStatus === "DISCARDED", "API action mapping failed.");
   assert(config.timing === "6hs" && template.subject === "Saved subject", "API config or template mapping failed.");
   assert(calls.every((call) => call.authorization === "Bearer harness-token"), "API client did not authenticate every request.");
-  clearAccountAccessToken();
+  clearAdminAccessToken();
 }
 
 async function runValidationScenario(): Promise<void> {
@@ -92,10 +92,14 @@ async function runValidationScenario(): Promise<void> {
 async function runFallbackScenario(): Promise<void> {
   const offline = new FetchAbandonedCartsApiClient(async () => { throw new Error("offline"); }, "https://offline.test/api/v1");
   const fallback = new ApiAbandonedCartsRepository(offline, new MockAbandonedCartsRepository(), true);
-  assert((await fallback.list({ search: "Lucía" })).items[0]?.id === "CART-901", "Offline fallback did not use mocks.");
+  await expectControlledFailure(() => fallback.list({ search: "Lucía" }));
   const serverError = new FetchAbandonedCartsApiClient(async () => jsonResponse({ code: "INTERNAL_ERROR", message: "Server unavailable.", ok: false }, 500), "https://server-error.test/api/v1");
   const serverFallback = new ApiAbandonedCartsRepository(serverError, new MockAbandonedCartsRepository(), true);
-  assert((await serverFallback.list()).total === 4, "5xx fallback did not use mocks.");
+  await expectControlledFailure(() => serverFallback.list());
+}
+
+async function expectControlledFailure(operation: () => Promise<unknown>): Promise<void> {
+  try { await operation(); throw new Error("Expected controlled abandoned-cart failure."); } catch (error) { assert(error instanceof AbandonedCartsApiError, "Abandoned-cart failure activated mocks."); }
 }
 
 function rawList() {

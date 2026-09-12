@@ -1,4 +1,4 @@
-import { clearAccountAccessToken, getAccountAccessToken } from "@/lib/api/account/access-token";
+import { AdminApiClient, AdminApiError, type AdminRequestOptions } from "@/lib/api/admin/client";
 import { z } from "zod";
 
 import {
@@ -38,11 +38,12 @@ export interface StatisticsApiRequestOptions {
 export type StatisticsApiMethodOptions = Omit<StatisticsApiRequestOptions, "method">;
 
 export class StatisticsApiClient {
+  private readonly adminClient: AdminApiClient;
   constructor(
-    private readonly fetchImplementation: FetchImplementation = fetch,
+    fetchImplementation: FetchImplementation = fetch,
     private readonly baseUrl = statisticsApiConfig.baseUrl,
     private readonly config: StatisticsApiConfig = statisticsApiConfig,
-  ) {}
+  ) { this.adminClient = new AdminApiClient(fetchImplementation, baseUrl); }
 
   get<T>(path: string, options: StatisticsApiMethodOptions = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: STATISTICS_API_HTTP_METHOD.GET });
@@ -75,7 +76,6 @@ export class StatisticsApiClient {
         const response = await this.execute(path, options);
         const payload = await readJson(response);
         if (!response.ok || (isRecord(payload) && payload.ok === false)) {
-          if (response.status === 401 && options.includeAuthorization !== false) clearAccountAccessToken();
           throw responseError(response.status, payload);
         }
         return payload as T;
@@ -107,35 +107,18 @@ export class StatisticsApiClient {
   }
 
   private async execute(path: string, options: StatisticsApiRequestOptions): Promise<Response> {
-    const headers = new Headers(options.headers);
-    headers.set("Accept", "application/json");
-    const token = getAccountAccessToken();
-    if (token && options.includeAuthorization !== false) headers.set("Authorization", `Bearer ${token}`);
-
-    const controller = new AbortController();
-    let timedOut = false;
-    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, options.timeoutMs ?? this.config.timeoutMs);
-    const abort = () => controller.abort();
-    if (options.signal?.aborted) abort();
-    else options.signal?.addEventListener("abort", abort, { once: true });
-
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, {
-        cache: "no-store",
-        credentials: "include",
-        headers,
-        method: options.method ?? STATISTICS_API_HTTP_METHOD.GET,
-        signal: controller.signal,
-      });
-    } catch {
-      if (options.signal?.aborted) throw new StatisticsApiError({ code: "STATISTICS_API_ABORTED", message: "The statistics request was aborted.", status: 499 });
-      if (timedOut) throw new StatisticsApiError({ code: "STATISTICS_API_TIMEOUT", message: "The statistics API request timed out.", status: 504 });
+      return await this.adminClient.requestRaw(path, toAdminOptions(options));
+    } catch (error) {
+      if (error instanceof StatisticsApiError) throw error;
+      if (error instanceof AdminApiError) throw new StatisticsApiError({ code: error.code, issues: error.issues.flatMap((issue) => isRecord(issue) ? [{ code: String(issue.code ?? "INVALID_FIELD"), field: String(issue.field ?? "request"), message: String(issue.message ?? "Invalid value.") }] : []), message: error.message, status: error.status });
       throw unavailableError();
-    } finally {
-      clearTimeout(timeout);
-      options.signal?.removeEventListener("abort", abort);
     }
   }
+}
+
+function toAdminOptions(options: StatisticsApiRequestOptions): AdminRequestOptions {
+  return { ...options, retryOnUnauthorized: true };
 }
 
 export class FetchStatisticsApiClient extends StatisticsApiClient {}

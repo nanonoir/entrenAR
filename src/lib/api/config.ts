@@ -51,7 +51,6 @@ const configuredCheckoutApiBaseUrl =
   defaultApiBaseUrl;
 
 export const catalogApiConfig = {
-  adminAccessToken: process.env.CATALOG_API_ADMIN_ACCESS_TOKEN,
   baseUrl: (process.env.NEXT_PUBLIC_CATALOG_API_BASE_URL ?? defaultApiBaseUrl).replace(/\/$/, ""),
 } as const;
 
@@ -138,7 +137,7 @@ export const adminCustomersApiConfig = customersApiConfig;
 export type { DataSource };
 
 function resolveDataSource(value: string | undefined): DataSource {
-  return value === DATA_SOURCE.MOCK ? DATA_SOURCE.MOCK : DATA_SOURCE.API;
+  return value === DATA_SOURCE.MOCK && process.env.NODE_ENV !== "production" ? DATA_SOURCE.MOCK : DATA_SOURCE.API;
 }
 
 function normalizeBaseUrl(value: string): string {

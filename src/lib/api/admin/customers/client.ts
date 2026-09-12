@@ -1,4 +1,4 @@
-import { clearAccountAccessToken, getAccountAccessToken } from "@/lib/api/account/access-token";
+import { AdminApiClient, AdminApiError, type AdminRequestOptions } from "@/lib/api/admin/client";
 
 import { customersApiConfig } from "./customers-api-config";
 import type { CustomerApiIssue } from "./types";
@@ -39,10 +39,12 @@ export interface CustomersApiClient {
 type FetchImplementation = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export class FetchCustomersApiClient implements CustomersApiClient {
+  private readonly adminClient: AdminApiClient;
+
   constructor(
-    private readonly fetchImplementation: FetchImplementation = fetch,
+    fetchImplementation: FetchImplementation = fetch,
     private readonly baseUrl = customersApiConfig.baseUrl,
-  ) {}
+  ) { this.adminClient = new AdminApiClient(fetchImplementation, baseUrl); }
 
   get<T>(path: string, options: CustomersApiMethodOptions = {}): Promise<T> { return this.request<T>(path, { ...options, method: "GET" }); }
   getText(path: string, options: CustomersApiMethodOptions = {}): Promise<string> { return this.requestText(path, { ...options, method: "GET" }); }
@@ -51,39 +53,31 @@ export class FetchCustomersApiClient implements CustomersApiClient {
   put<T>(path: string, body?: unknown, options: CustomersApiMethodOptions = {}): Promise<T> { return this.request<T>(path, { ...options, body, method: "PUT" }); }
 
   private async request<T>(path: string, options: CustomersApiRequestOptions): Promise<T> {
-    const response = await this.execute(path, options);
-    const payload = await readJson(response);
-    if (!response.ok) throw responseError(response.status, payload);
-    if (isRecord(payload) && payload.ok === false) throw responseError(response.status, payload);
-    return payload as T;
+    try {
+      return await this.adminClient.request<T>(path, toAdminOptions(options));
+    } catch (error) {
+      throw toCustomersError(error);
+    }
   }
 
   private async requestText(path: string, options: CustomersApiRequestOptions): Promise<string> {
-    const response = await this.execute(path, options);
-    const text = await response.text();
-    if (!response.ok) throw responseError(response.status, parseJson(text));
-    return text.startsWith("\uFEFF") ? text : `\uFEFF${text}`;
-  }
-
-  private async execute(path: string, options: CustomersApiRequestOptions): Promise<Response> {
-    const headers = new Headers(options.headers);
-    headers.set("Accept", options.method === "GET" && path.includes("/export") ? "text/csv" : "application/json");
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
-    const token = getAccountAccessToken();
-    if (token && options.includeAuthorization !== false) headers.set("Authorization", `Bearer ${token}`);
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${path.startsWith("/") ? path : `/${path}`}`, {
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
-        cache: "no-store",
-        credentials: "include",
-        headers,
-        method: options.method ?? "GET",
-        signal: options.signal,
-      });
-    } catch {
-      throw new CustomersApiError({ code: "CUSTOMERS_API_UNAVAILABLE", message: "The customers API is unavailable.", status: 503 });
+      const text = await this.adminClient.requestText(path, { ...toAdminOptions(options), headers: { ...options.headers, Accept: "text/csv" } });
+      return text.startsWith("\uFEFF") ? text : `\uFEFF${text}`;
+    } catch (error) {
+      throw toCustomersError(error);
     }
   }
+}
+
+function toAdminOptions(options: CustomersApiRequestOptions): AdminRequestOptions {
+  return { ...options, retryOnUnauthorized: true };
+}
+
+function toCustomersError(error: unknown): CustomersApiError {
+  if (error instanceof CustomersApiError) return error;
+  if (error instanceof AdminApiError) return new CustomersApiError({ code: error.code, issues: [], message: error.message, status: error.status });
+  return new CustomersApiError({ code: "CUSTOMERS_API_ERROR", message: error instanceof Error ? error.message : "The customers request failed.", status: 500 });
 }
 
 export function toCustomersApiError(error: unknown): CustomersApiError {
@@ -96,7 +90,6 @@ function responseError(status: number, payload: unknown): CustomersApiError {
   const record = isRecord(payload) ? payload : {};
   const code = typeof record.code === "string" && record.code.trim() ? record.code : "CUSTOMERS_API_ERROR";
   const message = typeof record.message === "string" && record.message.trim() ? record.message : "The customers request failed.";
-  if (status === 401) clearAccountAccessToken();
   return new CustomersApiError({ code, issues: readIssues(record.issues), message, status });
 }
 
