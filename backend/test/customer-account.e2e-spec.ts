@@ -55,7 +55,7 @@ describe("customer account API (e2e)", () => {
     const fixture = requireFixtures(fixtures);
     ownerSession = await login(fixture.owner);
     foreignSession = await serviceLogin(fixture.foreign);
-    adminSession = await serviceLogin(fixture.admin);
+    adminSession = await serviceAdminLogin(fixture.admin);
     limitSession = await serviceLogin(fixture.limit);
   });
 
@@ -396,6 +396,11 @@ describe("customer account API (e2e)", () => {
   async function serviceLogin(user: UserFixture): Promise<SessionFixture> {
     if (!authService) throw new Error("Auth service was not initialized.");
     return { accessToken: (await authService.login(user.email, user.password)).accessToken, cookie: "" };
+  }
+
+  async function serviceAdminLogin(user: UserFixture): Promise<SessionFixture> {
+    if (!authService) throw new Error("Auth service was not initialized.");
+    return { accessToken: (await authService.loginAdmin(user.email, user.password)).accessToken, cookie: "" };
   }
 
   function request(path: string, options: RequestOptions = {}): Promise<Response> {

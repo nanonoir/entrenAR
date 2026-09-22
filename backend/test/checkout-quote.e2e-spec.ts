@@ -19,6 +19,7 @@ import {
   checkoutQuoteBody as quoteBody,
   checkoutRequest,
   expectCheckoutError as expectError,
+  loginAdminUser as loginAdmin,
   loginCheckoutUser as login,
   requireCheckoutFixtures as requireFixtures,
   testCheckoutConfig,
@@ -65,7 +66,7 @@ describe("checkout quote REST API (e2e)", () => {
 
     const fixture = requireFixtures(fixtures);
     foreignSession = await login(baseUrl, fixture.foreign);
-    adminSession = await login(baseUrl, fixture.admin);
+    adminSession = await loginAdmin(baseUrl, fixture.admin);
     staleSession = await login(baseUrl, fixture.staleOwner);
     validationSession = await login(baseUrl, fixture.validationOwner);
   });

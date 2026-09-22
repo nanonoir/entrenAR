@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const protectedPaths = ["/admin", "/admin/ventas", "/admin/anything-invented"];
+const showcaseAdminCredentials = {
+  email: process.env.E2E_ADMIN_EMAIL ?? "prueba@entrenar.com",
+  password: process.env.E2E_ADMIN_PASSWORD ?? "pruebaentrenar",
+};
 
 test.describe("admin route cloaking and public error contract", () => {
   for (const path of protectedPaths) {
@@ -44,16 +48,11 @@ test.describe("admin route cloaking and public error contract", () => {
 });
 
 test.describe("admin authenticated lifecycle contract", () => {
-  test.skip(
-    !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
-    "Requires E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD plus the backend fixture.",
-  );
-
   test("restores nested routes, protects bootstrap data, and supports admin/customer coexistence", async ({ page, context }) => {
     test.info().annotations.push({ type: "coverage", description: "login, restoration, coexistence, bootstrap non-disclosure, six transports" });
     await page.goto("/admin/login");
-    await page.getByLabel("Correo").fill(process.env.E2E_ADMIN_EMAIL!);
-    await page.getByLabel("Contraseña").fill(process.env.E2E_ADMIN_PASSWORD!);
+    await page.getByLabel("Correo").fill(showcaseAdminCredentials.email);
+    await page.getByLabel("Contraseña").fill(showcaseAdminCredentials.password);
     await page.getByRole("button", { name: "Ingresar" }).click();
     await expect(page).toHaveURL(/\/admin$/);
 
