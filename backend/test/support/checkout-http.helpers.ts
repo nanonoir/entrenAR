@@ -21,6 +21,16 @@ export async function loginCheckoutUser(baseUrl: string, user: FixtureUser): Pro
   return { accessToken: body.accessToken };
 }
 
+export async function loginAdminUser(baseUrl: string, user: FixtureUser): Promise<SessionFixture> {
+  const response = await checkoutRequest(baseUrl, "/auth/admin/login", {
+    body: { email: user.email, password: user.password },
+    method: HTTP_METHOD.POST,
+  });
+  expect(response.status).toBe(200);
+  const body = await checkoutJson<{ accessToken: string }>(response);
+  return { accessToken: body.accessToken };
+}
+
 export function checkoutRequest(baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
   const headers = new Headers(options.headers);
   headers.set("accept", "application/json");

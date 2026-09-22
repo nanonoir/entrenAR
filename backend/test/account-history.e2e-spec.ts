@@ -18,6 +18,7 @@ import {
   checkoutRequest,
   expectCheckoutError as expectError,
   expectCheckoutJson as expectJson,
+  loginAdminUser as loginAdmin,
   loginCheckoutUser as login,
   requireCheckoutFixtures as requireFixtures,
   seedCheckoutHistoryOrder,
@@ -64,7 +65,7 @@ describe("account order history REST API (e2e)", () => {
     const fixture = requireFixtures(fixtures);
     ownerSession = await login(baseUrl, fixture.owner);
     foreignSession = await login(baseUrl, fixture.foreign);
-    adminSession = await login(baseUrl, fixture.admin);
+    adminSession = await loginAdmin(baseUrl, fixture.admin);
     await seedCheckoutHistoryOrder(baseUrl, fixture, ownerSession);
   });
 
