@@ -1,7 +1,7 @@
 "use client";
 
 import { PackageSearch } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { AdminPageHeader } from "@/components/admin/layout/AdminPageHeader";
 import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
@@ -9,7 +9,7 @@ import { useAdminProductsStore } from "@/stores/admin-products-store";
 export function InventoryHistoryPage({ product }: { product: AdminProduct }) {
   const initializeProducts = useAdminProductsStore((state) => state.initializeProducts);
   const stockHistory = useAdminProductsStore((state) => state.stockHistory);
-  const history = useMemo(() => stockHistory.filter((entry) => entry.productId === product.id), [product.id, stockHistory]);
+  const history = stockHistory.filter((entry) => entry.productId === product.id);
 
   useEffect(() => { initializeProducts([product]); }, [initializeProducts, product]);
 
