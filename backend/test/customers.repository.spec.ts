@@ -219,8 +219,8 @@ function createHarness() {
   return { customer, prisma, repository: new CustomersRepository(prisma as unknown as PrismaService) };
 }
 
-function createTransaction(): { customer: { create: jest.Mock; findFirst: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock } } {
-  return { customer: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() } };
+function createTransaction(): { $executeRaw: jest.Mock; customer: { create: jest.Mock; findFirst: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock } } {
+  return { $executeRaw: jest.fn(), customer: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() } };
 }
 
 function record(id: string, orders: unknown[] = []): CustomerListRecord {

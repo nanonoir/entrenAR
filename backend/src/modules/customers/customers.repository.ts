@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
 import type { PrismaClient } from "../../generated/prisma/client";
 import { OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
@@ -88,10 +89,13 @@ export type CustomerRepositoryListQuery = Omit<CustomerListQuery, "sortBy"> & {
 
 @Injectable()
 export class CustomersRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
 
   async transaction<T>(callback: (transaction: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(callback);
+    return this.mutationGate.runShared(this.prisma, callback);
   }
 
   async findMany(query: CustomerRepositoryListQuery, client?: CustomerClient): Promise<CustomerPageResult>;

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
 import { SupplierStatus } from "../../generated/prisma/enums";
 import type { SupplierFilterQueryDto } from "./suppliers.schemas";
@@ -14,8 +15,11 @@ export type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class SuppliersRepository {
-  constructor(private readonly prisma: PrismaService) {}
-  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(callback); }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
+  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.mutationGate.runShared(this.prisma, callback); }
   async list(query: SupplierFilterQueryDto): Promise<SupplierPageResult> {
     const where = supplierWhere(query);
     const [items, total] = await this.prisma.$transaction([

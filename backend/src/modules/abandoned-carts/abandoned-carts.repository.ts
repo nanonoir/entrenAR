@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
 import { CartStatus, CheckoutRecoveryStatus, CheckoutSessionStatus } from "../../generated/prisma/enums";
 import {
@@ -96,7 +97,10 @@ export type CartRecoverySettingsRecord = Prisma.CartRecoverySettingsGetPayload<R
 
 @Injectable()
 export class AbandonedCartsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
 
   async findMany(query: AbandonedCartListQuery): Promise<AbandonedCartPageResult>;
   async findMany(filters: AbandonedCartFilters, pagination: AbandonedCartPageInput, sort?: AbandonedCartSort): Promise<AbandonedCartPageResult>;
@@ -216,7 +220,7 @@ export class AbandonedCartsRepository {
   }
 
   async runInTransaction<T>(fn: (txClient: TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(fn);
+    return this.mutationGate.runShared(this.prisma, fn);
   }
 }
 
