@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the EntrenAR showcase CRM data reset hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=false
+Unit=entrenar-showcase-reset.service
+
+[Install]
+WantedBy=timers.target

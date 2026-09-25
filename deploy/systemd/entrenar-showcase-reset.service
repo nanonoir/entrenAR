@@ -1,0 +1,9 @@
+[Unit]
+Description=EntrenAR showcase CRM data reset
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/entrenar
+ExecStart=/usr/bin/docker compose --project-directory /opt/entrenar exec -T backend npm run showcase:reset
+StandardOutput=journal
+StandardError=journal
