@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
 import { OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
 import { salesOrderInclude, type OrderHistoryRecord, type SalesOrderRecord } from "./sales.mapper";
@@ -15,8 +16,11 @@ export interface AppendHistoryInput { actorId?: string; actorRole?: "CUSTOMER" |
 
 @Injectable()
 export class SalesRepository {
-  constructor(private readonly prisma: PrismaService) {}
-  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(callback); }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
+  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.mutationGate.runShared(this.prisma, callback); }
   async list(query: SalesListQuery): Promise<SalesPageResult> {
     const where = salesWhere(query);
     const [items, total] = await this.prisma.$transaction([

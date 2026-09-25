@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
 import { PurchaseOrderStatus } from "../../generated/prisma/enums";
 import type { CreatePurchaseOrderDto, PurchaseOrderFilterQueryDto } from "./purchase-orders.schemas";
@@ -15,8 +16,11 @@ export interface PurchaseOrderUpdateRecord { expectedDate: Date | null; items: r
 
 @Injectable()
 export class PurchaseOrdersRepository {
-  constructor(private readonly prisma: PrismaService) {}
-  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(callback); }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
+  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.mutationGate.runShared(this.prisma, callback); }
   async list(query: PurchaseOrderFilterQueryDto): Promise<PurchaseOrderPageResult> {
     const where = purchaseOrderWhere(query);
     const [items, total] = await this.prisma.$transaction([

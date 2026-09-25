@@ -20,6 +20,7 @@ import {
   ShippingZoneTargetType,
 } from "../../generated/prisma/enums";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MutationGate } from "../../common/prisma/mutation-gate";
 import {
   couponSelect,
   paymentMethodSelect,
@@ -183,10 +184,13 @@ export interface ShippingDiscountMutationRecord {
 
 @Injectable()
 export class CommerceRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mutationGate = new MutationGate(),
+  ) {}
 
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(callback);
+    return this.mutationGate.runShared(this.prisma, callback);
   }
 
   async paymentMethods(): Promise<PaymentMethodRecord[]> {
