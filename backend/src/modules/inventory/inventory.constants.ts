@@ -16,6 +16,7 @@ export const INVENTORY_ORIGIN = {
   ABANDONED_CART_RECOVERY: "abandoned_cart_recovery",
   CHECKOUT: "checkout",
   PURCHASE_ORDER: "purchase_order",
+  SHOWCASE_RESET: "showcase-reset",
 } as const;
 
 export type InventoryOperationInput = (typeof INVENTORY_OPERATION)[keyof typeof INVENTORY_OPERATION];
