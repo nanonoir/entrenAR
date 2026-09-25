@@ -23,6 +23,7 @@ import { PurchaseOrdersModule } from "./modules/purchase-orders/purchase-orders.
 import { SalesModule } from "./modules/sales/sales.module";
 import { StatisticsModule } from "./modules/statistics/statistics.module";
 import { SuppliersModule } from "./modules/suppliers/suppliers.module";
+import { ShowcaseResetModule } from "./modules/showcase-reset/showcase-reset.module";
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SuppliersModule } from "./modules/suppliers/suppliers.module";
     StatisticsModule,
     SuppliersModule,
     PurchaseOrdersModule,
+    ShowcaseResetModule,
   ],
   providers: [
     {
