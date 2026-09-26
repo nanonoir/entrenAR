@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { Role } from "../src/generated/prisma/enums";
 import { SHOWCASE_FIXTURE_FAMILY, SHOWCASE_FIXTURE_MANIFEST, assertShowcaseFixtureIds, assertShowcaseFixtureManifest } from "../src/modules/showcase-reset/fixtures/showcase-fixture-manifest";
-import { CATALOG_PRODUCTS, CATALOG_SETTINGS_ID, CATEGORIES, COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS, inferredProperties, productSku, stockFields, variantAttributes } from "../src/modules/showcase-reset/fixtures/catalog-commerce-baseline";
+import { CATALOG_PRODUCTS, CATALOG_SETTINGS_ID, CATEGORIES, COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS, inferredProperties, stockFields, variantAttributes } from "../src/modules/showcase-reset/fixtures/catalog-commerce-baseline";
 import { seedAbandonedCarts } from "./fixtures/abandoned-carts-fixtures";
 import { seedCheckout } from "./fixtures/checkout-fixtures";
 import { seedCustomersCrm } from "./fixtures/customers-crm-fixtures";
@@ -27,12 +27,13 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
   for (const product of CATALOG_PRODUCTS) {
     const existingProduct = await prisma.product.findUnique({ where: { publicSlug: product.publicSlug } });
     if (existingProduct && existingProduct.id !== product.id) await prisma.product.update({ where: { id: existingProduct.id }, data: { id: product.id } });
-    const productStock = stockFields(product.stock);
-    const data = { ...productStock, brand: product.brand, compareAtPrice: product.compareAtPrice, description: product.description, highlightSections: [], imageTone: product.imageTone, legacySourceId: product.legacySourceId, manualOrder: product.manualOrder, name: product.name, promotionalPrice: product.promotionalPrice, publicSlug: product.publicSlug, salePrice: product.salePrice, sku: productSku(product), slug: product.slug, subcategorySlugs: [], tags: [...(product.tags ?? [])], variantProperties: inferredProperties(product), visibility: product.visibility ?? "VISIBLE" as const };
+    const price = product.promotionalPrice ?? product.salePrice;
+    const compareAtPrice = product.promotionalPrice ? product.salePrice : product.compareAtPrice;
+    const data = { brand: product.brand, compareAtPrice, description: product.description, highlightSections: [], legacySourceId: product.legacySourceId, manualOrder: product.manualOrder, name: product.name, price, publicSlug: product.publicSlug, slug: product.slug, subcategorySlugs: [], tags: [...(product.tags ?? [])], variantProperties: inferredProperties(product), visibility: product.visibility ?? "VISIBLE" as const };
     await prisma.product.upsert({ where: { id: product.id }, create: { id: product.id, ...data }, update: data });
     await prisma.productCategory.upsert({ where: { productId_categoryId: { productId: product.id, categoryId: product.categoryId } }, create: { productId: product.id, categoryId: product.categoryId }, update: {} });
     for (const variant of product.variants) {
-      const variantData = { ...stockFields(variant.stock), attributes: variantAttributes(product, variant), compareAtPrice: variant.compareAtPrice, isDefault: product.variants.length === 1, name: variant.name, price: variant.price, productId: product.id, sku: variant.sku ?? `${productSku(product)}-${variant.id.toUpperCase()}` };
+      const variantData = { ...stockFields(variant.stock), attributes: variantAttributes(product, variant), name: variant.name, productId: product.id, sku: variant.sku ?? `${product.id}-${variant.id}` };
       await prisma.productVariant.upsert({ where: { id: variant.id }, create: { id: variant.id, ...variantData }, update: variantData });
     }
   }
