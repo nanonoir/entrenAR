@@ -11,10 +11,6 @@ const catalogVisibilityValues = Object.values(CATALOG_VISIBILITY) as [
   (typeof CATALOG_VISIBILITY)[keyof typeof CATALOG_VISIBILITY],
   ...(typeof CATALOG_VISIBILITY)[keyof typeof CATALOG_VISIBILITY][],
 ];
-const catalogStockModeValues = Object.values(CATALOG_STOCK_MODE) as [
-  (typeof CATALOG_STOCK_MODE)[keyof typeof CATALOG_STOCK_MODE],
-  ...(typeof CATALOG_STOCK_MODE)[keyof typeof CATALOG_STOCK_MODE][],
-];
 
 export const identifierSchema = z.string().trim().min(1).max(128);
 const optionalTextSchema = z.string().trim().min(1).max(500).optional();
@@ -43,11 +39,9 @@ export const variantPropertySchema = z.object({
 
 export const variantCombinationSchema = z.object({
   attributes: z.record(z.string(), z.string()).optional(),
-  compareAtPrice: optionalMoneySchema,
   id: identifierSchema.optional(),
   name: z.string().trim().min(1).max(200),
-  price: optionalMoneySchema,
-  sku: optionalSlugSchema,
+  sku: identifierSchema,
   stock: z.union([z.number().int().nonnegative(), z.literal(CATALOG_STOCK_MODE.INFINITE)]),
 }).strict();
 
@@ -61,22 +55,17 @@ const productBaseSchema = z.object({
   description: z.string().trim().min(10).max(10_000),
   heightCm: optionalPositiveIntegerSchema,
   highlightSections: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
-  imageTone: z.string().trim().min(1).max(32).optional(),
-  imageUrl: z.url().optional(),
   isBestSeller: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
   lengthCm: optionalPositiveIntegerSchema,
   name: z.string().trim().min(3).max(240),
   promotionalPrice: optionalMoneySchema,
   publicSlug: optionalSlugSchema,
-  salePrice: moneySchema,
+  price: moneySchema,
   seoDescription: z.string().trim().max(160).optional(),
   seoTitle: z.string().trim().max(70).optional(),
   shippingRequired: z.boolean().default(true),
-  sku: optionalSlugSchema,
   slug: optionalSlugSchema,
-  stockMode: z.enum(catalogStockModeValues),
-  stockQuantity: z.number().int().nonnegative().optional(),
   subcategorySlugs: z.array(identifierSchema).max(50).default([]),
   tags: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
   variantCombinations: z.array(variantCombinationSchema).max(2_500).default([]),
@@ -85,7 +74,7 @@ const productBaseSchema = z.object({
   weightGrams: optionalPositiveIntegerSchema,
   widthCm: optionalPositiveIntegerSchema,
 }).strict().superRefine((input, context) => {
-  if (input.promotionalPrice !== undefined && input.promotionalPrice >= input.salePrice) {
+  if (input.promotionalPrice !== undefined && input.promotionalPrice >= input.price) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: "promotionalPrice must be lower than salePrice.",
@@ -93,21 +82,6 @@ const productBaseSchema = z.object({
     });
   }
 
-  if (input.stockMode === CATALOG_STOCK_MODE.LIMITED && input.stockQuantity === undefined) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "stockQuantity is required for limited stock.",
-      path: ["stockQuantity"],
-    });
-  }
-
-  if (input.stockMode === CATALOG_STOCK_MODE.INFINITE && input.stockQuantity !== undefined) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "stockQuantity must be omitted for infinite stock.",
-      path: ["stockQuantity"],
-    });
-  }
 
   const propertyIds = input.variantProperties.map((property) => property.id.toLocaleLowerCase());
   if (new Set(propertyIds).size !== propertyIds.length) {
@@ -189,9 +163,9 @@ export const catalogSettingsUpdateSchema = z.object({
 export const productPriceUpdateSchema = z.object({
   compareAtPrice: optionalMoneySchema,
   promotionalPrice: optionalMoneySchema,
-  salePrice: moneySchema,
+  price: moneySchema,
 }).strict().superRefine((input, context) => {
-  if (input.promotionalPrice !== undefined && input.promotionalPrice >= input.salePrice) {
+  if (input.promotionalPrice !== undefined && input.promotionalPrice >= input.price) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: "promotionalPrice must be lower than salePrice.",

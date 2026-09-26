@@ -20,11 +20,8 @@ import {
 
 interface PreparedVariant {
   attributes: Record<string, string>;
-  compareAtPrice?: number;
   id?: string;
-  isDefault: boolean;
   name: string;
-  price?: number;
   sku: string;
   stock: number | "infinite";
 }
@@ -37,7 +34,7 @@ export class ProductService {
     return this.catalogRepository.transaction(async (transaction) => {
       await this.assertCategoriesExist(transaction, input.categoryIds);
       const identities = await this.identitiesForInput(transaction, input);
-      const variants = this.validateVariantConfiguration(input.variantProperties, input.variantCombinations, identities.skus, input.stockMode, input.stockQuantity);
+      const variants = this.validateVariantConfiguration(input.variantProperties, input.variantCombinations, identities.skus);
       const product = await this.catalogRepository.createProduct(transaction, this.toCreateRecord(input, identities, variants, await this.nextManualOrder(transaction)));
       return toAdminCatalogProduct(product);
     });
@@ -49,7 +46,7 @@ export class ProductService {
       if (!current) throw this.notFound();
       await this.assertCategoriesExist(transaction, input.categoryIds);
       const identities = await this.identitiesForInput(transaction, input, current);
-      const variants = this.validateVariantConfiguration(input.variantProperties, input.variantCombinations, identities.skus, input.stockMode, input.stockQuantity);
+      const variants = this.validateVariantConfiguration(input.variantProperties, input.variantCombinations, identities.skus);
       const product = await this.catalogRepository.updateProduct(transaction, {
         ...this.toCreateRecord(input, identities, variants, current.manualOrder),
         id: current.id,
@@ -65,13 +62,9 @@ export class ProductService {
       const takenSkus = await this.catalogRepository.allSkus(transaction);
       const slug = await this.nextUniqueSlug(transaction, source.slug);
       const publicSlug = await this.nextUniquePublicSlug(transaction, source.publicSlug);
-      const sku = nextUniqueSku(source.sku, takenSkus);
       const variants = source.variants.map((variant) => ({
         attributes: jsonRecord(variant.attributes),
-        ...(variant.compareAtPrice ? { compareAtPrice: moneyNumber(variant.compareAtPrice) } : {}),
-        isDefault: variant.isDefault,
         name: variant.name,
-        ...(variant.price ? { price: moneyNumber(variant.price) } : {}),
         quantity: variant.stockMode === StockMode.INFINITE ? null : variant.quantity ?? 0,
         sku: nextUniqueSku(variant.sku, takenSkus),
         stockMode: variant.stockMode === StockMode.INFINITE ? StockMode.INFINITE : StockMode.TRACKED,
@@ -83,8 +76,6 @@ export class ProductService {
         description: source.description ?? "Catalog product duplicate.",
         ...(source.heightCm ? { heightCm: source.heightCm } : {}),
         highlightSections: jsonValue(source.highlightSections),
-        ...(source.imageTone ? { imageTone: source.imageTone } : {}),
-        ...(source.imageUrl ? { imageUrl: source.imageUrl } : {}),
         isBestSeller: source.isBestSeller,
         isFeatured: source.isFeatured,
         ...(source.lengthCm ? { lengthCm: source.lengthCm } : {}),
@@ -93,14 +84,11 @@ export class ProductService {
         name: `${source.name} Copy`,
         ...(source.promotionalPrice ? { promotionalPrice: moneyNumber(source.promotionalPrice) } : {}),
         publicSlug,
-        quantity: source.stockMode === StockMode.INFINITE ? null : source.quantity ?? 0,
-        salePrice: moneyNumber(source.salePrice),
+        price: moneyNumber(source.price),
         ...(source.seoDescription ? { seoDescription: source.seoDescription } : {}),
         ...(source.seoTitle ? { seoTitle: source.seoTitle } : {}),
         shippingRequired: source.shippingRequired,
-        sku,
         slug,
-        stockMode: source.stockMode === StockMode.INFINITE ? StockMode.INFINITE : StockMode.TRACKED,
         subcategorySlugs: jsonValue(source.subcategorySlugs),
         tags: jsonValue(source.tags),
         variantProperties: jsonValue(source.variantProperties),
@@ -121,11 +109,11 @@ export class ProductService {
 
   async updatePrices(
     id: string,
-    input: Pick<ProductUpdateInput, "salePrice"> & Partial<Pick<ProductUpdateInput, "compareAtPrice" | "promotionalPrice">>,
+    input: Pick<ProductUpdateInput, "price"> & Partial<Pick<ProductUpdateInput, "compareAtPrice" | "promotionalPrice">>,
   ): Promise<AdminCatalogProduct> {
     return this.catalogRepository.transaction(async (transaction) => {
       if (!await this.catalogRepository.productById(transaction, id)) throw this.notFound();
-      return toAdminCatalogProduct(await this.catalogRepository.updateProductPrices(transaction, id, input));
+      return toAdminCatalogProduct(await this.catalogRepository.updateProductPrices(transaction, id, { price: input.price, compareAtPrice: input.compareAtPrice, promotionalPrice: input.promotionalPrice }));
     });
   }
 
@@ -150,10 +138,9 @@ export class ProductService {
     transaction: Parameters<CatalogRepository["allSkus"]>[0],
     input: ProductCreateInput | ProductUpdateInput,
     current?: CatalogProduct,
-  ): Promise<{ publicSlug: string; sku: string; skus: Set<string>; slug: string }> {
+  ): Promise<{ publicSlug: string; skus: Set<string>; slug: string }> {
     const takenSkus = await this.catalogRepository.allSkus(transaction);
     if (current) {
-      takenSkus.delete(current.sku);
       for (const variant of current.variants) takenSkus.delete(variant.sku);
     }
     const slug = input.slug
@@ -162,32 +149,22 @@ export class ProductService {
     const publicSlug = input.publicSlug
       ? await this.assertAvailablePublicSlug(transaction, input.publicSlug, current?.id)
       : await this.nextUniquePublicSlug(transaction, slug, current?.id);
-    const sku = input.sku ? this.assertAvailableSku(input.sku, takenSkus) : nextUniqueSku(`SKU-${slug}`, takenSkus);
-
-    return { publicSlug, sku, skus: takenSkus, slug };
+    return { publicSlug, skus: takenSkus, slug };
   }
 
   private validateVariantConfiguration(
     properties: readonly VariantPropertyInput[],
     combinations: readonly VariantCombinationInput[],
     takenSkus: Set<string>,
-    productStockMode: "infinite" | "limited",
-    productStockQuantity: number | undefined,
   ): PreparedVariant[] {
     if (properties.length === 0) {
       if (combinations.length > 0) throw this.validationConflict("Products without option axes must not submit variant combinations.");
       return [{
         attributes: {},
-        isDefault: true,
-        name: "Default",
-        sku: nextUniqueSku("SKU-DEFAULT", takenSkus),
-        stock: productStockMode === CATALOG_STOCK_MODE.INFINITE ? CATALOG_STOCK_MODE.INFINITE : productStockQuantity ?? 0,
+         name: "Simple product",
+         sku: nextUniqueSku("SKU-DEFAULT", takenSkus),
+         stock: 0,
       }];
-    }
-
-    const expected = cartesianCombinations(properties);
-    if (combinations.length !== expected.size) {
-      throw this.validationConflict("Variant combinations must exactly match the active option Cartesian product.");
     }
 
     const result: PreparedVariant[] = [];
@@ -195,8 +172,8 @@ export class ProductService {
     for (const combination of combinations) {
       const attributes = combination.attributes ?? attributesFromName(combination.name, properties);
       const key = attributeKey(attributes, properties);
-      if (!expected.has(key) || submitted.has(key)) {
-        throw this.validationConflict("Variant combinations must exactly match the active option Cartesian product.");
+      if (!key || submitted.has(key)) {
+        throw this.validationConflict("Variant combinations must contain unique declared option values.");
       }
       submitted.add(key);
       const sku = combination.sku
@@ -204,29 +181,21 @@ export class ProductService {
         : nextUniqueSku(`SKU-${combination.name}`, takenSkus);
       result.push({
         attributes,
-        ...(combination.compareAtPrice ? { compareAtPrice: combination.compareAtPrice } : {}),
-        ...(combination.id ? { id: combination.id } : {}),
-        isDefault: false,
-        name: combination.name,
-        ...(combination.price ? { price: combination.price } : {}),
-        sku,
+         ...(combination.id ? { id: combination.id } : {}),
+         name: combination.name,
+         sku,
         stock: combination.stock,
       });
-    }
-    if (submitted.size !== expected.size) {
-      throw this.validationConflict("Variant combinations must exactly match the active option Cartesian product.");
     }
     return result;
   }
 
   private toCreateRecord(
     input: ProductCreateInput | ProductUpdateInput,
-    identities: { publicSlug: string; sku: string; slug: string },
+    identities: { publicSlug: string; slug: string },
     variants: readonly PreparedVariant[],
     manualOrder: number,
   ): CreateCatalogProductRecord {
-    const stockMode = input.stockMode === CATALOG_STOCK_MODE.INFINITE ? StockMode.INFINITE : StockMode.TRACKED;
-
     return {
       ...(input.brand ? { brand: input.brand } : {}),
       categoryIds: input.categoryIds,
@@ -234,8 +203,6 @@ export class ProductService {
       description: input.description,
       ...(input.heightCm ? { heightCm: input.heightCm } : {}),
       highlightSections: jsonValue(input.highlightSections),
-      ...(input.imageTone ? { imageTone: input.imageTone } : {}),
-      ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
       isBestSeller: input.isBestSeller,
       isFeatured: input.isFeatured,
       ...(input.lengthCm ? { lengthCm: input.lengthCm } : {}),
@@ -244,24 +211,18 @@ export class ProductService {
       name: input.name,
       ...(input.promotionalPrice ? { promotionalPrice: input.promotionalPrice } : {}),
       publicSlug: identities.publicSlug,
-      quantity: stockMode === StockMode.INFINITE ? null : input.stockQuantity ?? 0,
-      salePrice: input.salePrice,
+      price: input.price,
       ...(input.seoDescription ? { seoDescription: input.seoDescription } : {}),
       ...(input.seoTitle ? { seoTitle: input.seoTitle } : {}),
       shippingRequired: input.shippingRequired,
-      sku: identities.sku,
       slug: identities.slug,
-      stockMode,
       subcategorySlugs: jsonValue(input.subcategorySlugs),
       tags: jsonValue(input.tags),
       variantProperties: jsonValue(input.variantProperties),
       variants: variants.map((variant) => ({
         attributes: jsonValue(variant.attributes),
-        ...(variant.compareAtPrice ? { compareAtPrice: variant.compareAtPrice } : {}),
-        ...(variant.id ? { id: variant.id } : {}),
-        isDefault: variant.isDefault ?? false,
-        name: variant.name,
-        ...(variant.price ? { price: variant.price } : {}),
+         ...(variant.id ? { id: variant.id } : {}),
+         name: variant.name,
         quantity: variant.stock === CATALOG_STOCK_MODE.INFINITE ? null : variant.stock,
         sku: variant.sku,
         stockMode: variant.stock === CATALOG_STOCK_MODE.INFINITE ? StockMode.INFINITE : StockMode.TRACKED,

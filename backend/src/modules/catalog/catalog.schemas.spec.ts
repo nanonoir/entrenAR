@@ -4,9 +4,7 @@ const baseProduct = {
   categoryIds: ["category-1"],
   description: "A catalog product description.",
   name: "Catalog product",
-  salePrice: 99.99,
-  stockMode: "limited",
-  stockQuantity: 10,
+  price: 99.99,
   visibility: "visible",
 };
 

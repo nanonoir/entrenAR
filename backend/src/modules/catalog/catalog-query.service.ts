@@ -39,7 +39,7 @@ export class CatalogQueryService {
       if (query.categoryId && !product.categories.some((entry) => entry.categoryId === query.categoryId)) return false;
       if (query.visibility && product.visibility !== visibility(query.visibility)) return false;
       if (!search) return true;
-      return [product.brand, product.name, product.sku, product.slug, product.publicSlug]
+      return [product.brand, product.name, ...product.variants.map((variant) => variant.sku), product.slug, product.publicSlug]
         .some((value) => value?.toLocaleLowerCase().includes(search));
     });
     const mapped = filtered.map(toAdminCatalogProduct);
@@ -95,8 +95,8 @@ export class CatalogQueryService {
     right: CatalogProduct,
     sort: PublicProductListQuery["sort"],
   ): number {
-    const leftPrice = Number(left.salePrice);
-    const rightPrice = Number(right.salePrice);
+    const leftPrice = Number(left.price);
+    const rightPrice = Number(right.price);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.PRICE_ASC) return leftPrice - rightPrice || left.id.localeCompare(right.id);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.PRICE_DESC) return rightPrice - leftPrice || left.id.localeCompare(right.id);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.NEWEST) return right.createdAt.getTime() - left.createdAt.getTime() || left.id.localeCompare(right.id);

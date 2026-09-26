@@ -41,8 +41,6 @@ describe("catalog mappers", () => {
 
   it("maps infinite stock to the numeric public contract without exposing stock mode", () => {
     const product = fixtureProduct();
-    product.stockMode = StockMode.INFINITE;
-    product.quantity = null;
     product.variants[0]!.stockMode = StockMode.INFINITE;
     product.variants[0]!.quantity = null;
 
@@ -77,8 +75,7 @@ function fixtureProduct(): CatalogProduct {
     name: "Catalog product",
     promotionalPrice: null,
     publicSlug: "storefront-product",
-    quantity: 3,
-    salePrice: decimal("19.99"),
+    price: decimal("19.99"),
     seoDescription: null,
     seoTitle: null,
     shippingRequired: true,
