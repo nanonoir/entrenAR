@@ -11,7 +11,16 @@ export class CatalogProductRequestDto {
   name!: string;
 
   @ApiProperty()
-  salePrice!: number;
+  price!: number;
+
+  @ApiPropertyOptional()
+  compareAtPrice?: number;
+
+  @ApiPropertyOptional({ type: [Object] })
+  variantProperties?: object[];
+
+  @ApiPropertyOptional({ type: [Object] })
+  variantCombinations?: object[];
 
   @ApiProperty({ enum: ["limited", "infinite"] })
   stockMode!: string;

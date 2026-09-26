@@ -1,10 +1,11 @@
 import type { Prisma } from "../../generated/prisma/client";
 import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
-import { toPublicStockNumber } from "../inventory/inventory.mapper";
+import { PUBLIC_INFINITE_STOCK, toPublicStockNumber } from "../inventory/inventory.mapper";
 
 export const catalogProductInclude = {
   categories: { include: { category: true } },
-  variants: { orderBy: { id: "asc" } },
+  images: { orderBy: { position: "asc" } },
+  variants: { include: { primaryImage: true }, orderBy: { id: "asc" } },
 } satisfies Prisma.ProductInclude;
 
 export type CatalogProduct = Prisma.ProductGetPayload<{ include: typeof catalogProductInclude }>;
@@ -16,19 +17,15 @@ export const checkoutProductSelect = {
   id: true,
   missingLogistics: true,
   name: true,
+  price: true,
   promotionalPrice: true,
-  salePrice: true,
   shippingRequired: true,
-  sku: true,
   variants: {
     orderBy: { id: "asc" },
     select: {
       attributes: true,
-      compareAtPrice: true,
       id: true,
-      isDefault: true,
       name: true,
-      price: true,
       quantity: true,
       sku: true,
       stockMode: true,
@@ -44,7 +41,6 @@ export interface CheckoutCatalogVariant {
   attributes: Record<string, string>;
   compareAtPrice?: number;
   id: string;
-  isDefault: boolean;
   name: string;
   price: number;
   quantity: number | null;
@@ -70,7 +66,7 @@ export interface CheckoutCatalogProduct {
 }
 
 export function toCheckoutCatalogProduct(product: CheckoutCatalogProductRecord): CheckoutCatalogProduct {
-  const salePrice = decimalToNumber(product.salePrice);
+  const salePrice = decimalToNumber(product.price);
   const promotionalPrice = product.promotionalPrice === null ? undefined : decimalToNumber(product.promotionalPrice);
   const effectivePrice = promotionalPrice ?? salePrice;
 
@@ -85,14 +81,12 @@ export function toCheckoutCatalogProduct(product: CheckoutCatalogProductRecord):
     ...(promotionalPrice === undefined ? {} : { promotionalPrice }),
     salePrice,
     shippingRequired: product.shippingRequired,
-    sku: product.sku,
+    sku: product.variants[0]?.sku ?? "",
     variants: product.variants.map((variant) => ({
       attributes: stringRecord(variant.attributes),
-      ...(variant.compareAtPrice === null ? {} : { compareAtPrice: decimalToNumber(variant.compareAtPrice) }),
       id: variant.id,
-      isDefault: variant.isDefault,
       name: variant.name,
-      price: variant.price === null ? effectivePrice : decimalToNumber(variant.price),
+      price: effectivePrice,
       quantity: variant.quantity,
       sku: variant.sku,
       stockMode: variant.stockMode,
@@ -150,9 +144,11 @@ export interface AdminCatalogProduct {
   categoryId: string;
   categoryIds: string[];
   categoryName: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
   compareAtPrice?: number;
   createdAt: string;
   description?: string;
+  images?: Array<{ alt?: string; id: string; position: number; storageKey: string; url: string }>;
   heightCm?: number;
   highlightSections: string[];
   id: string;
@@ -165,6 +161,7 @@ export interface AdminCatalogProduct {
   promotionalPrice?: number;
   publicSlug: string;
   salePrice: number;
+  price?: number;
   salesCount: number;
   seoDescription?: string;
   seoTitle?: string;
@@ -186,7 +183,7 @@ export interface AdminCatalogVariant {
   compareAtPrice?: number;
   id: string;
   name: string;
-  price: number;
+  price?: number;
   sku: string;
   stock: number | "infinite";
 }
@@ -195,8 +192,10 @@ export interface PublicCatalogProduct {
   brand: string;
   categoryName: string;
   categorySlug: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
   compareAtPrice?: number;
   description: string;
+  images?: Array<{ alt?: string; id: string; position: number; storageKey: string; url: string }>;
   id: string;
   imageTone?: string;
   isBestSeller: boolean;
@@ -215,6 +214,7 @@ export interface PublicCatalogProduct {
 export interface PublicCatalogVariant {
   compareAtPrice?: number;
   id: string;
+  primaryImageId?: string;
   label: string;
   optionValues: Record<string, string>;
   price: number;
@@ -230,31 +230,38 @@ export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProd
     categoryId: primaryCategory?.id ?? "",
     categoryIds: categories.map((entry) => entry.categoryId),
     categoryName: primaryCategory?.name ?? "",
+    categories: categories.map(({ category }) => ({ id: category.id, name: category.name, slug: category.slug })),
     ...(product.compareAtPrice ? { compareAtPrice: decimalToNumber(product.compareAtPrice) } : {}),
     createdAt: product.createdAt.toISOString(),
     ...(product.description ? { description: product.description } : {}),
+    images: (product.images ?? []).map((image) => ({
+      ...(image.altText ? { alt: image.altText } : {}),
+      id: image.id,
+      position: image.position,
+      storageKey: image.storageKey,
+      url: assetUrl(image.storageKey),
+    })),
     ...(product.heightCm ? { heightCm: product.heightCm } : {}),
     highlightSections: stringArray(product.highlightSections),
     id: product.id,
-    ...(product.imageTone ? { imageTone: product.imageTone } : {}),
-    ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}),
     ...(product.lengthCm ? { lengthCm: product.lengthCm } : {}),
     manualOrder: product.manualOrder,
     missingLogistics: product.missingLogistics,
     name: product.name,
     ...(product.promotionalPrice ? { promotionalPrice: decimalToNumber(product.promotionalPrice) } : {}),
     publicSlug: product.publicSlug,
-    salePrice: decimalToNumber(product.salePrice),
+    price: decimalToNumber(product.price),
+    salePrice: decimalToNumber(product.price),
     salesCount: product.salesCount,
     ...(product.seoDescription ? { seoDescription: product.seoDescription } : {}),
     ...(product.seoTitle ? { seoTitle: product.seoTitle } : {}),
     shippingRequired: product.shippingRequired,
-    sku: product.sku,
+    sku: product.variants[0]?.sku ?? "",
     slug: product.slug,
-    stock: toAdminProductStock(product.stockMode, product.quantity),
+    stock: aggregateAdminProductStock(product.variants),
     tags: stringArray(product.tags),
     updatedAt: product.updatedAt.toISOString(),
-    variantCombinations: product.variants.map((variant) => toAdminCatalogVariant(variant, decimalToNumber(product.salePrice))),
+    variantCombinations: product.variants.map((variant) => toAdminCatalogVariant(variant, decimalToNumber(product.price))),
     variantProperties: unknownArray(product.variantProperties),
     visibility: toVisibility(product.visibility),
     ...(product.weightGrams ? { weightGrams: product.weightGrams } : {}),
@@ -263,7 +270,7 @@ export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProd
 }
 
 export function toPublicCatalogProduct(product: CatalogProduct): PublicCatalogProduct {
-  const productPrice = decimalToNumber(product.salePrice);
+  const productPrice = decimalToNumber(product.price);
   const categories = [...product.categories].sort((left, right) => left.category.id.localeCompare(right.category.id));
   const primaryCategory = categories[0]?.category;
 
@@ -271,25 +278,32 @@ export function toPublicCatalogProduct(product: CatalogProduct): PublicCatalogPr
     brand: product.brand ?? "EntrenAR",
     categoryName: primaryCategory?.name ?? "Uncategorized",
     categorySlug: primaryCategory?.slug ?? "uncategorized",
+    categories: categories.map(({ category }) => ({ id: category.id, name: category.name, slug: category.slug })),
     ...(product.compareAtPrice ? { compareAtPrice: decimalToNumber(product.compareAtPrice) } : {}),
     description: product.description ?? product.shortDescription ?? product.name,
     id: product.id,
-    ...(product.imageTone ? { imageTone: product.imageTone } : {}),
+    images: (product.images ?? []).map((image) => ({
+      ...(image.altText ? { alt: image.altText } : {}),
+      id: image.id,
+      position: image.position,
+      storageKey: image.storageKey,
+      url: assetUrl(image.storageKey),
+    })),
     isBestSeller: product.isBestSeller,
     isFeatured: product.isFeatured,
     name: product.name,
     price: productPrice,
     shortDescription: product.shortDescription ?? product.description ?? product.name,
     slug: product.publicSlug,
-    stock: toPublicStockNumber({ quantity: product.quantity, stockMode: product.stockMode }),
+    stock: aggregateVariantStock(product.variants),
     subcategorySlugs: stringArray(product.subcategorySlugs),
     tags: stringArray(product.tags),
     variants: product.variants.map((variant) => ({
-      ...(variant.compareAtPrice ? { compareAtPrice: decimalToNumber(variant.compareAtPrice) } : {}),
       id: variant.id,
       label: variant.name,
+      ...(variant.primaryImageId ? { primaryImageId: variant.primaryImageId } : {}),
       optionValues: stringRecord(variant.attributes),
-      price: variant.price ? decimalToNumber(variant.price) : productPrice,
+      price: productPrice,
       stock: toPublicStockNumber({ quantity: variant.quantity, stockMode: variant.stockMode }),
     })),
     variantProperties: unknownArray(product.variantProperties),
@@ -336,6 +350,21 @@ function decimalToNumber(value: { toString(): string } | number): number {
   return numberValue;
 }
 
+function assetUrl(storageKey: string): string {
+  const baseUrl = process.env["ASSETS_BASE_URL"]?.replace(/\/$/, "");
+  return baseUrl ? `${baseUrl}/${storageKey}` : storageKey;
+}
+
+function aggregateVariantStock(variants: CatalogProduct["variants"]): number {
+  if (variants.some((variant) => variant.stockMode === StockMode.INFINITE)) return PUBLIC_INFINITE_STOCK;
+  return variants.reduce((total, variant) => total + (variant.quantity ?? 0), 0);
+}
+
+function aggregateAdminProductStock(variants: CatalogProduct["variants"]): { quantity: number } | { type: "infinite" } {
+  if (variants.some((variant) => variant.stockMode === StockMode.INFINITE)) return { type: "infinite" };
+  return { quantity: variants.reduce((total, variant) => total + (variant.quantity ?? 0), 0) };
+}
+
 function isPubliclyVisible(
   category: Prisma.CategoryGetPayload<Record<string, never>>,
   byId: ReadonlyMap<string, Prisma.CategoryGetPayload<Record<string, never>>>,
@@ -369,10 +398,9 @@ function toAdminCatalogVariant(
 ): AdminCatalogVariant {
   return {
     attributes: stringRecord(variant.attributes),
-    ...(variant.compareAtPrice ? { compareAtPrice: decimalToNumber(variant.compareAtPrice) } : {}),
     id: variant.id,
     name: variant.name,
-    price: variant.price ? decimalToNumber(variant.price) : productPrice,
+    price: productPrice,
     sku: variant.sku,
     stock: toAdminStock(variant.stockMode, variant.quantity),
   };
@@ -380,10 +408,6 @@ function toAdminCatalogVariant(
 
 function toAdminStock(stockMode: StockMode, quantity: number | null): number | "infinite" {
   return stockMode === StockMode.INFINITE ? "infinite" : quantity ?? 0;
-}
-
-function toAdminProductStock(stockMode: StockMode, quantity: number | null): { quantity: number } | { type: "infinite" } {
-  return stockMode === StockMode.INFINITE ? { type: "infinite" } : { quantity: quantity ?? 0 };
 }
 
 function toVisibility(visibility: CatalogVisibility): "hidden" | "visible" {

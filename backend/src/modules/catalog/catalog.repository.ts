@@ -29,11 +29,8 @@ export type UpdateCategoryRecord = Omit<CreateCategoryRecord, "sortOrder">;
 
 export interface CreateCatalogVariantRecord {
   attributes: Prisma.InputJsonValue;
-  compareAtPrice?: number;
   id?: string;
-  isDefault: boolean;
   name: string;
-  price?: number;
   quantity: number | null;
   sku: string;
   stockMode: StockMode;
@@ -46,8 +43,6 @@ export interface CreateCatalogProductRecord {
   description: string;
   heightCm?: number;
   highlightSections: Prisma.InputJsonValue;
-  imageTone?: string;
-  imageUrl?: string;
   isBestSeller: boolean;
   isFeatured: boolean;
   lengthCm?: number;
@@ -56,14 +51,11 @@ export interface CreateCatalogProductRecord {
   name: string;
   promotionalPrice?: number;
   publicSlug: string;
-  salePrice: number;
+  price: number;
   seoDescription?: string;
   seoTitle?: string;
   shippingRequired: boolean;
-  sku: string;
   slug: string;
-  stockMode: StockMode;
-  quantity: number | null;
   subcategorySlugs: Prisma.InputJsonValue;
   tags: Prisma.InputJsonValue;
   variantProperties: Prisma.InputJsonValue;
@@ -81,10 +73,9 @@ type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class CatalogRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> {
     return this.mutationGate.runShared(this.prisma, callback);
@@ -208,13 +199,10 @@ export class CatalogRepository {
     const publicSlug = values.publicSlug
       ? await transaction.product.findFirst({ select: { id: true }, where: { publicSlug: values.publicSlug, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } })
       : null;
-    const products = values.skus && values.skus.length > 0
-      ? await transaction.product.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { id: { not: ignoredProductId } } : {}) } })
-      : [];
     const variants = values.skus && values.skus.length > 0
       ? await transaction.productVariant.findMany({ select: { sku: true }, where: { sku: { in: [...values.skus] }, ...(ignoredProductId ? { productId: { not: ignoredProductId } } : {}) } })
       : [];
-    const conflictingSku = [...products, ...variants][0]?.sku;
+    const conflictingSku = variants[0]?.sku;
 
     return {
       ...(slug ? { slug: values.slug } : {}),
@@ -224,9 +212,8 @@ export class CatalogRepository {
   }
 
   async allSkus(transaction: TransactionClient): Promise<Set<string>> {
-    const products = await transaction.product.findMany({ select: { sku: true } });
     const variants = await transaction.productVariant.findMany({ select: { sku: true } });
-    return new Set([...products, ...variants].map((record) => record.sku));
+    return new Set(variants.map((record) => record.sku));
   }
 
   async createProduct(transaction: TransactionClient, data: CreateCatalogProductRecord): Promise<CatalogProduct> {
@@ -249,23 +236,45 @@ export class CatalogRepository {
     await transaction.productCategory.createMany({
       data: data.categoryIds.map((categoryId) => ({ categoryId, productId: data.id })),
     });
-    await transaction.productVariant.deleteMany({ where: { productId: data.id } });
-    await transaction.productVariant.createMany({
-      data: data.variants.map((variant) => ({ ...variant, productId: data.id })),
-    });
+    const currentVariants = await transaction.productVariant.findMany({ where: { productId: data.id }, select: { id: true, sku: true } });
+    const matched = new Set<string>();
+    for (const variant of data.variants) {
+      const current = currentVariants.find((candidate) => candidate.id === variant.id || candidate.sku === variant.sku);
+      const variantData = {
+        attributes: variant.attributes,
+        name: variant.name,
+        quantity: variant.quantity,
+        sku: variant.sku,
+        stockMode: variant.stockMode,
+      };
+      if (current) {
+        matched.add(current.id);
+        await transaction.productVariant.update({ data: variantData, where: { id: current.id } });
+      } else {
+        await transaction.productVariant.create({ data: { ...variantData, productId: data.id } });
+      }
+    }
+    for (const current of currentVariants) {
+      if (matched.has(current.id)) continue;
+      const [historyCount, cartCount] = await Promise.all([
+        transaction.inventoryHistory.count({ where: { variantId: current.id } }),
+        transaction.cartItem.count({ where: { variantId: current.id } }),
+      ]);
+      if (historyCount === 0 && cartCount === 0) await transaction.productVariant.delete({ where: { id: current.id } });
+    }
     return transaction.product.findUniqueOrThrow({ include: catalogProductInclude, where: { id: data.id } });
   }
 
   async updateProductPrices(
     transaction: TransactionClient,
     id: string,
-    data: Pick<CreateCatalogProductRecord, "salePrice"> & Partial<Pick<CreateCatalogProductRecord, "compareAtPrice" | "promotionalPrice">>,
+    data: Pick<CreateCatalogProductRecord, "price"> & Partial<Pick<CreateCatalogProductRecord, "compareAtPrice" | "promotionalPrice">>,
   ): Promise<CatalogProduct> {
     await transaction.product.update({
       data: {
         compareAtPrice: data.compareAtPrice ?? null,
+        price: data.price,
         promotionalPrice: data.promotionalPrice ?? null,
-        salePrice: data.salePrice,
       },
       where: { id },
     });
@@ -303,24 +312,19 @@ function productData(data: CreateCatalogProductRecord): Prisma.ProductUncheckedC
     description: data.description,
     heightCm: data.heightCm,
     highlightSections: data.highlightSections,
-    imageTone: data.imageTone,
-    imageUrl: data.imageUrl,
     isBestSeller: data.isBestSeller,
     isFeatured: data.isFeatured,
     lengthCm: data.lengthCm,
     manualOrder: data.manualOrder,
     missingLogistics: data.missingLogistics,
     name: data.name,
+    price: data.price,
     promotionalPrice: data.promotionalPrice,
     publicSlug: data.publicSlug,
-    quantity: data.quantity,
-    salePrice: data.salePrice,
     seoDescription: data.seoDescription,
     seoTitle: data.seoTitle,
     shippingRequired: data.shippingRequired,
-    sku: data.sku,
     slug: data.slug,
-    stockMode: data.stockMode,
     subcategorySlugs: data.subcategorySlugs,
     tags: data.tags,
     variantProperties: data.variantProperties,
