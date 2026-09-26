@@ -176,7 +176,7 @@ export class CheckoutSnapshotBuilder {
         productId: line.product.id,
         productName: line.product.name,
         quantity: line.quantity,
-        sku: line.variant?.sku ?? line.product.sku,
+        sku: line.variant!.sku,
         snapshot: {
           ...(line.product.brand ? { brand: line.product.brand } : {}),
           effectivePrice: line.unitPrice,
@@ -185,7 +185,8 @@ export class CheckoutSnapshotBuilder {
           ...(line.weightGrams === null ? {} : { weightGrams: line.weightGrams }),
         },
         unitPrice: line.unitPrice,
-        ...(line.variant ? { variantId: line.variant.id, variantName: line.variant.name } : {}),
+        variantId: line.variant!.id,
+        variantName: line.variant!.name,
         ...(line.weightGrams === null ? {} : { weightGrams: line.weightGrams }),
       })),
       inventoryPolicy: OrderInventoryPolicy.NOT_APPLICABLE,

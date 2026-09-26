@@ -41,20 +41,20 @@ describe("sales CRM inventory integration", () => {
       restoreStock: true,
     }), { id: "admin-restore", role: Role.ADMIN });
 
-    const [product, variant, infiniteProduct, history, orderHistory] = await Promise.all([
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } }),
+    const [productVariant, variant, infiniteVariant, history, orderHistory] = await Promise.all([
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } }),
       prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } }),
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.infiniteProductId } }),
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.infiniteVariantId } }),
       prisma.inventoryHistory.findMany({ orderBy: { id: "asc" }, where: { origin: INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION, productId: { in: fixture.productIds } } }),
       prisma.orderHistory.findMany({ where: { orderId: fixture.orderId } }),
     ]);
 
-    expect(product.quantity).toBe(5);
+    expect(productVariant.quantity).toBe(5);
     expect(variant.quantity).toBe(4);
-    expect(infiniteProduct.quantity).toBeNull();
+    expect(infiniteVariant.quantity).toBeNull();
     expect(history).toHaveLength(2);
     expect(history).toEqual(expect.arrayContaining([
-      expect.objectContaining({ compensatesMovementId: expect.any(String), delta: 2, movementKind: InventoryMovementKind.SALE_CANCELLATION_RESTORATION, operation: InventoryOperation.ADD, productId: fixture.productId, resultingQuantity: 5, variantId: null }),
+        expect.objectContaining({ compensatesMovementId: expect.any(String), delta: 2, movementKind: InventoryMovementKind.SALE_CANCELLATION_RESTORATION, operation: InventoryOperation.ADD, productId: fixture.productId, resultingQuantity: 5, variantId: fixture.productVariantId }),
       expect.objectContaining({ compensatesMovementId: expect.any(String), delta: 1, movementKind: InventoryMovementKind.SALE_CANCELLATION_RESTORATION, operation: InventoryOperation.ADD, productId: fixture.productId, resultingQuantity: 4, variantId: fixture.variantId }),
     ]));
     expect(orderHistory).toEqual(expect.arrayContaining([expect.objectContaining({ type: "ORDER_CANCELLED" })]));
@@ -65,7 +65,7 @@ describe("sales CRM inventory integration", () => {
     fixtures.push(fixture);
 
     await Promise.all([
-      prisma.product.update({ data: { name: "Changed live product", salePrice: 999 }, where: { id: fixture.productId } }),
+      prisma.product.update({ data: { name: "Changed live product", price: 999 }, where: { id: fixture.productId } }),
       prisma.productVariant.update({ data: { name: "Changed live variant" }, where: { id: fixture.variantId } }),
     ]);
 
@@ -112,13 +112,13 @@ describe("sales CRM inventory integration", () => {
       restoreStock: false,
     }));
 
-    const [product, variant, history] = await Promise.all([
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } }),
+    const [productVariant, variant, history] = await Promise.all([
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } }),
       prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } }),
       prisma.inventoryHistory.count({ where: { origin: INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION, productId: { in: fixture.productIds } } }),
     ]);
 
-    expect(product.quantity).toBe(3);
+    expect(productVariant.quantity).toBe(3);
     expect(variant.quantity).toBe(3);
     expect(history).toBe(0);
   });
@@ -132,7 +132,7 @@ describe("sales CRM inventory integration", () => {
     await expect(service.cancelSale(fixture.orderId, input)).rejects.toMatchObject({ status: 409 });
 
     await expect(prisma.inventoryHistory.count({ where: { origin: INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION, productId: { in: fixture.productIds } } })).resolves.toBe(2);
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 5 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 5 });
   });
 
   it("allows only one concurrent cancellation to claim restoration", async () => {
@@ -149,7 +149,7 @@ describe("sales CRM inventory integration", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect(rejectionStatus(rejected[0]?.reason)).toBe(409);
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 5 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 5 });
     await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } })).resolves.toEqual({ quantity: 4 });
     await expect(prisma.inventoryHistory.count({ where: { origin: INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION, productId: { in: fixture.productIds } } })).resolves.toBe(2);
   });
@@ -161,11 +161,11 @@ describe("sales CRM inventory integration", () => {
 
     await service.cancelSale(fixture.orderId, input);
     await service.reopen(fixture.orderId);
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 3 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 3 });
     await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } })).resolves.toEqual({ quantity: 3 });
 
     await service.cancelSale(fixture.orderId, input);
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 5 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 5 });
     await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } })).resolves.toEqual({ quantity: 4 });
   });
 
@@ -178,7 +178,7 @@ describe("sales CRM inventory integration", () => {
     await expect(service.cancelSale(fixture.orderId, input)).rejects.toMatchObject({ status: 409 });
     await prisma.order.update({ data: { shippingStatus: OrderShippingStatus.CANCELLED, status: OrderStatus.CANCELLED }, where: { id: fixture.orderId } });
     await expect(service.reopen(fixture.orderId)).rejects.toMatchObject({ status: 409 });
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 3 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 3 });
   });
 
   it("marks confirmed pending payments as paid exactly once", async () => {
@@ -244,11 +244,11 @@ describe("sales CRM inventory integration", () => {
 
     const sale = await service.createManualSale(createManualSaleSchema.parse(manualSaleInput(fixture)), { id: "admin-manual", role: Role.ADMIN });
 
-    const [order, product, variant, infiniteProduct, movements] = await Promise.all([
+    const [order, productVariant, variant, infiniteVariant, movements] = await Promise.all([
       prisma.order.findUniqueOrThrow({ include: { items: true, payment: true }, where: { id: sale.id } }),
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } }),
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } }),
       prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } }),
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.infiniteProductId } }),
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.infiniteVariantId } }),
       prisma.inventoryHistory.findMany({ orderBy: { id: "asc" }, where: { referenceId: sale.id } }),
     ]);
 
@@ -266,11 +266,11 @@ describe("sales CRM inventory integration", () => {
     expect(order.total.toString()).toBe("1050");
     expect(order.items.map((item) => item.lineSubtotal.toString())).toEqual(expect.arrayContaining(["500", "400", "100"]));
     expect(order.payment?.amount.toString()).toBe("1050");
-    expect(product.quantity).toBe(8);
+    expect(productVariant.quantity).toBe(8);
     expect(variant.quantity).toBe(6);
-    expect(infiniteProduct.quantity).toBeNull();
+    expect(infiniteVariant.quantity).toBeNull();
     expect(movements).toEqual(expect.arrayContaining([
-      expect.objectContaining({ delta: -2, movementKind: InventoryMovementKind.SALE_DEDUCTION, productId: fixture.productId, referenceType: InventoryReferenceType.ORDER, variantId: null }),
+        expect.objectContaining({ delta: -2, movementKind: InventoryMovementKind.SALE_DEDUCTION, productId: fixture.productId, referenceType: InventoryReferenceType.ORDER, variantId: fixture.productVariantId }),
       expect.objectContaining({ delta: -2, movementKind: InventoryMovementKind.SALE_DEDUCTION, productId: fixture.productId, referenceType: InventoryReferenceType.ORDER, variantId: fixture.variantId }),
     ]));
     expect(movements).toHaveLength(2);
@@ -285,7 +285,7 @@ describe("sales CRM inventory integration", () => {
     expect(() => createManualSaleSchema.parse({ ...manualSaleInput(fixture), items: [{ ...manualSaleInput(fixture).items[0], unitPrice: 10.001 }] })).toThrow();
 
     await expect(service.createManualSale(createManualSaleSchema.parse(manualSaleInput(fixture)), { id: "admin-manual", role: Role.ADMIN })).rejects.toMatchObject({ status: 409 });
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productId } })).resolves.toEqual({ quantity: 1 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.productVariantId } })).resolves.toEqual({ quantity: 1 });
     await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: fixture.variantId } })).resolves.toEqual({ quantity: 1 });
     await expect(prisma.order.count({ where: { customerEmail: `manual-${fixture.suffix}@example.test` } })).resolves.toBe(0);
     await expect(prisma.inventoryHistory.count({ where: { productId: { in: [fixture.productId, fixture.infiniteProductId] } } })).resolves.toBe(0);
@@ -300,19 +300,18 @@ async function createManualSaleFixture(
   const suffix = `${label}-${randomUUID().replaceAll("-", "")}`;
   const productId = `manual-product-${suffix}`;
   const variantId = `manual-variant-${suffix}`;
+  const productVariantId = `manual-product-variant-${suffix}`;
   const infiniteProductId = `manual-infinite-${suffix}`;
+  const infiniteVariantId = `${infiniteProductId}-variant`;
 
   await prisma.product.create({
     data: {
-      id: productId,
+       id: productId,
       name: "Manual sale fixture product",
       publicSlug: `manual-public-${suffix}`,
-      quantity: quantities.productQuantity,
-      salePrice: "100.00",
-      sku: `MANUAL-PRODUCT-${suffix}`,
-      slug: `manual-${suffix}`,
-      stockMode: StockMode.TRACKED,
-      variants: { create: { id: variantId, name: "Manual sale fixture variant", quantity: quantities.variantQuantity, sku: `MANUAL-VARIANT-${suffix}`, stockMode: StockMode.TRACKED } },
+       price: "100.00",
+       slug: `manual-${suffix}`,
+       variants: { create: [{ id: productVariantId, name: "Manual sale fixture product variant", quantity: quantities.productQuantity, sku: `MANUAL-PRODUCT-${suffix}`, stockMode: StockMode.TRACKED }, { id: variantId, name: "Manual sale fixture variant", quantity: quantities.variantQuantity, sku: `MANUAL-VARIANT-${suffix}`, stockMode: StockMode.TRACKED }] },
       visibility: CatalogVisibility.HIDDEN,
     },
   });
@@ -321,19 +320,19 @@ async function createManualSaleFixture(
       id: infiniteProductId,
       name: "Manual sale infinite fixture",
       publicSlug: `manual-infinite-public-${suffix}`,
-      quantity: null,
-      salePrice: "100.00",
-      sku: `MANUAL-INFINITE-${suffix}`,
-      slug: `manual-infinite-${suffix}`,
-      stockMode: StockMode.INFINITE,
+       price: "100.00",
+       slug: `manual-infinite-${suffix}`,
+       variants: { create: { id: infiniteVariantId, name: "Manual infinite fixture variant", quantity: null, sku: `MANUAL-INFINITE-${suffix}`, stockMode: StockMode.INFINITE } },
       visibility: CatalogVisibility.HIDDEN,
     },
   });
 
   return {
-    cleanupFixture: { infiniteProductId, orderId: "", productId, productIds: [productId, infiniteProductId], suffix, variantId },
+    cleanupFixture: { infiniteProductId, infiniteVariantId, orderId: "", productId, productIds: [productId, infiniteProductId], productVariantId, suffix, variantId },
+    infiniteVariantId,
     infiniteProductId,
     productId,
+    productVariantId,
     suffix,
     variantId,
   };
@@ -346,9 +345,9 @@ function manualSaleInput(fixture: ManualSaleFixture) {
     discountAmount: 100,
     discountSnapshot: {},
     items: [
-      { name: "Manual tracked product", productId: fixture.productId, quantity: 2, unitPrice: 250 },
+       { name: "Manual tracked product", productId: fixture.productId, quantity: 2, unitPrice: 250, variantId: fixture.productVariantId },
       { name: "Manual tracked variant", productId: fixture.productId, quantity: 2, unitPrice: 200, variantId: fixture.variantId },
-      { name: "Manual infinite product", productId: fixture.infiniteProductId, quantity: 1, unitPrice: 100 },
+       { name: "Manual infinite product", productId: fixture.infiniteProductId, quantity: 1, unitPrice: 100, variantId: fixture.infiniteVariantId },
     ],
     paymentMethodSnapshot: {},
     shippingCost: 150,
@@ -358,8 +357,10 @@ function manualSaleInput(fixture: ManualSaleFixture) {
 async function createFixture(prisma: PrismaClient, label: string): Promise<SaleFixture> {
   const suffix = `${label}-${randomUUID().replaceAll("-", "")}`;
   const productId = `sales-product-${suffix}`;
+  const productVariantId = `sales-product-variant-${suffix}`;
   const variantId = `sales-variant-${suffix}`;
   const infiniteProductId = `sales-infinite-${suffix}`;
+  const infiniteVariantId = `${infiniteProductId}-variant`;
   const orderId = `sales-order-${suffix}`;
 
   await prisma.product.create({
@@ -367,19 +368,22 @@ async function createFixture(prisma: PrismaClient, label: string): Promise<SaleF
       id: productId,
       name: "Sales CRM fixture product",
       publicSlug: `sales-public-${suffix}`,
-      quantity: 3,
-      salePrice: "100.00",
-      sku: `SALES-PRODUCT-${suffix}`,
-      slug: `sales-${suffix}`,
-      stockMode: StockMode.TRACKED,
-      variants: {
-        create: {
-          id: variantId,
+       price: "100.00",
+       slug: `sales-${suffix}`,
+       variants: {
+         create: [{
+           id: productVariantId,
+           name: "Sales CRM fixture product variant",
+           quantity: 3,
+           sku: `SALES-PRODUCT-${suffix}`,
+           stockMode: StockMode.TRACKED,
+         }, {
+           id: variantId,
           name: "Sales CRM fixture variant",
           quantity: 3,
           sku: `SALES-VARIANT-${suffix}`,
-          stockMode: StockMode.TRACKED,
-        },
+           stockMode: StockMode.TRACKED,
+         }],
       },
       visibility: CatalogVisibility.HIDDEN,
     },
@@ -389,11 +393,9 @@ async function createFixture(prisma: PrismaClient, label: string): Promise<SaleF
       id: infiniteProductId,
       name: "Sales CRM infinite fixture",
       publicSlug: `sales-infinite-public-${suffix}`,
-      quantity: null,
-      salePrice: "100.00",
-      sku: `SALES-INFINITE-${suffix}`,
-      slug: `sales-infinite-${suffix}`,
-      stockMode: StockMode.INFINITE,
+       price: "100.00",
+       slug: `sales-infinite-${suffix}`,
+       variants: { create: { id: infiniteVariantId, name: "Sales CRM infinite fixture variant", quantity: null, sku: `SALES-INFINITE-${suffix}`, stockMode: StockMode.INFINITE } },
       visibility: CatalogVisibility.HIDDEN,
     },
   });
@@ -412,9 +414,9 @@ async function createFixture(prisma: PrismaClient, label: string): Promise<SaleF
        inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED,
       items: {
         create: [
-           { attributes: { color: "red" }, lineSubtotal: 200, productId, productName: "Sales CRM fixture product", quantity: 2, sku: `SALES-PRODUCT-${suffix}`, snapshot: { catalogName: "Original product" }, unitPrice: 100, variantId: null },
+            { attributes: { color: "red" }, lineSubtotal: 200, productId, productName: "Sales CRM fixture product", quantity: 2, sku: `SALES-PRODUCT-${suffix}`, snapshot: { catalogName: "Original product" }, unitPrice: 100, variantId: productVariantId },
            { attributes: { color: "blue" }, lineSubtotal: 100, productId, productName: "Sales CRM fixture product", quantity: 1, sku: `SALES-VARIANT-${suffix}`, snapshot: { catalogName: "Original variant" }, unitPrice: 100, variantId, variantName: "Sales CRM fixture variant" },
-           { attributes: {}, lineSubtotal: 100, productId: infiniteProductId, productName: "Sales CRM infinite fixture", quantity: 1, sku: `SALES-INFINITE-${suffix}`, snapshot: {}, unitPrice: 100 },
+            { attributes: {}, lineSubtotal: 100, productId: infiniteProductId, productName: "Sales CRM infinite fixture", quantity: 1, sku: `SALES-INFINITE-${suffix}`, snapshot: {}, unitPrice: 100, variantId: infiniteVariantId },
          ],
        },
       number: `EN-SALES-${suffix}`,
@@ -437,8 +439,9 @@ async function createFixture(prisma: PrismaClient, label: string): Promise<SaleF
         productId,
         referenceId: orderId,
         referenceType: InventoryReferenceType.ORDER,
-        resultingQuantity: 3,
-        stockMode: StockMode.TRACKED,
+         resultingQuantity: 3,
+         stockMode: StockMode.TRACKED,
+         variantId: productVariantId,
       },
       {
         delta: -1,
@@ -457,7 +460,7 @@ async function createFixture(prisma: PrismaClient, label: string): Promise<SaleF
     ],
   });
 
-  return { infiniteProductId, orderId, productId, productIds: [productId, infiniteProductId], suffix, variantId };
+  return { infiniteProductId, infiniteVariantId, orderId, productId, productIds: [productId, infiniteProductId], productVariantId, suffix, variantId };
 }
 
 async function deleteFixture(prisma: PrismaClient, fixture: SaleFixture): Promise<void> {
@@ -469,10 +472,12 @@ async function deleteFixture(prisma: PrismaClient, fixture: SaleFixture): Promis
 }
 
 interface SaleFixture {
+  infiniteVariantId: string;
   infiniteProductId: string;
   orderId: string;
   productId: string;
   productIds: string[];
+  productVariantId: string;
   suffix: string;
   variantId: string;
 }
@@ -480,7 +485,9 @@ interface SaleFixture {
 interface ManualSaleFixture {
   cleanupFixture: SaleFixture;
   infiniteProductId: string;
+  infiniteVariantId: string;
   productId: string;
+  productVariantId: string;
   suffix: string;
   variantId: string;
 }

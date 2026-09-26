@@ -67,7 +67,7 @@ export class CheckoutCartRepository {
           cartId,
           productId: item.productId,
           quantity: item.quantity,
-          variantId: item.variantId ?? null,
+          variantId: item.variantId!,
         },
       });
     }

@@ -26,18 +26,18 @@ describe("purchase order inventory integration", () => {
 
   it("receives ordered items atomically and writes exactly one purchase-order movement per item", async () => {
     const suffix = randomUUID().replaceAll("-", ""); const supplier = await suppliers.create({ code: `TEST-${suffix}`, name: "Integration Supplier", status: SupplierStatus.ACTIVE });
-    const productId = `po-product-${suffix}`; const variantId = `po-variant-${suffix}`;
-    await prisma.product.create({ data: { id: productId, name: "PO fixture", publicSlug: `po-public-${suffix}`, quantity: 2, salePrice: 100, sku: `PO-P-${suffix}`, slug: `po-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN, variants: { create: { id: variantId, name: "PO variant", quantity: 4, sku: `PO-V-${suffix}`, stockMode: StockMode.TRACKED } } } });
-    const input = createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, quantity: 3, sku: `PO-P-${suffix}`, title: "PO fixture", unitCost: 10 }, { productId, variantId, quantity: 2, sku: `PO-V-${suffix}`, title: "PO variant", unitCost: 12 }] });
+    const productId = `po-product-${suffix}`; const productVariantId = `po-product-variant-${suffix}`; const variantId = `po-variant-${suffix}`;
+    await prisma.product.create({ data: { id: productId, name: "PO fixture", publicSlug: `po-public-${suffix}`, price: 100, slug: `po-${suffix}`, visibility: CatalogVisibility.HIDDEN, variants: { create: [{ id: productVariantId, name: "PO product variant", quantity: 2, sku: `PO-P-${suffix}`, stockMode: StockMode.TRACKED }, { id: variantId, name: "PO variant", quantity: 4, sku: `PO-V-${suffix}`, stockMode: StockMode.TRACKED }] } } });
+    const input = createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, variantId: productVariantId, quantity: 3, sku: `PO-P-${suffix}`, title: "PO fixture", unitCost: 10 }, { productId, variantId, quantity: 2, sku: `PO-V-${suffix}`, title: "PO variant", unitCost: 12 }] });
     const created = await service.create(input); await service.submit(created.id); await service.receive(created.id, { id: "integration-admin" });
     const [order, product, variant, history] = await Promise.all([
       prisma.purchaseOrder.findUniqueOrThrow({ select: { status: true, receivedAt: true }, where: { id: created.id } }),
-      prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: productId } }),
+      prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: productVariantId } }),
       prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: variantId } }),
       prisma.inventoryHistory.findMany({ orderBy: { id: "asc" }, where: { origin: INVENTORY_ORIGIN.PURCHASE_ORDER, productId } }),
     ]);
     expect(order.status).toBe(PurchaseOrderStatus.RECEIVED); expect(order.receivedAt).toBeInstanceOf(Date); expect(product.quantity).toBe(5); expect(variant.quantity).toBe(6);
-    expect(history).toHaveLength(2); expect(history).toEqual(expect.arrayContaining([expect.objectContaining({ delta: 3, operation: InventoryOperation.ADD, variantId: null }), expect.objectContaining({ delta: 2, operation: InventoryOperation.ADD, variantId })]));
+    expect(history).toHaveLength(2); expect(history).toEqual(expect.arrayContaining([expect.objectContaining({ delta: 3, operation: InventoryOperation.ADD, variantId: productVariantId }), expect.objectContaining({ delta: 2, operation: InventoryOperation.ADD, variantId })]));
     await prisma.purchaseOrder.delete({ where: { id: created.id } }); await prisma.supplier.delete({ where: { id: supplier.id } });
   });
 
@@ -47,8 +47,8 @@ describe("purchase order inventory integration", () => {
     const input = createPurchaseOrderSchema.parse({
       supplierId: supplier.id,
       items: [
-        { productId: `missing-money-a-${suffix}`, quantity: 2, sku: "A", title: "A", unitCost: 100 },
-        { productId: `missing-money-b-${suffix}`, quantity: 3, sku: "B", title: "B", unitCost: 50 },
+         { productId: `missing-money-a-${suffix}`, variantId: `missing-money-a-variant-${suffix}`, quantity: 2, sku: "A", title: "A", unitCost: 100 },
+         { productId: `missing-money-b-${suffix}`, variantId: `missing-money-b-variant-${suffix}`, quantity: 3, sku: "B", title: "B", unitCost: 50 },
       ],
       tax: 35,
       shippingCost: 20,
@@ -61,7 +61,7 @@ describe("purchase order inventory integration", () => {
     expect(shipping).toMatchObject({ subtotal: 350, tax: 35, shippingCost: 200, total: 585 });
     const tax = await service.update(created.id, { tax: 15 });
     expect(tax).toMatchObject({ subtotal: 350, tax: 15, shippingCost: 200, total: 565 });
-    const itemUpdate = await service.update(created.id, { items: [{ productId: input.items[0]!.productId, quantity: 4, sku: "A", title: "A", unitCost: 125 }] });
+    const itemUpdate = await service.update(created.id, { items: [{ productId: input.items[0]!.productId, variantId: input.items[0]!.variantId, quantity: 4, sku: "A", title: "A", unitCost: 125 }] });
     expect(itemUpdate).toMatchObject({ subtotal: 500, tax: 15, shippingCost: 200, total: 715 });
     expect(itemUpdate.items[0]).toMatchObject({ quantity: 4, unitCost: 125, totalCost: 500 });
 
@@ -74,7 +74,7 @@ describe("purchase order inventory integration", () => {
     const supplier = await suppliers.create({ code: `RACE-${suffix}`, name: "Race Supplier", status: SupplierStatus.ACTIVE });
     const created = await service.create(createPurchaseOrderSchema.parse({
       supplierId: supplier.id,
-      items: [{ productId: `missing-race-${suffix}`, quantity: 1, sku: "RACE", title: "Race", unitCost: 100 }],
+       items: [{ productId: `missing-race-${suffix}`, variantId: `missing-race-variant-${suffix}`, quantity: 1, sku: "RACE", title: "Race", unitCost: 100 }],
     }));
     const results = await Promise.allSettled([service.update(created.id, { tax: 10 }), service.update(created.id, { shippingCost: 20 })]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
@@ -88,10 +88,11 @@ describe("purchase order inventory integration", () => {
 
   it("rolls back the status and prior stock increment when one item is invalid", async () => {
     const suffix = randomUUID().replaceAll("-", ""); const supplier = await suppliers.create({ code: `ROLLBACK-${suffix}`, name: "Rollback Supplier", status: SupplierStatus.ACTIVE }); const productId = `po-rollback-${suffix}`;
-    await prisma.product.create({ data: { id: productId, name: "Rollback fixture", publicSlug: `po-rollback-public-${suffix}`, quantity: 1, salePrice: 100, sku: `PO-R-${suffix}`, slug: `po-rollback-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN } });
-    const created = await service.create(createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, quantity: 2, sku: "VALID", title: "Valid", unitCost: 10 }, { productId: `missing-${suffix}`, quantity: 1, sku: "MISSING", title: "Missing", unitCost: 10 }] })); await service.submit(created.id);
+    const variantId = `po-rollback-variant-${suffix}`;
+    await prisma.product.create({ data: { id: productId, name: "Rollback fixture", publicSlug: `po-rollback-public-${suffix}`, price: 100, slug: `po-rollback-${suffix}`, visibility: CatalogVisibility.HIDDEN, variants: { create: { id: variantId, name: "Rollback variant", quantity: 1, sku: `PO-R-${suffix}`, stockMode: StockMode.TRACKED } } } });
+    const created = await service.create(createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, variantId, quantity: 2, sku: "VALID", title: "Valid", unitCost: 10 }, { productId: `missing-${suffix}`, variantId: `missing-variant-${suffix}`, quantity: 1, sku: "MISSING", title: "Missing", unitCost: 10 }] })); await service.submit(created.id);
     await expect(service.receive(created.id)).rejects.toThrow();
-    await expect(prisma.purchaseOrder.findUniqueOrThrow({ select: { status: true, receivedAt: true }, where: { id: created.id } })).resolves.toEqual({ receivedAt: null, status: PurchaseOrderStatus.ORDERED }); await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: productId } })).resolves.toEqual({ quantity: 1 });
+    await expect(prisma.purchaseOrder.findUniqueOrThrow({ select: { status: true, receivedAt: true }, where: { id: created.id } })).resolves.toEqual({ receivedAt: null, status: PurchaseOrderStatus.ORDERED }); await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: variantId } })).resolves.toEqual({ quantity: 1 });
     await prisma.purchaseOrder.delete({ where: { id: created.id } }); await prisma.supplier.delete({ where: { id: supplier.id } });
   });
 
@@ -99,8 +100,9 @@ describe("purchase order inventory integration", () => {
     const suffix = randomUUID().replaceAll("-", "");
     const supplier = await suppliers.create({ code: `CONCURRENT-${suffix}`, name: "Concurrent Supplier", status: SupplierStatus.ACTIVE });
     const productId = `po-concurrent-${suffix}`;
-    await prisma.product.create({ data: { id: productId, name: "Concurrent PO fixture", publicSlug: `po-concurrent-public-${suffix}`, quantity: 0, salePrice: 100, sku: `PO-C-${suffix}`, slug: `po-concurrent-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN } });
-    const created = await service.create(createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, quantity: 2, sku: "PO-C", title: "Concurrent PO fixture", unitCost: 10 }] }));
+    const variantId = `po-concurrent-variant-${suffix}`;
+    await prisma.product.create({ data: { id: productId, name: "Concurrent PO fixture", publicSlug: `po-concurrent-public-${suffix}`, price: 100, slug: `po-concurrent-${suffix}`, visibility: CatalogVisibility.HIDDEN, variants: { create: { id: variantId, name: "Concurrent PO variant", quantity: 0, sku: `PO-C-${suffix}`, stockMode: StockMode.TRACKED } } } });
+    const created = await service.create(createPurchaseOrderSchema.parse({ supplierId: supplier.id, items: [{ productId, variantId, quantity: 2, sku: "PO-C", title: "Concurrent PO fixture", unitCost: 10 }] }));
     await service.submit(created.id);
 
     const results = await Promise.allSettled([
@@ -112,7 +114,7 @@ describe("purchase order inventory integration", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect(rejected[0]?.reason).toMatchObject({ status: 409 });
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: productId } })).resolves.toEqual({ quantity: 2 });
+    await expect(prisma.productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: variantId } })).resolves.toEqual({ quantity: 2 });
     await expect(prisma.inventoryHistory.count({ where: { origin: INVENTORY_ORIGIN.PURCHASE_ORDER, productId } })).resolves.toBe(1);
     await expect(prisma.purchaseOrder.findUniqueOrThrow({ select: { status: true }, where: { id: created.id } })).resolves.toEqual({ status: PurchaseOrderStatus.RECEIVED });
 

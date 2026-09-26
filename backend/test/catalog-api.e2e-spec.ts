@@ -16,7 +16,6 @@ interface ProductResponse {
   name: string;
   price?: number;
   publicSlug: string;
-  salePrice?: number;
   slug: string;
   stock?: number;
 }
@@ -82,11 +81,9 @@ describe("catalog administration and public API (e2e)", () => {
       data: {
         name: "Public API product",
         publicSlug,
-        quantity: null,
-        salePrice: "55.50",
-        sku: `CATALOG-API-${suffix}`,
+        price: "55.50",
         slug: `catalog-api-product-${suffix}`,
-        stockMode: StockMode.INFINITE,
+        variants: { create: { name: "API fixture variant", quantity: null, sku: `CATALOG-API-${suffix}`, stockMode: StockMode.INFINITE } },
       },
     });
     fixtureProductIds.push(publicProduct.id);
@@ -135,8 +132,8 @@ describe("catalog administration and public API (e2e)", () => {
     expect(createdResponse.status).toBe(201);
     const created = await json<ProductResponse>(createdResponse);
     fixtureProductIds.push(created.id);
-    expect(created).toEqual(expect.objectContaining({ publicSlug: body.publicSlug, salePrice: body.salePrice, slug: body.slug }));
-    expect(Number.isFinite(created.salePrice!)).toBe(true);
+    expect(created).toEqual(expect.objectContaining({ price: body.price, publicSlug: body.publicSlug, slug: body.slug }));
+    expect(Number.isFinite(created.price!)).toBe(true);
 
     const conflictResponse = await request("/api/v1/admin/products", { body, method: "POST", token: adminToken });
     expect(conflictResponse.status).toBe(409);
@@ -148,12 +145,12 @@ describe("catalog administration and public API (e2e)", () => {
     await expectJson(updatedResponse, { id: created.id, name: updatedBody.name });
 
     const pricedResponse = await request(`/api/v1/admin/products/${created.id}/price`, {
-      body: { salePrice: 73.25 },
+      body: { price: 73.25 },
       method: "PUT",
       token: adminToken,
     });
     expect(pricedResponse.status).toBe(200);
-    await expectJson(pricedResponse, { salePrice: 73.25 });
+    await expectJson(pricedResponse, { price: 73.25 });
 
     const duplicateResponse = await request(`/api/v1/admin/products/${created.id}/duplicate`, { method: "POST", token: adminToken });
     expect(duplicateResponse.status).toBe(201);
@@ -263,11 +260,10 @@ function productInput(categoryId: string, label: string) {
     description: "A complete catalog API lifecycle fixture product.",
     name: `Catalog ${label} ${suffix}`,
     publicSlug: `catalog-${label}-public-${suffix}`,
-    salePrice: 49.99,
-    sku: `CATALOG-${label}-${suffix}`,
+    price: 49.99,
     slug: `catalog-${label}-${suffix}`,
-    stockMode: "limited",
-    stockQuantity: 5,
+    variantProperties: [{ name: "Option", values: [{ id: "default", label: "Default" }] }],
+    variantCombinations: [{ name: "Default", sku: `CATALOG-${label}-${suffix}`, stock: 5, attributes: { option: "default" } }],
     visibility: "visible",
   };
 }

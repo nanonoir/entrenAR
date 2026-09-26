@@ -485,11 +485,9 @@ async function createProduct(
       id,
       name: `Customer account e2e ${label} product`,
       publicSlug,
-      quantity: 8,
-      salePrice: "49.99",
-      sku: `ACCOUNT-E2E-${label.toUpperCase()}-${suffix}`,
+      price: "49.99",
       slug: `customer-account-e2e-admin-${label}-${suffix}`,
-      stockMode: StockMode.TRACKED,
+      variants: { create: { name: "Account e2e variant", quantity: 8, sku: `ACCOUNT-E2E-${label.toUpperCase()}-${suffix}`, stockMode: StockMode.TRACKED } },
       visibility,
     },
   });

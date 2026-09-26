@@ -163,7 +163,7 @@ describe("SalesService", () => {
 
     const input = createManualSaleSchema.parse({
       customer: { email: "customer@example.com", firstName: "Test", lastName: "Customer" },
-      items: [{ name: "Product", productId: "product-1", quantity: 1, unitPrice: 100 }],
+       items: [{ name: "Product", productId: "product-1", variantId: "variant-1", quantity: 1, unitPrice: 100 }],
     });
     await expect(harness.service.createManualSale(input)).resolves.toEqual(toAdminSaleDetailDto(created));
     expect(harness.repository.createManualSale).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({

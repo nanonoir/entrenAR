@@ -72,17 +72,12 @@ export async function createCheckoutDomainProduct(
       id: productId,
       name: `${label[0]?.toLocaleUpperCase() ?? "C"}${label.slice(1)} fixture product`,
       publicSlug: `${productId}-public`,
-      quantity,
-      salePrice: "100.00",
-      sku: `CHECKOUT-DOMAIN-${label.toLocaleUpperCase()}-${suffix}`,
+      price: "100.00",
       slug: `${productId}-admin`,
-      stockMode: StockMode.TRACKED,
       variants: {
         create: {
           id: variantId,
-          isDefault: true,
           name: "Fixture variant",
-          price: "50.00",
           quantity,
           sku: `CHECKOUT-DOMAIN-VARIANT-${label.toLocaleUpperCase()}-${suffix}`,
           stockMode: StockMode.TRACKED,

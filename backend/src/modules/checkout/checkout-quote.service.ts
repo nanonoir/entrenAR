@@ -212,7 +212,7 @@ export class CheckoutQuoteService {
     for (const item of items) {
       const product = await this.catalogRepository.checkoutProductById(transaction, item.productId);
       if (!product) throw this.productNotFound();
-      if (item.variantId && !product.variants.some((variant) => variant.id === item.variantId)) {
+      if (!item.variantId || !product.variants.some((variant) => variant.id === item.variantId)) {
         throw this.variantNotFound();
       }
     }
@@ -314,9 +314,10 @@ function toQuoteItem(line: ResolvedCheckoutLine): CheckoutQuoteItemProjection {
     productId: line.product.id,
     productName: line.product.name,
     quantity: line.quantity,
-    sku: line.variant?.sku ?? line.product.sku,
+    sku: line.variant!.sku,
     unitPrice: line.unitPrice,
-    ...(line.variant ? { variantId: line.variant.id, variantName: line.variant.name } : {}),
+    variantId: line.variant!.id,
+    variantName: line.variant!.name,
     ...(line.weightGrams === null ? {} : { weightGrams: line.weightGrams }),
   };
 }

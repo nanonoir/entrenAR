@@ -71,7 +71,8 @@ describe("sales schemas", () => {
       },
       items: [{
         name: "  Product one  ",
-        productId: "product-1",
+         productId: "product-1",
+         variantId: "variant-1",
         quantity: 2,
         unitPrice: 12.5,
       }],

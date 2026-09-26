@@ -12,23 +12,23 @@ import { InventoryRepository, type InventoryLedgerContext } from "./inventory.re
 describe("InventoryRepository stock increments", () => {
   it("increments a tracked product and records an auditable cancellation movement", async () => {
     const harness = createHarness();
-    harness.transaction.product.findUnique
-      .mockResolvedValueOnce({ id: "product-1", quantity: 2, stockMode: StockMode.TRACKED })
-      .mockResolvedValueOnce({ id: "product-1", quantity: 4, stockMode: StockMode.TRACKED });
-    harness.transaction.product.updateMany.mockResolvedValue({ count: 1 });
+    harness.transaction.productVariant.findFirst
+      .mockResolvedValueOnce({ id: "variant-1", productId: "product-1", quantity: 2, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "variant-1", productId: "product-1", quantity: 4, stockMode: StockMode.TRACKED });
+    harness.transaction.productVariant.updateMany.mockResolvedValue({ count: 1 });
 
-    await harness.repository.restoreStockForItems(harness.transaction, [{ productId: "product-1", quantity: 2 }]);
+    await harness.repository.restoreStockForItems(harness.transaction, [{ productId: "product-1", variantId: "variant-1", quantity: 2 }]);
 
-    expect(harness.transaction.product.updateMany).toHaveBeenCalledWith({
+    expect(harness.transaction.productVariant.updateMany).toHaveBeenCalledWith({
       data: { quantity: { increment: 2 } },
-      where: { id: "product-1", stockMode: StockMode.TRACKED },
+      where: { id: "variant-1", productId: "product-1", stockMode: StockMode.TRACKED },
     });
     expect(harness.transaction.inventoryHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         delta: 2,
         operation: InventoryOperation.ADD,
         origin: INVENTORY_ORIGIN.ADMIN_SALES_CANCELLATION,
-        productId: "product-1",
+        productId: "product-1", variantId: "variant-1",
         resultingQuantity: 4,
         stockMode: StockMode.TRACKED,
       }),
@@ -66,11 +66,11 @@ describe("InventoryRepository stock increments", () => {
 
   it("skips infinite-stock targets without creating a movement", async () => {
     const harness = createHarness();
-    harness.transaction.product.findUnique.mockResolvedValue({ id: "product-1", quantity: null, stockMode: StockMode.INFINITE });
+    harness.transaction.productVariant.findFirst.mockResolvedValue({ id: "variant-1", productId: "product-1", quantity: null, stockMode: StockMode.INFINITE });
 
-    await expect(harness.repository.restoreStockForItems(harness.transaction, [{ productId: "product-1", quantity: 2 }])).resolves.toBeUndefined();
+    await expect(harness.repository.restoreStockForItems(harness.transaction, [{ productId: "product-1", variantId: "variant-1", quantity: 2 }])).resolves.toBeUndefined();
 
-    expect(harness.transaction.product.updateMany).not.toHaveBeenCalled();
+    expect(harness.transaction.productVariant.updateMany).not.toHaveBeenCalled();
     expect(harness.transaction.inventoryHistory.create).not.toHaveBeenCalled();
   });
 });
@@ -78,11 +78,10 @@ describe("InventoryRepository stock increments", () => {
 describe("InventoryRepository referenced ledger movements", () => {
   it("deducts a tracked product and variant under one ledger effect", async () => {
     const harness = createHarness();
-    harness.transaction.product.findUnique
-      .mockResolvedValueOnce({ id: "product-1", quantity: 5, stockMode: StockMode.TRACKED })
-      .mockResolvedValueOnce({ id: "product-1", quantity: 3, stockMode: StockMode.TRACKED });
     harness.transaction.productVariant.findFirst
+      .mockResolvedValueOnce({ id: "variant-1", productId: "product-1", quantity: 5, stockMode: StockMode.TRACKED })
       .mockResolvedValueOnce({ id: "variant-1", productId: "product-2", quantity: 4, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "variant-1", productId: "product-1", quantity: 3, stockMode: StockMode.TRACKED })
       .mockResolvedValueOnce({ id: "variant-1", productId: "product-2", quantity: 3, stockMode: StockMode.TRACKED });
     harness.transaction.product.updateMany.mockResolvedValue({ count: 1 });
     harness.transaction.productVariant.updateMany.mockResolvedValue({ count: 1 });
@@ -91,12 +90,12 @@ describe("InventoryRepository referenced ledger movements", () => {
       .mockResolvedValueOnce({ id: "deduction-variant" });
 
     const movements = await harness.repository.deductStockForItems(harness.transaction, [
-      { productId: "product-1", quantity: 2 },
+      { productId: "product-1", quantity: 2, variantId: "variant-1" },
       { productId: "product-2", quantity: 1, variantId: "variant-1" },
     ], ledgerContext());
 
     expect(movements).toEqual([
-      expect.objectContaining({ id: "deduction-product", productId: "product-1", quantity: 2 }),
+      expect.objectContaining({ id: "deduction-product", productId: "product-2", quantity: 2, variantId: "variant-1" }),
       expect.objectContaining({ id: "deduction-variant", productId: "product-2", quantity: 1, variantId: "variant-1" }),
     ]);
     expect(harness.transaction.inventoryHistory.create).toHaveBeenLastCalledWith({
@@ -116,7 +115,7 @@ describe("InventoryRepository referenced ledger movements", () => {
     harness.transaction.inventoryHistory.findMany.mockResolvedValue([
       { delta: -2, id: "deduction-1", productId: "product-1", variantId: null },
     ]);
-    harness.transaction.product.findUnique.mockResolvedValue({ id: "product-1", quantity: null, stockMode: StockMode.INFINITE });
+    harness.transaction.productVariant.findFirst.mockResolvedValue(null);
 
     await expect(harness.repository.restoreUncompensatedDeductions(harness.transaction, ledgerContext())).rejects.toThrow("incompatible");
     expect(harness.transaction.product.updateMany).not.toHaveBeenCalled();
@@ -128,22 +127,11 @@ describe("InventoryRepository referenced ledger movements", () => {
     harness.transaction.inventoryHistory.findMany.mockResolvedValue([
       { delta: -2, id: "deduction-1", productId: "product-1", variantId: null },
     ]);
-    harness.transaction.product.findUnique
-      .mockResolvedValueOnce({ id: "product-1", quantity: 3, stockMode: StockMode.TRACKED })
-      .mockResolvedValueOnce({ id: "product-1", quantity: 5, stockMode: StockMode.TRACKED });
-    harness.transaction.product.updateMany.mockResolvedValue({ count: 1 });
+    harness.transaction.productVariant.findFirst.mockResolvedValue(null);
     harness.transaction.inventoryHistory.create.mockResolvedValue({ id: "restoration-1" });
 
-    await harness.repository.restoreUncompensatedDeductions(harness.transaction, ledgerContext({ movementKind: "SALE_CANCELLATION_RESTORATION" }));
-
-    expect(harness.transaction.inventoryHistory.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        compensatesMovementId: "deduction-1",
-        delta: 2,
-        movementKind: "SALE_CANCELLATION_RESTORATION",
-        operation: InventoryOperation.ADD,
-      }),
-    });
+    await expect(harness.repository.restoreUncompensatedDeductions(harness.transaction, ledgerContext({ movementKind: "SALE_CANCELLATION_RESTORATION" }))).rejects.toThrow("incompatible");
+    expect(harness.transaction.inventoryHistory.create).not.toHaveBeenCalled();
   });
 });
 

@@ -43,14 +43,15 @@ export class CheckoutLineResolver {
         throw this.productNotFound();
       }
 
+      if (!item.variantId) throw this.variantNotFound();
       const variant = this.variantForItem(product, item.variantId);
       const inventory = await this.checkoutRepository.stockTargetForCheckout(
         transaction,
         product.id,
         variant?.id,
       );
-      if (item.variantId && !variant) throw this.variantNotFound();
-      if (!inventory) throw variant ? this.variantNotFound() : this.productNotFound();
+      if (!variant) throw this.variantNotFound();
+      if (!inventory) throw this.variantNotFound();
       if (inventory.stockMode !== StockMode.INFINITE && (inventory.quantity ?? 0) < item.quantity) {
         throw this.outOfStock();
       }
@@ -76,10 +77,8 @@ export class CheckoutLineResolver {
     return lines;
   }
 
-  private variantForItem(product: CheckoutCatalogProduct, variantId: string | null): CheckoutCatalogVariant | undefined {
-    if (variantId) return product.variants.find((variant) => variant.id === variantId);
-    if (product.variants.length === 1) return product.variants[0];
-    return product.variants.find((variant) => variant.isDefault);
+  private variantForItem(product: CheckoutCatalogProduct, variantId: string): CheckoutCatalogVariant | undefined {
+    return product.variants.find((variant) => variant.id === variantId);
   }
 
   private variantNotFound(): NotFoundException {

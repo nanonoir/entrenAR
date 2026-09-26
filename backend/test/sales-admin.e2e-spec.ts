@@ -34,6 +34,7 @@ describe("sales CRM administration API (e2e)", () => {
   const sourceOrderIds: string[] = [];
   const purchaseOrderIds: string[] = [];
   let poProductId = "";
+  let poProductVariantId = "";
   let poVariantId = "";
 
   beforeAll(async () => {
@@ -45,6 +46,7 @@ describe("sales CRM administration API (e2e)", () => {
     adminId = `sales-admin-${suffix}`;
     customerId = `sales-customer-${suffix}`;
     poProductId = `sales-e2e-product-${suffix}`;
+    poProductVariantId = `sales-e2e-product-variant-${suffix}`;
     poVariantId = `sales-e2e-variant-${suffix}`;
     const adminEmail = `${adminId}@example.test`;
     const customerEmail = `${customerId}@example.test`;
@@ -56,18 +58,15 @@ describe("sales CRM administration API (e2e)", () => {
       id: poProductId,
       name: "Sales CRM E2E product",
       publicSlug: `${poProductId}-public`,
-      quantity: 20,
-      salePrice: 100,
-      sku: `${poProductId}-sku`,
-      slug: `${poProductId}-slug`,
-      stockMode: StockMode.TRACKED,
-      variants: { create: {
+       price: 100,
+       slug: `${poProductId}-slug`,
+       variants: { create: [{ id: poProductVariantId, name: "Sales CRM E2E product variant", quantity: 14, sku: `${poProductId}-sku`, stockMode: StockMode.TRACKED }, {
         id: poVariantId,
         name: "Sales CRM E2E variant",
         quantity: 3,
         sku: `${poVariantId}-sku`,
         stockMode: StockMode.TRACKED,
-      } },
+       }], },
       visibility: CatalogVisibility.HIDDEN,
     } });
     const authService = moduleFixture.get(AuthService);
@@ -231,7 +230,7 @@ describe("sales CRM administration API (e2e)", () => {
     await expectError(await request("/admin/sales", {
       body: {
         customer: { email: `forged-${randomUUID()}@example.test`, firstName: "Forged", lastName: "Sale" },
-        items: [{ lineSubtotal: 1, name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100 }],
+        items: [{ lineSubtotal: 1, name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100, variantId: poProductVariantId }],
         paymentMethodSnapshot: {},
         subtotal: 1,
         total: 1,
@@ -244,7 +243,7 @@ describe("sales CRM administration API (e2e)", () => {
       body: {
         customer: { email: `pickup-${randomUUID()}@example.test`, firstName: "Pickup", lastName: "Sale" },
         deliveryType: OrderDeliveryType.PICKUP,
-        items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100 }],
+        items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: 100, variantId: poProductVariantId }],
         paymentMethodSnapshot: {},
         shippingCost: 99,
       },
@@ -314,7 +313,7 @@ describe("sales CRM administration API (e2e)", () => {
     const received = await purchaseOrderCommand(created.id, "receive");
     expect(received).toEqual(expect.objectContaining({ receivedAt: expect.any(String), status: "RECEIVED" }));
     await expectError(await request(`/admin/purchase-orders/${created.id}/receive`, { body: {}, method: "POST", token: adminToken }), 409, "CONFLICT");
-    await expect(prismaOrThrow().product.findUniqueOrThrow({ select: { quantity: true }, where: { id: poProductId } })).resolves.toEqual({ quantity: 16 });
+     await expect(prismaOrThrow().productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: poProductVariantId } })).resolves.toEqual({ quantity: 10 });
     await expect(prismaOrThrow().productVariant.findUniqueOrThrow({ select: { quantity: true }, where: { id: poVariantId } })).resolves.toEqual({ quantity: 4 });
     await expect(prismaOrThrow().inventoryHistory.count({ where: { origin: "purchase_order", productId: poProductId } })).resolves.toBe(2);
 
@@ -344,7 +343,7 @@ describe("sales CRM administration API (e2e)", () => {
     const response = await request("/admin/sales", {
       body: {
         customer: { email: `${label}@example.test`, firstName: "E2E", lastName: "Customer", phone: "+54 11 5555-5555" },
-        items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: total }],
+        items: [{ name: "E2E fixture item", productId: poProductId, quantity: 1, unitPrice: total, variantId: poProductVariantId }],
         paymentMethodSnapshot: { source: "e2e" },
         paymentStatus: PaymentStatus.PAID,
         ...baseOverrides,
@@ -381,7 +380,7 @@ describe("sales CRM administration API (e2e)", () => {
       orderNumber,
       supplierId,
       items: [
-        { productId: poProductId, quantity: 2, sku: `${poProductId}-sku`, title: "Sales CRM E2E product", unitCost: 10 },
+        { productId: poProductId, quantity: 2, sku: `${poProductId}-sku`, title: "Sales CRM E2E product", variantId: poProductVariantId, unitCost: 10 },
         { productId: poProductId, quantity: 1, sku: `${poVariantId}-sku`, title: "Sales CRM E2E variant", variantId: poVariantId, unitCost: 12 },
       ],
     };

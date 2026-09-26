@@ -304,7 +304,6 @@ function resolvedLine(): ResolvedCheckoutLine {
       attributes: { flavor: "chocolate" },
       compareAtPrice: 220,
       id: "variant-1",
-      isDefault: true,
       name: "Chocolate",
       price: 200,
       quantity: 4,

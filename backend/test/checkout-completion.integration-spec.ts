@@ -87,8 +87,8 @@ describe("checkout completion domain integration", () => {
     });
 
     const quote = await checkoutService.quote(quoteInput, { role: Role.CUSTOMER, userId: owner.id });
-    expect(quote).toEqual(expect.objectContaining({ discount: 0, ok: true, shipping: 100, subtotal: 50, total: 150 }));
-    expect(quote.items[0]).toEqual(expect.objectContaining({ unitPrice: 50, variantId: product.variantId }));
+    expect(quote).toEqual(expect.objectContaining({ discount: 0, ok: true, shipping: 100, subtotal: 100, total: 200 }));
+    expect(quote.items[0]).toEqual(expect.objectContaining({ unitPrice: 100, variantId: product.variantId }));
     expect(quote.sessionToken).toEqual(expect.any(String));
 
     const completeInput = checkoutCompleteRequestSchema.parse({
@@ -103,7 +103,7 @@ describe("checkout completion domain integration", () => {
       shippingMethodId: "andreani:envío-a-domicilio",
     });
     const response = await checkoutService.complete(completeInput, { role: Role.CUSTOMER, userId: owner.id });
-    expect(response).toEqual(expect.objectContaining({ number: expect.any(String), ok: true, status: "pending", total: 150 }));
+    expect(response).toEqual(expect.objectContaining({ number: expect.any(String), ok: true, status: "pending", total: 200 }));
 
     const [order, variant, history, idempotency, cart, session] = await Promise.all([
       prisma.order.findUniqueOrThrow({ include: { items: true, payment: true }, where: { id: response.orderId } }),
@@ -121,9 +121,9 @@ describe("checkout completion domain integration", () => {
     const orderItem = order.items[0];
     if (!orderItem) throw new Error("Expected a persisted checkout order item.");
     expect(orderItem.productName).toBe("Complete fixture product");
-    expect(orderItem.unitPrice.toString()).toBe("50");
+    expect(orderItem.unitPrice.toString()).toBe("100");
     expect(order.payment).toEqual(expect.objectContaining({ paymentMethodId: "bank-transfer", status: "PENDING" }));
-    expect(Number(order.payment?.amount)).toBe(150);
+    expect(Number(order.payment?.amount)).toBe(200);
     expect(variant?.quantity).toBe(1);
     expect(history).toEqual([expect.objectContaining({
       delta: -1,
@@ -142,12 +142,12 @@ describe("checkout completion domain integration", () => {
     await expect(checkoutService.complete(completeInput, { role: Role.CUSTOMER, userId: owner.id })).resolves.toEqual(response);
     await expect(readMutationCounts(product.productId, response.orderId)).resolves.toEqual(beforeReplay);
 
-    await prisma.product.update({ data: { name: "Changed after placement", salePrice: "999.00" }, where: { id: product.productId } });
+    await prisma.product.update({ data: { name: "Changed after placement", price: "999.00" }, where: { id: product.productId } });
     await expect(prisma.orderItem.findUniqueOrThrow({ where: { id: orderItem.id } })).resolves.toEqual(
       expect.objectContaining({ productName: "Complete fixture product" }),
     );
     const persistedSnapshot = await prisma.orderItem.findUniqueOrThrow({ where: { id: orderItem.id } });
-    expect(persistedSnapshot.unitPrice.toString()).toBe("50");
+    expect(persistedSnapshot.unitPrice.toString()).toBe("100");
   });
 
   it("allows only one concurrent completion to consume the final variant unit and rolls back the loser", async () => {
@@ -224,7 +224,7 @@ describe("checkout completion domain integration", () => {
       items: [{ productId: product.productId, quantity: 1, variantId: product.variantId }],
       shippingMethodId: "andreani:envío-a-domicilio",
     }), { role: Role.CUSTOMER, userId: owner.id });
-    expect(quote).toEqual(expect.objectContaining({ discount: 5, shipping: 100, subtotal: 50, total: 145 }));
+    expect(quote).toEqual(expect.objectContaining({ discount: 10, shipping: 100, subtotal: 100, total: 190 }));
 
     const input = checkoutCompleteRequestSchema.parse({
       address: { city: "Buenos Aires", postalCode: "C1000", province: "Buenos Aires", street: "123 Test Street" },
@@ -249,7 +249,7 @@ describe("checkout completion domain integration", () => {
     expect(redemptions).toHaveLength(1);
     const redemption = redemptions[0];
     if (!redemption) throw new Error("Expected one coupon redemption.");
-    expect(redemption.discountAmount.toString()).toBe("5");
+    expect(redemption.discountAmount.toString()).toBe("10");
     await expect(checkoutService.complete(input, { role: Role.CUSTOMER, userId: owner.id })).resolves.toEqual(response);
     await expect(prisma.couponRedemption.count({ where: { couponId } })).resolves.toBe(1);
     await expect(prisma.coupon.findUniqueOrThrow({ where: { id: couponId } })).resolves.toEqual(
@@ -261,7 +261,6 @@ describe("checkout completion domain integration", () => {
     const suffix = randomUUID().replaceAll("-", "");
     const owner = await createCheckoutDomainUser(prisma, "infinite-owner", suffix, fixtures);
     const product = await createCheckoutDomainProduct(prisma, "infinite", suffix, 5, fixtures);
-    await prisma.product.update({ data: { quantity: null, stockMode: StockMode.INFINITE }, where: { id: product.productId } });
     await prisma.productVariant.update({ data: { quantity: null, stockMode: StockMode.INFINITE }, where: { id: product.variantId } });
     const cart = await createCheckoutDomainCart(prisma, owner.id, product, 1, undefined, suffix, fixtures, false);
     const quote = await checkoutService.quote(checkoutQuoteRequestSchema.parse({

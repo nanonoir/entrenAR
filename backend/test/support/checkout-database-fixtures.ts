@@ -296,17 +296,12 @@ async function createCheckoutProduct(
       id: productId,
       name: `${label[0]?.toLocaleUpperCase() ?? "C"}${label.slice(1)} fixture product`,
       publicSlug: `${productId}-public`,
-      quantity,
-      salePrice: "100.00",
-      sku: `CHECKOUT-API-${label.toLocaleUpperCase()}-${suffix}`,
+      price: "100.00",
       slug: `${productId}-admin`,
-      stockMode: StockMode.TRACKED,
       variants: {
         create: {
           id: variantId,
-          isDefault: true,
           name: "Fixture variant",
-          price: "50.00",
           quantity,
           sku: `CHECKOUT-API-VARIANT-${label.toLocaleUpperCase()}-${suffix}`,
           stockMode: StockMode.TRACKED,

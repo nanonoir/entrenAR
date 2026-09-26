@@ -57,6 +57,9 @@ export class InventoryService {
     input: InventoryUpdateInput,
     actor: InventoryActor,
   ): Promise<AdminInventoryRecord> {
+    if (!input.variantId) {
+      throw new ConflictException({ code: ERROR_CODE.VALIDATION_ERROR, message: "Inventory operations require a product variant.", ok: false });
+    }
     return this.inventoryRepository.transaction(async (transaction) => {
       const target = await this.inventoryRepository.findTarget(transaction, productId, input.variantId);
 

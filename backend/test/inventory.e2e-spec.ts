@@ -33,16 +33,15 @@ describe("inventory administration (e2e)", () => {
       },
     });
     productId = `inventory-e2e-product-${id}`;
+    const variantId = `inventory-e2e-variant-${id}`;
     await prisma.product.create({
       data: {
         id: productId,
         name: "Inventory e2e fixture",
         publicSlug: `inventory-e2e-public-${id}`,
-        quantity: 3,
-        salePrice: "100.00",
-        sku: `INV-E2E-PRODUCT-${id}`,
+        price: "100.00",
         slug: `inventory-e2e-${id}`,
-        stockMode: StockMode.TRACKED,
+        variants: { create: { id: variantId, name: "Inventory e2e variant", quantity: 3, sku: `INV-E2E-VARIANT-${id}`, stockMode: StockMode.TRACKED } },
         visibility: CatalogVisibility.HIDDEN,
       },
     });

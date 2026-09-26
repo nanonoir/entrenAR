@@ -156,16 +156,12 @@ async function createFixture(prisma: PrismaClient, initialQuantity: number | nul
       id: productId,
       name: "Inventory integration fixture",
       publicSlug: `inventory-public-${id}`,
-      quantity: infinite ? null : initialQuantity,
-      salePrice: "100.00",
-      sku: `INV-PRODUCT-${id}`,
+      price: "100.00",
       slug: `inventory-${id}`,
-      stockMode: infinite ? StockMode.INFINITE : StockMode.TRACKED,
       visibility: CatalogVisibility.HIDDEN,
       variants: {
         create: {
           id: variantId,
-          isDefault: true,
           name: "Fixture variant",
           quantity: infinite ? null : initialQuantity,
           sku: `INV-VARIANT-${id}`,

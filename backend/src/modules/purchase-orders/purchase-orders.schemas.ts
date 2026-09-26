@@ -18,7 +18,7 @@ export const purchaseOrderItemSchema = z.object({
   sku: text(160),
   title: text(240),
   unitCost: money,
-  variantId: id.nullable().optional(),
+  variantId: id,
 }).strict();
 
 const purchaseOrderFields = {
@@ -54,7 +54,7 @@ export const purchaseOrderFilterQuerySchema = z.object({
 }).strict();
 export const purchaseOrderCommandSchema = z.preprocess((value) => value === undefined ? {} : value, z.object({}).strict());
 
-export const purchaseOrderItemResponseSchema = purchaseOrderItemSchema.extend({ totalCost: money });
+export const purchaseOrderItemResponseSchema = purchaseOrderItemSchema.extend({ totalCost: money, variantId: id.nullable() });
 export const purchaseOrderResponseSchema = z.object({
   createdAt: z.string(), expectedDate: z.string().nullable(), id: z.string(), items: z.array(purchaseOrderItemResponseSchema), notes: z.string().nullable(), orderNumber: z.string(), receivedAt: z.string().nullable(), shippingCost: money,
   status: z.enum(statuses), subtotal: money, supplier: supplierResponseSchema, supplierId: z.string(), tax: money, total: money, updatedAt: z.string(),
