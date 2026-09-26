@@ -33,6 +33,7 @@ type PublicCatalogVariantDto = {
   id: string;
   label: string;
   optionValues: Record<string, string>;
+  primaryImageId?: string;
   price: number | string;
   stock: number | string;
   stockMode?: "infinite" | "limited";
@@ -42,9 +43,11 @@ type PublicCatalogProductDto = {
   brand?: string;
   categoryName?: string;
   categorySlug?: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
   compareAtPrice?: number | string;
   description?: string;
   id: string;
+  images?: Array<{ alt?: string; id: string; position: number; storageKey: string; url: string }>;
   imageTone?: string;
   isBestSeller?: boolean;
   isFeatured?: boolean;
@@ -75,11 +78,14 @@ type AdminCatalogProductDto = {
   categoryId: string;
   categoryIds: string[];
   categoryName: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
   createdAt: string;
   description?: string;
   heightCm?: number;
   highlightSections: string[];
   id: string;
+  images?: Array<{ alt?: string; id: string; position: number; storageKey: string; url: string }>;
+  price?: number | string;
   imageUrl?: string;
   lengthCm?: number;
   manualOrder: number;
@@ -206,18 +212,28 @@ function mapPublicProduct(product: PublicCatalogProductDto): ProductDetail {
   const stock = toPublicStock(product.stock, product.stockMode);
   const categorySlug = product.categorySlug ?? fallback?.categorySlug ?? "uncategorized";
   const categoryName = product.categoryName ?? fallback?.categoryName ?? "Uncategorized";
+  const persistedImages = product.images?.map((image) => ({
+    alt: image.alt ?? product.name,
+    id: image.id,
+    label: `Imagen ${image.position}`,
+    position: image.position,
+    storageKey: image.storageKey,
+    tone: imageTone,
+    url: image.url,
+  }));
 
   return {
     brand: product.brand ?? fallback?.brand ?? "EntrenAR",
     categoryName,
     categorySlug,
+    ...(product.categories ? { categories: product.categories } : {}),
     ...(product.compareAtPrice === undefined && fallback?.compareAtPrice === undefined
       ? {}
       : { compareAtPrice: finiteNumber(product.compareAtPrice ?? fallback?.compareAtPrice ?? price, "compareAtPrice") }),
     description: firstNonEmpty(product.description, fallback?.description, product.shortDescription, fallback?.shortDescription, product.name),
     id: product.id,
     imageTone,
-    images: fallback?.images ?? createCompatibilityImages(product.id, product.name, imageTone),
+    images: persistedImages ?? fallback?.images ?? createCompatibilityImages(product.id, product.name, imageTone),
     isBestSeller: product.isBestSeller || fallback?.isBestSeller,
     isFeatured: product.isFeatured || fallback?.isFeatured,
     name: product.name,
@@ -235,6 +251,7 @@ function mapPublicProduct(product: PublicCatalogProductDto): ProductDetail {
       id: variant.id,
       label: variant.label,
       optionValues: variant.optionValues,
+      ...(variant.primaryImageId ? { primaryImageId: variant.primaryImageId } : {}),
       price: finiteNumber(variant.price, "variant.price"),
       stock: toPublicStock(variant.stock, variant.stockMode),
     })),

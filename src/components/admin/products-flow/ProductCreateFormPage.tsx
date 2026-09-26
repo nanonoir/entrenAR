@@ -30,14 +30,10 @@ type ProductCreateFormPageProps = {
 const defaultValues: ProductCreateInput = {
   name: "",
   slug: "",
-  sku: "",
   categoryIds: [],
   description: "",
-  imageUrl: "",
-  salePrice: "",
+  price: "",
   promotionalPrice: "",
-  stockMode: "limited",
-  stockQuantity: "0",
   visibility: "visible",
   brand: "",
   tags: "",
@@ -67,14 +63,10 @@ function buildProductDefaultValues(product?: AdminProduct): ProductCreateInput {
   return {
     name: product.name,
     slug: product.slug,
-    sku: product.sku,
     categoryIds: product.categoryIds ?? [product.categoryId],
     description: product.description ?? "",
-    imageUrl: product.imageUrl ?? "",
-    salePrice: String(product.salePrice),
+    price: String(product.salePrice),
     promotionalPrice: product.promotionalPrice ? String(product.promotionalPrice) : "",
-    stockMode: product.stock.type,
-    stockQuantity: product.stock.type === "limited" ? String(product.stock.quantity) : "0",
     visibility: product.visibility,
     brand: "",
     tags: product.tags.join(", "),
@@ -130,7 +122,7 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
 
   async function onSubmit(data: ProductCreateValues) {
     setSubmitError(null);
-    setMediaWarning(data.imageUrl ? null : "El producto se guardará sin imagen principal. Podés agregarla más adelante.");
+    setMediaWarning(null);
     setIsSubmitting(true);
     try {
       const categoryNames = localCategories.filter((item) => data.categoryIds.includes(item.id)).map((item) => item.name).join(", ");
@@ -151,17 +143,16 @@ export function ProductCreateFormPage({ categories, mode = "create", product }: 
 
   function onInvalid(formErrors: FieldErrors<ProductCreateInput>) {
     setSubmitError("Debés completar todos los campos obligatorios correctamente.");
-    const firstInvalidSectionId = formErrors.name || formErrors.sku || formErrors.slug || formErrors.description
+    const firstInvalidSectionId = formErrors.name || formErrors.slug || formErrors.description
       ? "product-identity-section"
-      : formErrors.salePrice || formErrors.promotionalPrice
+      : formErrors.price || formErrors.promotionalPrice
         ? "product-pricing-section"
         : formErrors.weightGrams || formErrors.heightCm || formErrors.widthCm || formErrors.lengthCm
           ? "product-shipping-data-section"
         : "product-logistics-section";
     scrollToFirstError(formErrors, [firstInvalidSectionId]);
     if (formErrors.name) setFocus("name");
-    else if (formErrors.sku) setFocus("sku");
-    else if (formErrors.salePrice) setFocus("salePrice");
+    else if (formErrors.price) setFocus("price");
   }
 
   const submitForm = handleSubmit(onSubmit, onInvalid);

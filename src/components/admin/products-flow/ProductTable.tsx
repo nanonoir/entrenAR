@@ -86,7 +86,7 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
                     <InlinePriceCell
                       productId={product.id}
                       productName={product.name}
-                      field="salePrice"
+                      field="price"
                       salePrice={product.salePrice}
                       promotionalPrice={product.promotionalPrice}
                     />
@@ -167,7 +167,7 @@ export function ProductTable({ products: initialProducts }: ProductTableProps) {
                 <InlinePriceCell
                   productId={product.id}
                   productName={product.name}
-                  field="salePrice"
+                      field="price"
                   salePrice={product.salePrice}
                   promotionalPrice={product.promotionalPrice}
                 />
