@@ -13,6 +13,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { AccountModule } from "./modules/account/account.module";
 import { AbandonedCartsModule } from "./modules/abandoned-carts/abandoned-carts.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
+import { CatalogImportModule } from "./modules/catalog-import/catalog-import.module";
 import { CommerceModule } from "./modules/commerce/commerce.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
@@ -46,6 +47,7 @@ import { ShowcaseResetModule } from "./modules/showcase-reset/showcase-reset.mod
     AccountModule,
     AbandonedCartsModule,
     CatalogModule,
+    CatalogImportModule,
     CommerceModule,
     HealthModule,
     InventoryModule,
