@@ -25,11 +25,11 @@ const promotionalPriceTextSchema = z
 
 export const inlineProductPriceSchema = z
   .object({
-    salePrice: priceTextSchema,
+    price: priceTextSchema,
     promotionalPrice: promotionalPriceTextSchema,
   })
   .refine(
-    (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.salePrice,
+    (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.price,
     {
       message: "El promocional debe ser menor al precio",
       path: ["promotionalPrice"],
@@ -58,21 +58,16 @@ export const productVariantCombinationSchema = z.object({
   name: z.string(),
   sku: z.string(),
   stock: z.union([z.number(), z.literal("infinite")]),
-  price: z.number().optional(),
 });
 
 export const productCreateSchema = z
   .object({
     name: z.string().trim().min(3, "Ingresá al menos 3 caracteres"),
     slug: optionalTextSchema,
-    sku: optionalTextSchema,
     categoryIds: z.array(z.string()).min(1, "Seleccioná al menos una categoría"),
     description: z.string().trim().min(10, "Agregá una descripción más completa"),
-    imageUrl: optionalTextSchema,
-    salePrice: priceTextSchema,
+    price: priceTextSchema,
     promotionalPrice: promotionalPriceTextSchema,
-    stockMode: z.enum(["limited", "infinite"]),
-    stockQuantity: z.string().trim().optional().transform((value) => (value ? Number(value) : undefined)),
     visibility: z.enum(["visible", "hidden"]),
     brand: optionalTextSchema,
     tags: optionalTextSchema,
@@ -91,13 +86,9 @@ export const productCreateSchema = z
     lengthCm: optionalPositiveNumberTextSchema,
   })
   .refine(
-    (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.salePrice,
+    (value) => value.promotionalPrice === undefined || value.promotionalPrice < value.price,
     { message: "El promocional debe ser menor al precio", path: ["promotionalPrice"] },
   )
-  .refine(
-    (value) => value.stockMode === "infinite" || (typeof value.stockQuantity === "number" && Number.isInteger(value.stockQuantity) && value.stockQuantity >= 0),
-    { message: "Ingresá stock válido", path: ["stockQuantity"] },
-  );
 
 export type ProductCreateInput = z.input<typeof productCreateSchema>;
 export type ProductCreateValues = z.output<typeof productCreateSchema>;

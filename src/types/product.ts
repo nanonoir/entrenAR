@@ -17,6 +17,7 @@ export type ProductVariant = {
   compareAtPrice?: number;
   stock: number;
   optionValues?: Record<string, string>;
+  primaryImageId?: string;
 };
 
 export type ProductImage = {
@@ -24,6 +25,9 @@ export type ProductImage = {
   alt: string;
   label: string;
   tone: ProductImageTone;
+  position?: number;
+  storageKey?: string;
+  url?: string;
 };
 
 export type ProductSummary = {
@@ -33,6 +37,7 @@ export type ProductSummary = {
   brand: string;
   categorySlug: string;
   categoryName: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
   imageTone: ProductImageTone;
   shortDescription: string;
   tags: string[];

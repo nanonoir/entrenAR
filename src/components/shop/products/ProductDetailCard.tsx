@@ -28,6 +28,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
     maxQuantity,
     outOfStock,
     price,
+    primaryImageId,
     quantity,
     selectedVariant,
     selectVariant,
@@ -51,6 +52,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
         <ProductImageGallery
           brand={product.brand}
           images={product.images}
+          activeImageId={primaryImageId}
           productName={product.name}
         />
         <div className="grid content-start gap-6">
@@ -99,7 +101,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
             </>
           ) : null}
         </div>
-        <div className="grid gap-3">
+        {product.variants.length > 1 && product.variantOptions?.length ? <div className="grid gap-3">
           <p className="text-sm font-medium">Variante</p>
           <div className="flex flex-wrap gap-2">
             {product.variants.map((item) => (
@@ -119,7 +121,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
               </button>
             ))}
           </div>
-        </div>
+        </div> : null}
         <div className="flex flex-wrap items-end gap-4">
           <QuantitySelector
             max={maxQuantity}
@@ -133,7 +135,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
         </div>
         <div className="grid gap-3 rounded-card border border-border bg-surface p-4">
           <h2 className="font-subtitle text-lg font-semibold uppercase">Descripción</h2>
-          <p className="text-sm leading-6 text-text-muted">{product.description}</p>
+          <div className="text-sm leading-6 text-text-muted" dangerouslySetInnerHTML={{ __html: product.description }} />
         </div>
         </div>
       </section>

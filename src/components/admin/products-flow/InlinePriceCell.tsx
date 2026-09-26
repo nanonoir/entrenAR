@@ -6,7 +6,7 @@ import { inlineProductPriceSchema } from "@/schemas/admin/product-schemas";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 import { cn } from "@/lib/utils";
 
-type PriceField = "salePrice" | "promotionalPrice";
+type PriceField = "price" | "promotionalPrice";
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
 type InlinePriceCellProps = {
@@ -24,7 +24,7 @@ function formatPriceInput(value?: number) {
 export function InlinePriceCell({ productId, productName, field, salePrice, promotionalPrice }: InlinePriceCellProps) {
   const inputId = useId();
   const updateProductPrice = useAdminProductsStore((state) => state.updateProductPrice);
-  const [value, setValue] = useState(field === "salePrice" ? formatPriceInput(salePrice) : formatPriceInput(promotionalPrice));
+  const [value, setValue] = useState(field === "price" ? formatPriceInput(salePrice) : formatPriceInput(promotionalPrice));
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState("");
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,14 +37,14 @@ export function InlinePriceCell({ productId, productName, field, salePrice, prom
 
   const helperId = `${inputId}-helper`;
   const errorId = `${inputId}-error`;
-  const label = field === "salePrice" ? `Precio de ${productName}` : `Precio promocional de ${productName}`;
+  const label = field === "price" ? `Precio de ${productName}` : `Precio promocional de ${productName}`;
 
   async function saveValue() {
-    const currentValue = field === "salePrice" ? formatPriceInput(salePrice) : formatPriceInput(promotionalPrice);
+    const currentValue = field === "price" ? formatPriceInput(salePrice) : formatPriceInput(promotionalPrice);
     if (value.trim() === currentValue) return;
 
     const parsed = inlineProductPriceSchema.safeParse({
-      salePrice: field === "salePrice" ? value : formatPriceInput(salePrice),
+      price: field === "price" ? value : formatPriceInput(salePrice),
       promotionalPrice: field === "promotionalPrice" ? value : formatPriceInput(promotionalPrice),
     });
 
@@ -60,7 +60,7 @@ export function InlinePriceCell({ productId, productName, field, salePrice, prom
 
     try {
       await updateProductPrice(productId, parsed.data);
-      setValue(field === "salePrice" ? formatPriceInput(parsed.data.salePrice) : formatPriceInput(parsed.data.promotionalPrice));
+      setValue(field === "price" ? formatPriceInput(parsed.data.price) : formatPriceInput(parsed.data.promotionalPrice));
       setStatus("success");
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
       successTimerRef.current = setTimeout(() => setStatus("idle"), 1200);

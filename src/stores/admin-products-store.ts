@@ -5,7 +5,7 @@ import type { AdminProduct, AdminProductStock } from "@/lib/data/admin/sales-flo
 import type { ProductCreateValues } from "@/schemas/admin/product-schemas";
 
 type ProductPriceInput = {
-  salePrice: number;
+  price: number;
   promotionalPrice?: number;
 };
 
@@ -78,14 +78,13 @@ function buildProductFromForm(data: ProductCreateValues & { categoryName: string
     slug,
     publicSlug: slug,
     name: data.name,
-    sku: data.sku ?? createStableId("PEND"),
+    sku: data.variantCombinations[0]?.sku ?? "",
     description: data.description,
-    imageUrl: data.imageUrl,
     categoryId: data.categoryIds[0] ?? "",
     categoryIds: data.categoryIds,
     categoryName: data.categoryName,
-    stock: data.stockMode === "infinite" ? { type: "infinite" } : { type: "limited", quantity: data.stockQuantity ?? 0 },
-    salePrice: data.salePrice,
+    stock: data.variantCombinations[0]?.stock === "infinite" ? { type: "infinite" } : { type: "limited", quantity: typeof data.variantCombinations[0]?.stock === "number" ? data.variantCombinations[0].stock : 0 },
+    salePrice: data.price,
     promotionalPrice: data.promotionalPrice,
     tags: data.tags ? data.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
     brand: data.brand,
@@ -146,7 +145,7 @@ export const useAdminProductsStore = create<AdminProductsState>()((set, get) => 
   updateProductPrice: async (id, prices) => {
     await new Promise((resolve) => setTimeout(resolve, 250));
     set((state) => ({
-      products: state.products.map((product) => (product.id === id ? { ...product, ...prices, updatedAt: new Date().toISOString() } : product)),
+       products: state.products.map((product) => (product.id === id ? { ...product, salePrice: prices.price, promotionalPrice: prices.promotionalPrice, updatedAt: new Date().toISOString() } : product)),
     }));
   },
 

@@ -55,8 +55,8 @@ export function useProductVariantSelection(product: VariantSelectableProduct) {
 
   const hasStructuredOptions = Boolean(product.variantOptions?.length);
   const hasVariantSelector = product.variants.length > 1;
-  const price = selectedVariant?.price ?? product.price;
-  const compareAtPrice = selectedVariant?.compareAtPrice ?? product.compareAtPrice;
+  const price = product.price;
+  const compareAtPrice = product.compareAtPrice;
   const outOfStock = !selectedVariant || selectedVariant.stock <= 0;
   const maxQuantity = selectedVariant?.stock ?? 1;
 
@@ -77,6 +77,7 @@ export function useProductVariantSelection(product: VariantSelectableProduct) {
     maxQuantity,
     outOfStock,
     price,
+    primaryImageId: selectedVariant?.primaryImageId,
     quantity,
     selectedOptions,
     selectedVariant,

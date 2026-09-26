@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProductVisual } from "@/components/shop/products/ProductVisual";
 import { useCarousel } from "@/hooks/useCarousel";
+import { useEffect } from "react";
 import { useImageZoom } from "@/hooks/useImageZoom";
 import { cn } from "@/lib/utils";
 import type { ProductImage } from "@/types/product";
@@ -13,6 +14,7 @@ type ProductImageGalleryProps = {
   productName: string;
   brand: string;
   className?: string;
+  activeImageId?: string;
 };
 
 export function ProductImageGallery({
@@ -20,11 +22,17 @@ export function ProductImageGallery({
   productName,
   brand,
   className,
+  activeImageId,
 }: ProductImageGalleryProps) {
   const { activeIndex, goToSlide, goToPrevious, goToNext, touchHandlers } = useCarousel({
     itemCount: images.length,
   });
   const activeImage = images[activeIndex] ?? images[0];
+  useEffect(() => {
+    if (!activeImageId) return;
+    const index = images.findIndex((image) => image.id === activeImageId);
+    if (index >= 0) goToSlide(index);
+  }, [activeImageId, goToSlide, images]);
   const { isZoomed, toggleZoom } = useImageZoom({ resetKey: activeImage?.id });
 
   if (!activeImage) {
@@ -49,12 +57,16 @@ export function ProductImageGallery({
               onClick={() => goToSlide(index)}
               type="button"
             >
-              <ProductVisual
-                brand={brand}
-                className="h-20 rounded-none p-1 lg:h-24"
-                name={productName}
-                tone={image.tone}
-              />
+              {image.url ? (
+                <img alt={image.alt || productName} className="h-20 w-full object-contain p-1 lg:h-24" src={image.url} />
+              ) : (
+                <ProductVisual
+                  brand={brand}
+                  className="h-20 rounded-none p-1 lg:h-24"
+                  name={productName}
+                  tone={image.tone}
+                />
+              )}
             </button>
           );
         })}
@@ -74,16 +86,28 @@ export function ProductImageGallery({
               style={{ transform: `translateX(-${activeIndex * 100}%)` }}
             >
               {images.map((image) => (
-                <ProductVisual
-                  brand={brand}
-                  className={cn(
-                    "h-full min-w-full rounded-none bg-white transition duration-300",
-                    isZoomed ? "scale-150" : "scale-100",
-                  )}
-                  key={image.id}
-                  name={productName}
-                  tone={image.tone}
-                />
+                image.url ? (
+                  <img
+                    alt={image.alt || productName}
+                    className={cn(
+                      "h-full min-w-full object-contain rounded-none bg-white transition duration-300",
+                      isZoomed ? "scale-150" : "scale-100",
+                    )}
+                    key={image.id}
+                    src={image.url}
+                  />
+                ) : (
+                  <ProductVisual
+                    brand={brand}
+                    className={cn(
+                      "h-full min-w-full rounded-none bg-white transition duration-300",
+                      isZoomed ? "scale-150" : "scale-100",
+                    )}
+                    key={image.id}
+                    name={productName}
+                    tone={image.tone}
+                  />
+                )
               ))}
             </div>
           </button>
