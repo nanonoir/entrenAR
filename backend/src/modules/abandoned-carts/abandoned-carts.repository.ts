@@ -97,10 +97,9 @@ export type CartRecoverySettingsRecord = Prisma.CartRecoverySettingsGetPayload<R
 
 @Injectable()
 export class AbandonedCartsRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async findMany(query: AbandonedCartListQuery): Promise<AbandonedCartPageResult>;
   async findMany(filters: AbandonedCartFilters, pagination: AbandonedCartPageInput, sort?: AbandonedCartSort): Promise<AbandonedCartPageResult>;

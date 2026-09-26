@@ -31,7 +31,7 @@ const shippingMethodIdSchema = identifierSchema
 export const checkoutLineItemSchema = z.object({
   productId: identifierSchema,
   quantity: quantitySchema,
-  variantId: identifierSchema.optional(),
+  variantId: identifierSchema,
 }).strict();
 
 export const checkoutItemsSchema = z.array(checkoutLineItemSchema)

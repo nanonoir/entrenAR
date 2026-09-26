@@ -133,7 +133,7 @@ describe("checkout quote REST API (e2e)", () => {
     });
     const staleQuote = await json<CheckoutQuoteResponse>(staleQuoteResponse);
     const database = prismaOrThrow();
-    await database.productVariant.update({ data: { price: "75.00" }, where: { id: fixture.staleProduct.variantId } });
+    await database.product.update({ data: { price: "75.00" }, where: { id: fixture.staleProduct.productId } });
     const staleComplete = await request("/checkout/complete", {
       body: completeBody(fixture.staleProduct, staleQuote.sessionToken, staleQuote.quoteId, "stale-key", fixture.staleOwner.email),
       method: "POST",
@@ -147,7 +147,7 @@ describe("checkout quote REST API (e2e)", () => {
       token: validationSession.accessToken,
     });
     const missing = await request("/checkout/quote", {
-      body: { items: [{ productId: `missing-${fixture.suffix}`, quantity: 1 }] },
+      body: { items: [{ productId: `missing-${fixture.suffix}`, quantity: 1, variantId: `missing-variant-${fixture.suffix}` }] },
       token: validationSession.accessToken,
     });
     const missingVariant = await request("/checkout/quote", {

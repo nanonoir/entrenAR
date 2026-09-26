@@ -21,19 +21,19 @@ describe("PurchaseOrdersService", () => {
     await expect(h.service.receive(draft.id)).rejects.toMatchObject({ status: 409 });
     expect(h.inventory.incrementStockForItems).not.toHaveBeenCalled();
     const ordered = purchaseOrder({ status: PurchaseOrderStatus.ORDERED }); h.repository.findByIdInTransaction.mockResolvedValue(ordered);
-    await expect(h.service.update(ordered.id, { items: createPurchaseOrderSchema.parse({ supplierId: "supplier-1", items: [{ productId: "product-1", quantity: 1, sku: "SKU", title: "Product", unitCost: 10 }] }).items })).rejects.toMatchObject({ status: 409 });
+    await expect(h.service.update(ordered.id, { items: createPurchaseOrderSchema.parse({ supplierId: "supplier-1", items: [{ productId: "product-1", variantId: "variant-1", quantity: 1, sku: "SKU", title: "Product", unitCost: 10 }] }).items })).rejects.toMatchObject({ status: 409 });
     expect(h.repository.update).not.toHaveBeenCalled();
   });
 
   it("rejects forged derived money and calculates create totals from base fields", async () => {
     const forged = createPurchaseOrderSchema.safeParse({
       supplierId: "supplier-1",
-      items: [{ productId: "product-1", quantity: 2, sku: "SKU", title: "Product", unitCost: 100, totalCost: 1 }],
+       items: [{ productId: "product-1", variantId: "variant-1", quantity: 2, sku: "SKU", title: "Product", unitCost: 100, totalCost: 1 }],
       subtotal: 1,
       total: 1,
     });
     expect(forged.success).toBe(false);
-    expect(createPurchaseOrderSchema.safeParse({ supplierId: "supplier-1", items: [{ productId: "product-1", quantity: 1, sku: "SKU", title: "Product", unitCost: 10.001 }] }).success).toBe(false);
+    expect(createPurchaseOrderSchema.safeParse({ supplierId: "supplier-1", items: [{ productId: "product-1", variantId: "variant-1", quantity: 1, sku: "SKU", title: "Product", unitCost: 10.001 }] }).success).toBe(false);
 
     const h = harness();
     const created = purchaseOrder({ subtotal: 350, tax: 35, shippingCost: 20, total: 405 });
@@ -41,8 +41,8 @@ describe("PurchaseOrdersService", () => {
     const input = createPurchaseOrderSchema.parse({
       supplierId: "supplier-1",
       items: [
-        { productId: "product-1", quantity: 2, sku: "A", title: "A", unitCost: 100 },
-        { productId: "product-1", quantity: 3, sku: "B", title: "B", unitCost: 50 },
+        { productId: "product-1", variantId: "variant-1", quantity: 2, sku: "A", title: "A", unitCost: 100 },
+        { productId: "product-1", variantId: "variant-2", quantity: 3, sku: "B", title: "B", unitCost: 50 },
       ],
       tax: 35,
       shippingCost: 20,

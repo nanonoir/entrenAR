@@ -16,10 +16,9 @@ export interface AppendHistoryInput { actorId?: string; actorRole?: "CUSTOMER" |
 
 @Injectable()
 export class SalesRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.mutationGate.runShared(this.prisma, callback); }
   async list(query: SalesListQuery): Promise<SalesPageResult> {
     const where = salesWhere(query);

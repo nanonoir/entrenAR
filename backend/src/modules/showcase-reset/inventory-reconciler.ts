@@ -52,10 +52,7 @@ export class ShowcaseInventoryReconciler {
 }
 
 function canonicalInventoryTargets(): readonly CanonicalInventoryTarget[] {
-  return CATALOG_PRODUCTS.flatMap((product) => [
-    toCanonicalTarget(product.id, undefined, product.stock),
-    ...product.variants.map((variant) => toCanonicalTarget(product.id, variant.id, variant.stock)),
-  ]);
+  return CATALOG_PRODUCTS.flatMap((product) => product.variants.map((variant) => toCanonicalTarget(product.id, variant.id, variant.stock)));
 }
 
 function toCanonicalTarget(

@@ -34,20 +34,15 @@ export const abandonedCartInclude = {
           product: {
             select: {
               id: true,
-              imageTone: true,
               name: true,
-              promotionalPrice: true,
-              salePrice: true,
-              sku: true,
+              price: true,
             },
           },
           variant: {
             select: {
-              compareAtPrice: true,
-              id: true,
-              name: true,
-              price: true,
-              sku: true,
+               id: true,
+               name: true,
+               sku: true,
             },
           },
         },
@@ -193,10 +188,7 @@ function mapSnapshotItem(item: Record<string, unknown>): AbandonedCartProductSum
 }
 
 function mapLiveItem(item: AbandonedCartSessionRecord["cart"]["items"][number]): AbandonedCartProductSummary {
-  const unitPrice = nonNegativeNumber(item.variant?.price)
-    ?? nonNegativeNumber(item.product.promotionalPrice)
-    ?? nonNegativeNumber(item.product.salePrice)
-    ?? 0;
+  const unitPrice = nonNegativeNumber(item.product.price) ?? 0;
   const quantity = Number.isInteger(item.quantity) && item.quantity > 0 ? item.quantity : 1;
 
   return {
@@ -204,7 +196,7 @@ function mapLiveItem(item: AbandonedCartSessionRecord["cart"]["items"][number]):
     name: item.product.name,
     productId: item.productId,
     quantity,
-    ...(item.variant?.sku ?? item.product.sku ? { sku: item.variant?.sku ?? item.product.sku } : {}),
+    ...(item.variant?.sku ? { sku: item.variant.sku } : {}),
     unitPrice,
     ...(item.variantId ? { variantId: item.variantId } : {}),
     ...(item.variant?.name ? { variantName: item.variant.name } : {}),

@@ -54,7 +54,7 @@ describe("CheckoutService", () => {
 
   it("rejects ADMIN actors and preserves the controlled error contract", async () => {
     const harness = createCheckoutUnitHarness();
-    const input = checkoutQuoteRequestSchema.parse({ items: [{ productId: "product-1", quantity: 1 }] });
+    const input = checkoutQuoteRequestSchema.parse({ items: [{ productId: "product-1", variantId: "variant-1", quantity: 1 }] });
 
     await expectCheckoutCode(harness.service.quote(input, { role: Role.ADMIN, userId: "admin-1" }), ERROR_CODE.FORBIDDEN);
     expect(harness.checkoutRepository.transaction).not.toHaveBeenCalled();

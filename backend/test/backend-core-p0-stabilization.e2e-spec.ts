@@ -61,17 +61,16 @@ describe("backend core P0 stabilization acceptance", () => {
   it("proves the integrated P0 stock, payment, recovery, ownership, and PO invariants", async () => {
     const suffix = randomUUID().replaceAll("-", "");
     const productId = `p0-acceptance-product-${suffix}`;
+    const productVariantId = `p0-acceptance-variant-${suffix}`;
     productIds.push(productId);
     await prisma.product.create({
       data: {
         id: productId,
         name: "P0 acceptance product",
         publicSlug: `p0-${suffix}`,
-        quantity: 10,
-        salePrice: 100,
-        sku: `P0-${suffix}`,
+        price: 100,
         slug: `p0-${suffix}`,
-        stockMode: StockMode.TRACKED,
+        variants: { create: { id: productVariantId, name: "P0 acceptance variant", quantity: 10, sku: `P0-${suffix}`, stockMode: StockMode.TRACKED } },
         visibility: CatalogVisibility.HIDDEN,
       },
     });
@@ -79,7 +78,7 @@ describe("backend core P0 stabilization acceptance", () => {
     const sale = await sales.createManualSale(createManualSaleSchema.parse({
       customer: { email: `p0-${suffix}@example.test`, firstName: "P0", lastName: "Acceptance" },
       deliveryType: OrderDeliveryType.SHIPPING,
-      items: [{ name: "P0 acceptance product", productId, quantity: 2, unitPrice: 100 }],
+      items: [{ name: "P0 acceptance product", productId, quantity: 2, unitPrice: 100, variantId: productVariantId }],
       paymentStatus: PaymentStatus.PENDING,
     }));
     orderIds.push(sale.id);
@@ -103,14 +102,15 @@ describe("backend core P0 stabilization acceptance", () => {
     await expect(prisma.inventoryHistory.count({ where: { referenceId: sale.id, compensatesMovementId: { not: null } } })).resolves.toBe(2);
 
     const recoveryProductId = `p0-recovery-product-${suffix}`;
+    const recoveryVariantId = `p0-recovery-variant-${suffix}`;
     productIds.push(recoveryProductId);
-    await prisma.product.create({ data: { id: recoveryProductId, name: "P0 recovery product", publicSlug: `p0-recovery-${suffix}`, quantity: 1, salePrice: 100, sku: `P0-R-${suffix}`, slug: `p0-recovery-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN } });
+    await prisma.product.create({ data: { id: recoveryProductId, name: "P0 recovery product", publicSlug: `p0-recovery-${suffix}`, price: 100, slug: `p0-recovery-${suffix}`, variants: { create: { id: recoveryVariantId, name: "P0 recovery variant", quantity: 1, sku: `P0-R-${suffix}`, stockMode: StockMode.TRACKED } }, visibility: CatalogVisibility.HIDDEN } });
     const cartId = `p0-recovery-cart-${suffix}`;
     const sessionId = `p0-recovery-session-${suffix}`;
     cartIds.push(cartId);
     sessionIds.push(sessionId);
-    await prisma.cart.create({ data: { id: cartId, items: { create: { productId: recoveryProductId, quantity: 1 } }, status: CartStatus.ABANDONED } });
-    await prisma.checkoutSession.create({ data: { abandonedAt: new Date(), cartId, id: sessionId, lastActivityAt: new Date(), recoveryStatus: CheckoutRecoveryStatus.PENDING, snapshotData: { currency: "ARS", customer: { email: `recovery-${suffix}@example.test`, firstName: "P0", lastName: "Recovery" }, items: [{ lineSubtotal: 100, name: "P0 recovery product", productId: recoveryProductId, quantity: 1, sku: `P0-R-${suffix}`, unitPrice: 100 }], subtotal: 100, total: 100 }, status: CheckoutSessionStatus.ABANDONED, tokenHash: `p0-token-${suffix}` } });
+    await prisma.cart.create({ data: { id: cartId, items: { create: { productId: recoveryProductId, quantity: 1, variantId: recoveryVariantId } }, status: CartStatus.ABANDONED } });
+    await prisma.checkoutSession.create({ data: { abandonedAt: new Date(), cartId, id: sessionId, lastActivityAt: new Date(), recoveryStatus: CheckoutRecoveryStatus.PENDING, snapshotData: { currency: "ARS", customer: { email: `recovery-${suffix}@example.test`, firstName: "P0", lastName: "Recovery" }, items: [{ lineSubtotal: 100, name: "P0 recovery product", productId: recoveryProductId, quantity: 1, sku: `P0-R-${suffix}`, unitPrice: 100, variantId: recoveryVariantId }], subtotal: 100, total: 100 }, status: CheckoutSessionStatus.ABANDONED, tokenHash: `p0-token-${suffix}` } });
     const converted = await recovery.convertAbandonedCart(sessionId, {}, "p0-admin", "ADMIN");
     orderIds.push(converted.orderId);
     await expectStock(recoveryProductId, 0);
@@ -121,16 +121,17 @@ describe("backend core P0 stabilization acceptance", () => {
     productIds.push(sourceProductId);
     const effectId = `p0-transfer-effect-${suffix}`;
     const sourceOrderId = `p0-transfer-source-${suffix}`;
-    await prisma.product.create({ data: { id: sourceProductId, name: "P0 transfer product", publicSlug: `p0-transfer-${suffix}`, quantity: 9, salePrice: 100, sku: `P0-T-${suffix}`, slug: `p0-transfer-${suffix}`, stockMode: StockMode.TRACKED, visibility: CatalogVisibility.HIDDEN } });
-    await prisma.order.create({ data: { confirmedAt: new Date(), customerEmail: `transfer-${suffix}@example.test`, customerFirstName: "P0", customerLastName: "Transfer", deliveryType: OrderDeliveryType.SHIPPING, id: sourceOrderId, inventoryEffectId: effectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED, number: `P0-TRANSFER-${suffix}`, status: OrderStatus.PENDING, subtotal: 100, total: 100, payment: { create: { amount: 100, paymentMethodId: "manual", status: PaymentStatus.PENDING } }, items: { create: { lineSubtotal: 100, productId: sourceProductId, productName: "P0 transfer product", quantity: 1, sku: `P0-T-${suffix}`, unitPrice: 100 } } } });
+    const sourceVariantId = `p0-transfer-variant-${suffix}`;
+    await prisma.product.create({ data: { id: sourceProductId, name: "P0 transfer product", publicSlug: `p0-transfer-${suffix}`, price: 100, slug: `p0-transfer-${suffix}`, variants: { create: { id: sourceVariantId, name: "P0 transfer variant", quantity: 9, sku: `P0-T-${suffix}`, stockMode: StockMode.TRACKED } }, visibility: CatalogVisibility.HIDDEN } });
+    await prisma.order.create({ data: { confirmedAt: new Date(), customerEmail: `transfer-${suffix}@example.test`, customerFirstName: "P0", customerLastName: "Transfer", deliveryType: OrderDeliveryType.SHIPPING, id: sourceOrderId, inventoryEffectId: effectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED, number: `P0-TRANSFER-${suffix}`, status: OrderStatus.PENDING, subtotal: 100, total: 100, payment: { create: { amount: 100, paymentMethodId: "manual", status: PaymentStatus.PENDING } }, items: { create: { lineSubtotal: 100, productId: sourceProductId, productName: "P0 transfer product", quantity: 1, sku: `P0-T-${suffix}`, unitPrice: 100, variantId: sourceVariantId } } } });
     orderIds.push(sourceOrderId);
-    await prisma.inventoryHistory.create({ data: { delta: -1, inventoryEffectId: effectId, movementKind: InventoryMovementKind.SALE_DEDUCTION, operation: InventoryOperation.SUBTRACT, operationId: `p0-transfer-operation-${suffix}`, origin: "p0_acceptance", productId: sourceProductId, referenceId: sourceOrderId, referenceType: InventoryReferenceType.ORDER, resultingQuantity: 9, stockMode: StockMode.TRACKED } });
+    await prisma.inventoryHistory.create({ data: { delta: -1, inventoryEffectId: effectId, movementKind: InventoryMovementKind.SALE_DEDUCTION, operation: InventoryOperation.SUBTRACT, operationId: `p0-transfer-operation-${suffix}`, origin: "p0_acceptance", productId: sourceProductId, referenceId: sourceOrderId, referenceType: InventoryReferenceType.ORDER, resultingQuantity: 8, stockMode: StockMode.TRACKED, variantId: sourceVariantId } });
     const destination = await sales.convertOrderToSale({ sourceOrderId });
     orderIds.push(destination.id);
     await expect(prisma.order.findMany({ select: { id: true, inventoryEffectId: true, inventoryPolicy: true }, where: { inventoryEffectId: effectId } })).resolves.toEqual([{ id: destination.id, inventoryEffectId: effectId, inventoryPolicy: OrderInventoryPolicy.LEDGER_MANAGED }]);
 
     supplierId = (await prisma.supplier.create({ data: { code: `P0-${suffix}`, name: "P0 acceptance supplier", status: SupplierStatus.ACTIVE } })).id;
-    const purchaseOrder = await purchaseOrders.create(createPurchaseOrderSchema.parse({ supplierId, items: [{ productId: `p0-po-item-a-${suffix}`, quantity: 2, sku: "A", title: "A", unitCost: 100 }, { productId: `p0-po-item-b-${suffix}`, quantity: 3, sku: "B", title: "B", unitCost: 50 }] }));
+    const purchaseOrder = await purchaseOrders.create(createPurchaseOrderSchema.parse({ supplierId, items: [{ productId: `p0-po-item-a-${suffix}`, variantId: `p0-po-variant-a-${suffix}`, quantity: 2, sku: "A", title: "A", unitCost: 100 }, { productId: `p0-po-item-b-${suffix}`, variantId: `p0-po-variant-b-${suffix}`, quantity: 3, sku: "B", title: "B", unitCost: 50 }] }));
     purchaseOrderId = purchaseOrder.id;
     const results = await Promise.allSettled([purchaseOrders.update(purchaseOrder.id, { tax: 35 }), purchaseOrders.update(purchaseOrder.id, { shippingCost: 20 })]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
@@ -142,7 +143,7 @@ describe("backend core P0 stabilization acceptance", () => {
   });
 
   async function expectStock(productId: string, quantity: number): Promise<void> {
-    await expect(prisma.product.findUniqueOrThrow({ select: { quantity: true }, where: { id: productId } })).resolves.toEqual({ quantity });
+    await expect(prisma.productVariant.findFirstOrThrow({ select: { quantity: true }, where: { productId } })).resolves.toEqual({ quantity });
   }
 
   async function expectMovements(referenceId: string, movementKind: InventoryMovementKind, count: number): Promise<void> {

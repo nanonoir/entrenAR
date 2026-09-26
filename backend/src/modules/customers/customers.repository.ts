@@ -89,10 +89,9 @@ export type CustomerRepositoryListQuery = Omit<CustomerListQuery, "sortBy"> & {
 
 @Injectable()
 export class CustomersRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async transaction<T>(callback: (transaction: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.mutationGate.runShared(this.prisma, callback);

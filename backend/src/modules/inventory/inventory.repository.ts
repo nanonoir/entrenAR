@@ -101,10 +101,9 @@ type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class InventoryRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> {
     return this.mutationGate.runShared(this.prisma, callback);
@@ -132,19 +131,7 @@ export class InventoryRepository {
         : null;
     }
 
-    const product = await transaction.product.findUnique({
-      select: { id: true, quantity: true, stockMode: true },
-      where: { id: productId },
-    });
-
-    return product
-      ? {
-        kind: INVENTORY_TARGET_KIND.PRODUCT,
-        productId: product.id,
-        quantity: product.quantity,
-        stockMode: product.stockMode,
-      }
-      : null;
+    return null;
   }
 
   async applyLimitedDelta(

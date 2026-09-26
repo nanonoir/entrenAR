@@ -15,10 +15,9 @@ export type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class SuppliersRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> { return this.mutationGate.runShared(this.prisma, callback); }
   async list(query: SupplierFilterQueryDto): Promise<SupplierPageResult> {
     const where = supplierWhere(query);

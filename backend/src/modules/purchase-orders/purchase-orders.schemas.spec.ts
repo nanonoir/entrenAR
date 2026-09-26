@@ -12,7 +12,7 @@ describe("purchase-order schemas", () => {
     const parsed = createPurchaseOrderSchema.parse({
       expectedDate: "2026-09-10",
       items: [{
-        productId: "product-1",
+        productId: "product-1", variantId: "variant-1",
         quantity: 3,
         sku: "SKU-1",
         title: "Product one",
@@ -29,7 +29,7 @@ describe("purchase-order schemas", () => {
     expect(parsed.expectedDate).toEqual(new Date("2026-09-10T00:00:00.000Z"));
     expect(parsed.items).toEqual([expect.objectContaining({ quantity: 3, unitCost: 12.5 })]);
     expect(purchaseOrderItemSchema.safeParse({
-      productId: "product-1",
+      productId: "product-1", variantId: "variant-1",
       quantity: 2,
       sku: "SKU-1",
       title: "Product one",

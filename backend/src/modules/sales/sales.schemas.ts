@@ -58,13 +58,13 @@ const customer = z.object({ dni: text(80).optional(), email: z.email(), firstNam
 const item = z.object({
   attributes: jsonObject.default({}), compareAtPrice: money.optional(), name: text(240).optional(), productId: id,
   productName: text(240).optional(), quantity: z.number().int().positive(), sku: text(160).optional(), snapshot: jsonObject.default({}), unitPrice: money,
-  variantId: id.optional(), variantName: text(160).optional(), weightGrams: z.number().int().nonnegative().optional(),
+  variantId: id, variantName: text(160).optional(), weightGrams: z.number().int().nonnegative().optional(),
 }).strict().superRefine((value, context) => {
   if (!value.productName && !value.name) context.addIssue({ code: z.ZodIssueCode.custom, message: "Each sale item requires productName.", path: ["productName"] });
 }).transform((value) => ({
   attributes: value.attributes, ...(value.compareAtPrice === undefined ? {} : { compareAtPrice: value.compareAtPrice }),
   productId: value.productId, productName: value.productName ?? value.name!, quantity: value.quantity, sku: value.sku ?? value.productId, snapshot: value.snapshot, unitPrice: value.unitPrice,
-  ...(value.variantId === undefined ? {} : { variantId: value.variantId }), ...(value.variantName === undefined ? {} : { variantName: value.variantName }), ...(value.weightGrams === undefined ? {} : { weightGrams: value.weightGrams }),
+  variantId: value.variantId, ...(value.variantName === undefined ? {} : { variantName: value.variantName }), ...(value.weightGrams === undefined ? {} : { weightGrams: value.weightGrams }),
 }));
 
 export const createManualSaleSchema = z.object({

@@ -47,7 +47,7 @@ describe("StatisticsRepository", () => {
     const harness = createHarness();
     harness.prisma.orderItem.groupBy.mockResolvedValue([{ productId: "product-1", _sum: { quantity: 4, lineSubtotal: "120" } }]);
     harness.prisma.product.findMany.mockResolvedValue([{
-      id: "product-1", name: "Protein", quantity: 7, categories: [{ category: { name: "Supplements" } }],
+      id: "product-1", name: "Protein", variants: [{ quantity: 7, stockMode: StockMode.TRACKED }], categories: [{ category: { name: "Supplements" } }],
     }]);
 
     await expect(harness.repository.getTopProducts(startDate, endDate, 5)).resolves.toEqual([{
@@ -62,8 +62,8 @@ describe("StatisticsRepository", () => {
   it("returns tracked inventory in stable OUT_OF_STOCK and LOW_STOCK groups", async () => {
     const harness = createHarness();
     harness.prisma.product.findMany.mockResolvedValue([
-      { id: "product-1", name: "Empty", quantity: 0 },
-      { id: "product-2", name: "Low", quantity: 3 },
+      { id: "product-1", name: "Empty", variants: [{ quantity: 0, stockMode: StockMode.TRACKED }] },
+      { id: "product-2", name: "Low", variants: [{ quantity: 3, stockMode: StockMode.TRACKED }] },
     ]);
 
     await expect(harness.repository.getInventoryAlerts()).resolves.toEqual([
@@ -71,7 +71,7 @@ describe("StatisticsRepository", () => {
       { type: "LOW_STOCK", items: [{ id: "product-2", name: "Low", stockAvailable: 3, stockReserved: 0 }] },
     ]);
     expect(harness.prisma.product.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { stockMode: StockMode.TRACKED, OR: [{ quantity: { lte: 0 } }, { quantity: { gt: 0, lte: 5 } }] },
+      select: { id: true, name: true, variants: { select: { quantity: true, stockMode: true } } },
     }));
   });
 

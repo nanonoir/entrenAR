@@ -89,9 +89,9 @@ describe("account order history REST API (e2e)", () => {
     expect(ownerHistory.status).toBe(200);
     const orders = await json<AccountOrderResponse[]>(ownerHistory);
     expect(orders).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: expect.any(String), status: "preparacion", trackingCode: expect.any(String), total: 150 }),
+      expect.objectContaining({ id: expect.any(String), status: "preparacion", trackingCode: expect.any(String), total: 200 }),
     ]));
-    expect(orders[0]?.items[0]).toEqual(expect.objectContaining({ name: "Customer fixture product", price: 50, quantity: 1 }));
+    expect(orders[0]?.items[0]).toEqual(expect.objectContaining({ name: "Customer fixture product", price: 100, quantity: 1 }));
     expect(orders[0]).not.toHaveProperty("userId");
     expect(fixture.owner.id).not.toBe(fixture.foreign.id);
     await expectJson(foreignHistory, []);

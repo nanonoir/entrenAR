@@ -82,7 +82,7 @@ export function createCheckoutUnitHarness(): CheckoutUnitHarness {
       productId: item.productId,
       quantity: item.quantity,
       updatedAt: cart.updatedAt,
-      variantId: item.variantId ?? null,
+      variantId: item.variantId!,
     })),
   }));
   checkoutRepository.updateSessionSnapshot.mockImplementation(async (_transaction, _sessionId, snapshotData) => {
@@ -232,7 +232,6 @@ export function checkoutUnitCatalogProduct(): CheckoutCatalogProduct {
       attributes: { flavor: "chocolate" },
       compareAtPrice: 90,
       id: "variant-1",
-      isDefault: true,
       name: "Chocolate",
       price: 75,
       quantity: 5,

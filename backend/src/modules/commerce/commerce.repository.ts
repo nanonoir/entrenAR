@@ -184,10 +184,9 @@ export interface ShippingDiscountMutationRecord {
 
 @Injectable()
 export class CommerceRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mutationGate = new MutationGate(),
-  ) {}
+  private readonly mutationGate = new MutationGate();
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>): Promise<T> {
     return this.mutationGate.runShared(this.prisma, callback);

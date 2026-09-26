@@ -98,7 +98,7 @@ describe("checkout completion REST API (e2e)", () => {
     expect(quoteResponse.status).toBe(200);
     expect(quoteResponse.headers.get("x-request-id")).toBe("checkout-e2e-guest-1");
     const quote = await json<CheckoutQuoteResponse>(quoteResponse);
-    expect(quote).toEqual(expect.objectContaining({ ok: true, shipping: 100, subtotal: 50, total: 150 }));
+    expect(quote).toEqual(expect.objectContaining({ ok: true, shipping: 100, subtotal: 100, total: 200 }));
     expect(quote.sessionToken).toBe(fixture.guestCart.sessionToken);
 
     const completeResponse = await request("/checkout/complete", {
@@ -107,7 +107,7 @@ describe("checkout completion REST API (e2e)", () => {
     });
     expect(completeResponse.status).toBe(201);
     const completed = await json<CheckoutCompleteResponse>(completeResponse);
-    expect(completed).toEqual(expect.objectContaining({ ok: true, orderId: expect.any(String), status: "pending", total: 150 }));
+    expect(completed).toEqual(expect.objectContaining({ ok: true, orderId: expect.any(String), status: "pending", total: 200 }));
 
     const database = prismaOrThrow();
     const [order, cart, variant] = await Promise.all([
@@ -133,7 +133,7 @@ describe("checkout completion REST API (e2e)", () => {
     expect(quoteResponse.status).toBe(200);
     expect(quoteResponse.headers.get("x-request-id")).toBe("checkout-e2e-customer-1");
     const quote = await json<CheckoutQuoteResponse>(quoteResponse);
-    expect(quote).toEqual(expect.objectContaining({ discount: 0, ok: true, subtotal: 50, total: 150 }));
+    expect(quote).toEqual(expect.objectContaining({ discount: 0, ok: true, subtotal: 100, total: 200 }));
 
     const completeResponse = await request("/checkout/complete", {
       body: completeBody(fixture.customerProduct, fixture.customerCart.sessionToken, quote.quoteId, "customer-complete-key", fixture.owner.email),
@@ -142,7 +142,7 @@ describe("checkout completion REST API (e2e)", () => {
     });
     expect(completeResponse.status).toBe(201);
     const completed = await json<CheckoutCompleteResponse>(completeResponse);
-    expect(completed).toEqual(expect.objectContaining({ ok: true, status: "pending", total: 150 }));
+    expect(completed).toEqual(expect.objectContaining({ ok: true, status: "pending", total: 200 }));
 
     const database = prismaOrThrow();
     const [order, variant, history, cart] = await Promise.all([

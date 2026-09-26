@@ -193,7 +193,7 @@ describe("Core platform production acceptance (e2e)", () => {
     });
     expect(quoteResponse.status).toBe(200);
     const quote = await json<QuoteResponse>(quoteResponse);
-    expect(quote).toEqual(expect.objectContaining({ ok: true, subtotal: 50, total: 150 }));
+    expect(quote).toEqual(expect.objectContaining({ ok: true, subtotal: 100, total: 200 }));
 
     const completionResponse = await request("/api/v1/checkout/complete", {
       body: {
@@ -212,7 +212,7 @@ describe("Core platform production acceptance (e2e)", () => {
     });
     expect(completionResponse.status).toBe(201);
     const completion = await json<CompletionResponse>(completionResponse);
-    expect(completion).toEqual(expect.objectContaining({ ok: true, status: "pending", total: 150 }));
+    expect(completion).toEqual(expect.objectContaining({ ok: true, status: "pending", total: 200 }));
 
     const salesResponse = await request(`/api/v1/admin/sales?limit=100&page=1&search=${encodeURIComponent(email)}`, { token: adminToken });
     expect(salesResponse.status).toBe(200);

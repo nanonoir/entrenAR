@@ -36,14 +36,12 @@ export class CatalogFixtureRestorer implements FixtureRestorer {
         compareAtPrice: product.compareAtPrice,
         description: product.description,
         highlightSections: [],
-        imageTone: product.imageTone,
         legacySourceId: product.legacySourceId,
         manualOrder: product.manualOrder,
         name: product.name,
         promotionalPrice: product.promotionalPrice,
         publicSlug: product.publicSlug,
-        salePrice: product.salePrice,
-        sku: productSku(product),
+        price: product.salePrice,
         slug: product.slug,
         subcategorySlugs: [],
         tags: [...(product.tags ?? [])],
@@ -52,7 +50,7 @@ export class CatalogFixtureRestorer implements FixtureRestorer {
       };
       await transaction.product.upsert({
         where: { id: product.id },
-        create: { id: product.id, ...stockFields(product.stock), ...productData },
+         create: { id: product.id, ...productData },
         update: productData,
       });
       productExists ? updated++ : created++;
@@ -72,12 +70,9 @@ export class CatalogFixtureRestorer implements FixtureRestorer {
         const variantExists = await transaction.productVariant.findUnique({ where: { id: variant.id }, select: { id: true } });
         const variantData = {
           attributes: variantAttributes(product, variant),
-          compareAtPrice: variant.compareAtPrice,
-          isDefault: product.variants.length === 1,
           name: variant.name,
-          price: variant.price,
           productId: product.id,
-          sku: variant.sku ?? `${productSku(product)}-${variant.id.toUpperCase()}`,
+          sku: variant.sku ?? `${product.id}-${variant.id}`,
         };
         await transaction.productVariant.upsert({ where: { id: variant.id }, create: { id: variant.id, ...stockFields(variant.stock), ...variantData }, update: variantData });
         variantExists ? updated++ : created++;

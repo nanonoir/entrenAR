@@ -121,7 +121,7 @@ export class StatisticsRepository {
       select: {
         id: true,
         name: true,
-        quantity: true,
+        variants: { select: { quantity: true, stockMode: true } },
         categories: {
           orderBy: { categoryId: "asc" },
           take: 1,
@@ -140,7 +140,7 @@ export class StatisticsRepository {
         category: product.categories[0]?.category.name ?? "Uncategorized",
         unitsSold: group._sum.quantity ?? 0,
         revenue: toNumber(group._sum.lineSubtotal),
-        stockAvailable: Math.max(product.quantity ?? 0, 0),
+         stockAvailable: aggregateStock(product.variants),
         stockReserved: 0,
       }];
     });
@@ -148,19 +148,15 @@ export class StatisticsRepository {
 
   async getInventoryAlerts(): Promise<InventoryAlertGroup[]> {
     const products = await this.prisma.product.findMany({
-      where: {
-        stockMode: StockMode.TRACKED,
-        OR: [{ quantity: { lte: 0 } }, { quantity: { gt: 0, lte: LOW_STOCK_THRESHOLD } }],
-      },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, quantity: true },
+      select: { id: true, name: true, variants: { select: { quantity: true, stockMode: true } } },
     });
     const items = products.map((product) => ({
       id: product.id,
       name: product.name,
-      stockAvailable: Math.max(product.quantity ?? 0, 0),
+      stockAvailable: aggregateStock(product.variants),
       stockReserved: 0,
-    }));
+    })).filter((item) => item.stockAvailable === 0 || item.stockAvailable <= LOW_STOCK_THRESHOLD);
     return [
       { type: STATISTICS_INVENTORY_ALERT_TYPE.OUT_OF_STOCK, items: items.filter((item) => item.stockAvailable === 0) },
       { type: STATISTICS_INVENTORY_ALERT_TYPE.LOW_STOCK, items: items.filter((item) => item.stockAvailable > 0 && item.stockAvailable <= LOW_STOCK_THRESHOLD) },
@@ -261,6 +257,11 @@ export class StatisticsRepository {
     ]);
     return { paidOrders: sales._count?._all ?? 0, grossRevenue: toNumber(sales._sum?.total), checkoutSessions };
   }
+}
+
+function aggregateStock(variants: readonly { quantity: number | null; stockMode: StockMode }[]): number {
+  if (variants.some((variant) => variant.stockMode === StockMode.INFINITE)) return Number.MAX_SAFE_INTEGER;
+  return variants.reduce((total, variant) => total + (variant.quantity ?? 0), 0);
 }
 
 export function qualifyingOrderWhere(startDate: Date, endDate: Date): Prisma.OrderWhereInput {

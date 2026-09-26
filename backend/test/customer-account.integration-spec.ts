@@ -255,11 +255,9 @@ async function createProduct(
       id,
       name: `Customer account ${label} product`,
       publicSlug,
-      quantity: 8,
-      salePrice: "49.99",
-      sku: `ACCOUNT-${label.toUpperCase()}-${suffix}`,
+      price: "49.99",
       slug: `customer-account-admin-${label}-${suffix}`,
-      stockMode: StockMode.TRACKED,
+      variants: { create: { name: "Account fixture variant", quantity: 8, sku: `ACCOUNT-${label.toUpperCase()}-${suffix}`, stockMode: StockMode.TRACKED } },
       visibility,
     },
   });

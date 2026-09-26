@@ -38,7 +38,7 @@ describe("catalog domain integration", () => {
     const child = await createFixtureCategory(categoryInput("child", root.id));
     await expectCode(categories.update(categoryUpdateSchema.parse(categoryInput("root", child.id, root.id))), "CATEGORY_CYCLE");
 
-    await createFixtureProduct(productInput(root.id, { sku: `PRODUCT-${randomUUID()}` }));
+    await createFixtureProduct(productInput(root.id));
     await expectCode(categories.delete(root.id), "CATEGORY_IN_USE");
     await expect(prisma.category.findUnique({ where: { id: child.id } })).resolves.toEqual(expect.objectContaining({ parentId: root.id }));
   });
@@ -57,19 +57,17 @@ describe("catalog domain integration", () => {
   it("rejects duplicate slug, public slug, and SKU without partial product writes", async () => {
     const category = await createFixtureCategory(categoryInput("identity"));
     const suffix = randomUUID();
-    await createFixtureProduct(productInput(category.id, { publicSlug: `public-${suffix}`, sku: `SKU-${suffix}`, slug: `slug-${suffix}` }));
+    await createFixtureProduct(productInput(category.id, { publicSlug: `public-${suffix}`, slug: `slug-${suffix}` }));
     const count = await prisma.product.count();
 
-    await expectCode(products.create(productInput(category.id, { sku: `NEW-${suffix}`, slug: `slug-${suffix}` })), "SLUG_CONFLICT");
-    await expectCode(products.create(productInput(category.id, { publicSlug: `public-${suffix}`, sku: `NEW2-${suffix}` })), "SLUG_CONFLICT");
-    await expectCode(products.create(productInput(category.id, { sku: `SKU-${suffix}` })), "SKU_CONFLICT");
+    await expectCode(products.create(productInput(category.id, { slug: `slug-${suffix}` })), "SLUG_CONFLICT");
+    await expectCode(products.create(productInput(category.id, { publicSlug: `public-${suffix}` })), "SLUG_CONFLICT");
     await expect(prisma.product.count()).resolves.toBe(count);
   });
 
-  it("requires every Cartesian combination and creates a default variant when no axes exist", async () => {
+  it("preserves sparse combinations and creates a non-default simple variant", async () => {
     const category = await createFixtureCategory(categoryInput("variants"));
-    const count = await prisma.product.count();
-    await expectCode(createFixtureProduct(productInput(category.id, {
+    const sparse = await createFixtureProduct(productInput(category.id, {
       variantCombinations: [
         { name: "Black / S", sku: `VAR-${randomUUID()}`, stock: 1 },
         { name: "Black / M", sku: `VAR-${randomUUID()}`, stock: 1 },
@@ -79,23 +77,24 @@ describe("catalog domain integration", () => {
         { name: "Color", values: ["Black", "Blue"] },
         { name: "Size", values: ["S", "M"] },
       ],
-    })), "VALIDATION_ERROR");
-    await expect(prisma.product.count()).resolves.toBe(count);
+    }));
+    expect(sparse.variantCombinations).toHaveLength(3);
 
     const created = await createFixtureProduct(productInput(category.id));
-    expect(created.variantCombinations).toEqual([expect.objectContaining({ name: "Default", stock: 8 })]);
+    expect(created.variantCombinations).toEqual([expect.objectContaining({ name: "Simple product", stock: 0 })]);
   });
 
   it("inherits the product price for variants without overrides", async () => {
     const category = await createFixtureCategory(categoryInput("inheritance"));
     const product = await createFixtureProduct(productInput(category.id, {
-      salePrice: 55.5,
+      price: 55.5,
       variantCombinations: [
         { name: "Black", sku: `VAR-${randomUUID()}`, stock: 2 },
       ],
       variantProperties: [{ name: "Color", values: ["Black"] }],
     }));
 
+    expect(product.price).toBe(55.5);
     expect(product.variantCombinations[0]).toEqual(expect.objectContaining({ price: 55.5 }));
   });
 
@@ -118,7 +117,6 @@ describe("catalog domain integration", () => {
       manualOrder: expect.any(Number),
       publicSlug: expect.not.stringMatching(new RegExp(`^${source.publicSlug}$`)),
       salesCount: 0,
-      sku: expect.not.stringMatching(new RegExp(`^${source.sku}$`)),
       slug: expect.not.stringMatching(new RegExp(`^${source.slug}$`)),
     }));
     expect(duplicateVariant.id).not.toBe(sourceVariant.id);
@@ -157,11 +155,8 @@ function productInput(categoryId: string, overrides: Record<string, unknown> = {
     categoryIds: [categoryId],
     description: "A persistent catalog product test fixture.",
     name: `Product ${suffix}`,
-    salePrice: 49.99,
-    sku: `SKU-${suffix}`,
+    price: 49.99,
     slug: `slug-${suffix}`,
-    stockMode: "limited",
-    stockQuantity: 8,
     visibility: "visible",
     ...overrides,
   });

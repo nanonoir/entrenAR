@@ -19,7 +19,7 @@ export const inventoryUpdateSchema = z.object({
   quantity: z.number().int().nonnegative().optional(),
   reason: z.string().trim().min(1).max(500).optional(),
   stockMode: z.enum(inventoryStockModeValues).optional(),
-  variantId: identifierSchema.optional(),
+  variantId: identifierSchema,
 }).strict().superRefine((input, context) => {
   if (input.operation === INVENTORY_OPERATION.REPLACE) {
     if (!input.stockMode) {

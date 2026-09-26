@@ -151,13 +151,8 @@ describe("showcase catalog and commerce restorers", () => {
     });
     await prisma.product.upsert({
       where: { id: unknownProductId },
-      create: { id: unknownProductId, name: "Visitor product", slug: unknownProductId, publicSlug: unknownProductId, sku: unknownProductId, salePrice: "100.00", stockMode: "TRACKED", quantity: 1 },
+      create: { id: unknownProductId, name: "Visitor product", slug: unknownProductId, publicSlug: unknownProductId, price: "100.00", variants: { create: { id: unknownVariantId, name: "Visitor variant", sku: unknownVariantId, stockMode: "TRACKED", quantity: 1 } } },
       update: { name: "Visitor product" },
-    });
-    await prisma.productVariant.upsert({
-      where: { id: unknownVariantId },
-      create: { id: unknownVariantId, productId: unknownProductId, name: "Visitor variant", sku: unknownVariantId, stockMode: "TRACKED", quantity: 1 },
-      update: { name: "Visitor variant" },
     });
 
     try {
@@ -363,21 +358,19 @@ describe("showcase reset atomic inventory command", () => {
     const unknownProductId = `showcase-reset-unknown-stock-${randomUUID()}`;
     const run = createResetService();
     await restoreBaseline();
-    await prisma.product.create({ data: { id: unknownProductId, name: "Visitor stock", publicSlug: unknownProductId, quantity: 7, salePrice: "10.00", sku: unknownProductId, slug: unknownProductId, stockMode: StockMode.TRACKED } });
+    const unknownVariantId = `${unknownProductId}-variant`;
+    await prisma.product.create({ data: { id: unknownProductId, name: "Visitor stock", publicSlug: unknownProductId, price: "10.00", slug: unknownProductId, variants: { create: { id: unknownVariantId, name: "Visitor stock variant", quantity: 7, sku: unknownVariantId, stockMode: StockMode.TRACKED } } } });
     await prisma.inventoryHistory.create({ data: { delta: 1, operation: InventoryOperation.ADD, origin: "visitor", productId: "p-creatine", resultingQuantity: 25, stockMode: StockMode.TRACKED } });
     const historyBefore = await prisma.inventoryHistory.count({ where: { productId: "p-creatine" } });
-    await prisma.product.update({ data: { quantity: 2 }, where: { id: "p-creatine" } });
     await prisma.productVariant.update({ data: { quantity: 3 }, where: { id: "sin-sabor-300" } });
 
     try {
       const result = await run.run();
       expect(result.exitCode).toBe(SHOWCASE_RESET_EXIT_CODE.SUCCESS);
-      await expect(prisma.product.findUnique({ where: { id: "p-creatine" } })).resolves.toMatchObject({ quantity: 24, stockMode: StockMode.TRACKED });
       await expect(prisma.productVariant.findUnique({ where: { id: "sin-sabor-300" } })).resolves.toMatchObject({ quantity: 24, stockMode: StockMode.TRACKED });
-      await expect(prisma.product.findUnique({ where: { id: unknownProductId } })).resolves.toMatchObject({ quantity: 7, stockMode: StockMode.TRACKED });
+      await expect(prisma.productVariant.findUnique({ where: { id: unknownVariantId } })).resolves.toMatchObject({ quantity: 7, stockMode: StockMode.TRACKED });
       const reconciliations = await prisma.inventoryHistory.findMany({ where: { origin: "showcase-reset", productId: "p-creatine" } });
       expect(reconciliations).toEqual(expect.arrayContaining([
-        expect.objectContaining({ delta: 22, operation: InventoryOperation.REPLACE, referenceType: InventoryReferenceType.RECONCILIATION, resultingQuantity: 24 }),
         expect.objectContaining({ delta: 21, operation: InventoryOperation.REPLACE, referenceType: InventoryReferenceType.RECONCILIATION, resultingQuantity: 24, variantId: "sin-sabor-300" }),
       ]));
       expect(await prisma.inventoryHistory.count({ where: { productId: "p-creatine" } })).toBeGreaterThan(historyBefore);
@@ -420,7 +413,8 @@ describe("showcase reset atomic inventory command", () => {
 
   it("rolls back restored families and reconciliation history when a required family fails", async () => {
     await restoreBaseline();
-    await prisma.product.update({ data: { name: "Changed before rollback", quantity: 2 }, where: { id: "p-creatine" } });
+    await prisma.product.update({ data: { name: "Changed before rollback" }, where: { id: "p-creatine" } });
+    await prisma.productVariant.update({ data: { quantity: 2 }, where: { id: "sin-sabor-300" } });
     const historyBefore = await prisma.inventoryHistory.count({ where: { origin: "showcase-reset" } });
     const failingRestorer: FixtureRestorer = {
       family: "sales",
@@ -433,7 +427,7 @@ describe("showcase reset atomic inventory command", () => {
     const result = await run.run();
     expect(result.exitCode).toBe(SHOWCASE_RESET_EXIT_CODE.FAILURE);
     expect(result.report.failureCategory).toBe("restoration_failed");
-    await expect(prisma.product.findUnique({ where: { id: "p-creatine" } })).resolves.toMatchObject({ name: "Changed before rollback", quantity: 2 });
+    await expect(prisma.product.findUnique({ where: { id: "p-creatine" } })).resolves.toMatchObject({ name: "Changed before rollback" });
     expect(await prisma.inventoryHistory.count({ where: { origin: "showcase-reset" } })).toBe(historyBefore);
     await expect(createResetService().run()).resolves.toMatchObject({ exitCode: SHOWCASE_RESET_EXIT_CODE.SUCCESS });
   });
