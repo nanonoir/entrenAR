@@ -1,5 +1,6 @@
 import type { ProductDetail, ProductSummary } from "@/types/product";
 import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+import { productBelongsToCategory } from "@/lib/category-membership";
 
 type ProductRoute = {
   type: "product";
@@ -25,7 +26,8 @@ const supplementCategoryBySlug: Record<string, string> = {
   proteinas: "proteinas",
   "pre-intra-creatina": "creatina-y-pre",
   "vitaminas-suplementos": "vitaminas",
-  performance: "creatina-y-pre",
+  performance: "performance",
+  "control-de-peso": "control-de-peso",
 };
 
 const simpleCategoryBySegment: Record<string, { categorySlug: string; title: string; description: string }> = {
@@ -105,7 +107,7 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
   if (section === "suplementos") {
     if (!firstSlug) {
       const categoryProducts = products.filter((product) =>
-        ["proteinas", "creatina-y-pre", "vitaminas"].includes(product.categorySlug),
+        ["proteinas", "creatina-y-pre", "vitaminas", "performance", "control-de-peso"].some((slug) => productBelongsToCategory(product, slug)),
       );
 
       return listingRoute(
@@ -122,7 +124,7 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
     }
 
     const category = categories.find((item) => item.slug === categorySlug);
-    const categoryProducts = products.filter((product) => product.categorySlug === categorySlug);
+    const categoryProducts = products.filter((product) => productBelongsToCategory(product, categorySlug));
 
     return listingRoute(
       category?.label ?? firstSlug,

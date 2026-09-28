@@ -2,7 +2,8 @@ const supplementCategoryBySlug: Record<string, string> = {
   proteinas: "proteinas",
   "pre-intra-creatina": "creatina-y-pre",
   "vitaminas-suplementos": "vitaminas",
-  performance: "creatina-y-pre",
+  performance: "performance",
+  "control-de-peso": "control-de-peso",
 };
 
 export const accountRoutes = {
