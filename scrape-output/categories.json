@@ -1,0 +1,422 @@
+[
+  {
+    "slug": "suplementos",
+    "name": "Suplementos",
+    "visibility": "visible",
+    "sortOrder": 1
+  },
+  {
+    "slug": "market",
+    "name": "Market",
+    "visibility": "visible",
+    "sortOrder": 2
+  },
+  {
+    "slug": "indumentaria",
+    "name": "Indumentaria",
+    "visibility": "visible",
+    "sortOrder": 3
+  },
+  {
+    "slug": "shakers",
+    "name": "Shakers",
+    "visibility": "visible",
+    "sortOrder": 4
+  },
+  {
+    "slug": "accesorios",
+    "name": "Accesorios",
+    "visibility": "visible",
+    "sortOrder": 5
+  },
+  {
+    "slug": "combos",
+    "name": "Combos",
+    "visibility": "visible",
+    "sortOrder": 6
+  },
+  {
+    "slug": "entrenamiento",
+    "name": "Entrenamiento",
+    "visibility": "visible",
+    "sortOrder": 7
+  },
+  {
+    "slug": "cinturones",
+    "name": "Cinturones",
+    "parentSlug": "accesorios",
+    "visibility": "visible",
+    "sortOrder": 8
+  },
+  {
+    "slug": "munequeras",
+    "name": "Muñequeras",
+    "parentSlug": "accesorios",
+    "visibility": "visible",
+    "sortOrder": 9
+  },
+  {
+    "slug": "straps",
+    "name": "Straps",
+    "parentSlug": "accesorios",
+    "visibility": "visible",
+    "sortOrder": 10
+  },
+  {
+    "slug": "tinta-de-competicion",
+    "name": "Tinta de Competición",
+    "parentSlug": "accesorios",
+    "visibility": "visible",
+    "sortOrder": 11
+  },
+  {
+    "slug": "vendas",
+    "name": "Vendas",
+    "parentSlug": "accesorios",
+    "visibility": "visible",
+    "sortOrder": 12
+  },
+  {
+    "slug": "entreno",
+    "name": "Entreno",
+    "parentSlug": "indumentaria",
+    "visibility": "visible",
+    "sortOrder": 13
+  },
+  {
+    "slug": "raw",
+    "name": "Raw",
+    "parentSlug": "indumentaria",
+    "visibility": "visible",
+    "sortOrder": 14
+  },
+  {
+    "slug": "shark",
+    "name": "Shark",
+    "parentSlug": "indumentaria",
+    "visibility": "visible",
+    "sortOrder": 15
+  },
+  {
+    "slug": "symmetry",
+    "name": "Symmetry",
+    "parentSlug": "indumentaria",
+    "visibility": "visible",
+    "sortOrder": 16
+  },
+  {
+    "slug": "xbelt",
+    "name": "Xbelt",
+    "parentSlug": "indumentaria",
+    "visibility": "visible",
+    "sortOrder": 17
+  },
+  {
+    "slug": "alfajor",
+    "name": "Alfajores Proteicos",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 18
+  },
+  {
+    "slug": "barras",
+    "name": "Barras",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 19
+  },
+  {
+    "slug": "cafe",
+    "name": "Café Funcional",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 20
+  },
+  {
+    "slug": "endulzantes",
+    "name": "Endulzantes",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 21
+  },
+  {
+    "slug": "enlatado",
+    "name": "Enlatados",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 22
+  },
+  {
+    "slug": "frutos-secos",
+    "name": "Frutos Secos",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 23
+  },
+  {
+    "slug": "hierba-mate",
+    "name": "Hierba Mate",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 24
+  },
+  {
+    "slug": "jerky",
+    "name": "Jerky",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 25
+  },
+  {
+    "slug": "pastas-de-mani",
+    "name": "Pastas de Maní",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 26
+  },
+  {
+    "slug": "polvos-mezclas",
+    "name": "Polvos & Mezclas",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 27
+  },
+  {
+    "slug": "salsas",
+    "name": "Salsas",
+    "parentSlug": "market",
+    "visibility": "visible",
+    "sortOrder": 28
+  },
+  {
+    "slug": "control-de-peso",
+    "name": "Control de peso",
+    "parentSlug": "suplementos",
+    "visibility": "visible",
+    "sortOrder": 29
+  },
+  {
+    "slug": "creatina-y-pre",
+    "name": "Creatina y pre",
+    "parentSlug": "suplementos",
+    "visibility": "visible",
+    "sortOrder": 30
+  },
+  {
+    "slug": "performance",
+    "name": "Performance",
+    "parentSlug": "suplementos",
+    "visibility": "visible",
+    "sortOrder": 31
+  },
+  {
+    "slug": "proteinas",
+    "name": "Proteínas",
+    "parentSlug": "suplementos",
+    "visibility": "visible",
+    "sortOrder": 32
+  },
+  {
+    "slug": "vitaminas",
+    "name": "Vitaminas",
+    "parentSlug": "suplementos",
+    "visibility": "visible",
+    "sortOrder": 33
+  },
+  {
+    "slug": "cafeina",
+    "name": "Cafeína",
+    "parentSlug": "control-de-peso",
+    "visibility": "visible",
+    "sortOrder": 34
+  },
+  {
+    "slug": "cla",
+    "name": "CLA",
+    "parentSlug": "control-de-peso",
+    "visibility": "visible",
+    "sortOrder": 35
+  },
+  {
+    "slug": "control-de-apetito",
+    "name": "Control de Apetito",
+    "parentSlug": "control-de-peso",
+    "visibility": "visible",
+    "sortOrder": 36
+  },
+  {
+    "slug": "l-carnitina",
+    "name": "L-Carnitina",
+    "parentSlug": "control-de-peso",
+    "visibility": "visible",
+    "sortOrder": 37
+  },
+  {
+    "slug": "quemadores-de-grasa",
+    "name": "Quemadores de Grasa",
+    "parentSlug": "control-de-peso",
+    "visibility": "visible",
+    "sortOrder": 38
+  },
+  {
+    "slug": "creatina",
+    "name": "Creatina",
+    "parentSlug": "creatina-y-pre",
+    "visibility": "visible",
+    "sortOrder": 39
+  },
+  {
+    "slug": "eeas-bcaas",
+    "name": "EEAs & BCAAs",
+    "parentSlug": "creatina-y-pre",
+    "visibility": "visible",
+    "sortOrder": 40
+  },
+  {
+    "slug": "pre-intra-entreno",
+    "name": "Pre & Intra Entreno",
+    "parentSlug": "creatina-y-pre",
+    "visibility": "visible",
+    "sortOrder": 41
+  },
+  {
+    "slug": "pump-vasodilatadores",
+    "name": "Pump & Vasodilatadores",
+    "parentSlug": "creatina-y-pre",
+    "visibility": "visible",
+    "sortOrder": 42
+  },
+  {
+    "slug": "glutamina",
+    "name": "Glutamina",
+    "parentSlug": "performance",
+    "visibility": "visible",
+    "sortOrder": 43
+  },
+  {
+    "slug": "hidratacion-resistencia",
+    "name": "Hidratación y Resistencia",
+    "parentSlug": "performance",
+    "visibility": "visible",
+    "sortOrder": 44
+  },
+  {
+    "slug": "colageno",
+    "name": "Colágeno",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 45
+  },
+  {
+    "slug": "ganadores",
+    "name": "Ganadores de Peso",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 46
+  },
+  {
+    "slug": "plant-protein",
+    "name": "Plant Protein",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 47
+  },
+  {
+    "slug": "protein-bars",
+    "name": "Protein Bars",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 48
+  },
+  {
+    "slug": "protein-foods",
+    "name": "Protein Foods",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 49
+  },
+  {
+    "slug": "shakers-y-botellas",
+    "name": "Shakers y Botellas",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 50
+  },
+  {
+    "slug": "whey-protein",
+    "name": "Whey Protein",
+    "parentSlug": "proteinas",
+    "visibility": "visible",
+    "sortOrder": 51
+  },
+  {
+    "slug": "adaptogenos-hierbas",
+    "name": "Adaptógenos y Hierbas",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 52
+  },
+  {
+    "slug": "antioxidantes",
+    "name": "Antioxidantes",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 53
+  },
+  {
+    "slug": "fish-oil-omegas",
+    "name": "Fish Oil & Omegas",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 54
+  },
+  {
+    "slug": "huesos-articulaciones",
+    "name": "Huesos y Articulaciones",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 55
+  },
+  {
+    "slug": "multivitaminicos",
+    "name": "Multivitamínicos",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 56
+  },
+  {
+    "slug": "nootropicos-concentracion",
+    "name": "Nootrópicos & Concentración",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 57
+  },
+  {
+    "slug": "probioticos-digestivos",
+    "name": "Probióticos y Digestivos",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 58
+  },
+  {
+    "slug": "stress-sueno",
+    "name": "Stress & Sueño",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 59
+  },
+  {
+    "slug": "verdes-superalimentos",
+    "name": "Verdes y Superalimentos",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 60
+  },
+  {
+    "slug": "vitaminas-a-z",
+    "name": "Vitaminas A-Z",
+    "parentSlug": "vitaminas",
+    "visibility": "visible",
+    "sortOrder": 61
+  }
+]
