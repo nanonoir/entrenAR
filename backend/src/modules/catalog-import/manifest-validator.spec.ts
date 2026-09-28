@@ -4,7 +4,8 @@ const validManifest = {
   products: [{
     slug: "whey-pro",
     name: "Whey Pro",
-    price: 8000,
+        price: 8000,
+        weightGrams: 1000,
     compareAtPrice: 10000,
     categorySlugs: ["protein"],
     images: [{ position: 1, storageKey: "products/whey-pro/1.webp", alt: "Whey" }],

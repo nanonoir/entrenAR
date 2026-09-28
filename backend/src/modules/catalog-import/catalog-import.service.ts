@@ -16,6 +16,7 @@ export interface CatalogImportReport {
   runId?: string;
   counts?: { products: number; variants: number; images: number };
   issues?: CatalogImportIssue[];
+  readiness?: "READY" | "NOT_READY";
 }
 
 @Injectable()
@@ -41,6 +42,10 @@ export class CatalogImportService {
       this.repository.existingCategorySlugs(),
     ]);
     const issues: CatalogImportIssue[] = [];
+    const productCount = this.repository.targetProductCount ? await this.repository.targetProductCount() : 0;
+    if (productCount > 0) {
+      issues.push({ code: "TARGET_NOT_CLEAN", field: "Product", message: "Catalog import requires an empty Product table." });
+    }
     const referencedKeys = plan.products.flatMap((product) => product.images.map((image) => ({ productSlug: product.slug, key: image.storageKey })));
 
     for (const product of plan.products) {
@@ -75,10 +80,10 @@ export class CatalogImportService {
     try {
       const plan = await this.preflight(input);
       const counts = await this.repository.persist(plan);
-      return { ok: true, runId: createRunId(), counts };
+      return { ok: true, runId: createRunId(), counts, readiness: "READY" };
     } catch (error) {
-      if (error instanceof CatalogManifestValidationError) return { ok: false, issues: [...error.issues] };
-      return { ok: false, issues: [{ code: "PERSISTENCE_FAILURE", message: "Catalog import could not be completed." }] };
+      if (error instanceof CatalogManifestValidationError) return { ok: false, readiness: "NOT_READY", issues: [...error.issues] };
+      return { ok: false, readiness: "NOT_READY", issues: [{ code: "PERSISTENCE_FAILURE", message: "Catalog import could not be completed." }] };
     }
   }
 }

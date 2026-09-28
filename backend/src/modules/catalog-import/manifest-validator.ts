@@ -9,6 +9,7 @@ type StockMode = (typeof STOCK_MODE)[keyof typeof STOCK_MODE];
 
 const slugSchema = z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const moneySchema = z.number().finite().positive();
+const positiveMeasurementSchema = z.number().finite().positive();
 const propertyValueSchema = z.object({ id: slugSchema, label: z.string().trim().min(1) });
 const propertySchema = z.object({ id: slugSchema, name: z.string().trim().min(1), values: z.array(propertyValueSchema).min(1) });
 const imageSchema = z.object({
@@ -41,6 +42,10 @@ const productSchema = z.object({
   variants: z.array(variantSchema).min(1),
   tags: z.array(z.string().trim().min(1)).default([]),
   shippingRequired: z.boolean().default(true),
+  weightGrams: positiveMeasurementSchema,
+  heightCm: positiveMeasurementSchema.optional(),
+  widthCm: positiveMeasurementSchema.optional(),
+  lengthCm: positiveMeasurementSchema.optional(),
 }).strict();
 
 export const catalogImportManifestSchema = z.object({
@@ -60,7 +65,7 @@ export interface CatalogImportIssue {
 }
 
 export interface CatalogImportPlan extends CatalogImportManifest {
-  products: Array<CatalogImportProduct & { publicSlug: string; descriptionHtml: string }>;
+  products: Array<CatalogImportProduct & { publicSlug: string; descriptionHtml: string; missingLogistics: boolean }>;
   skuSet: Set<string>;
 }
 
@@ -150,7 +155,12 @@ export function normalizeCatalogImportManifest(input: unknown): CatalogImportPla
       issues.push(issue(product.slug, "variants", "INVALID_SIMPLE_PRODUCT", "A simple product must contain exactly one empty-attribute variant."));
     }
 
-    return { ...product, publicSlug, descriptionHtml: sanitizeHtml(product.descriptionHtml ?? "") };
+    return {
+      ...product,
+      publicSlug,
+      descriptionHtml: sanitizeHtml(product.descriptionHtml ?? ""),
+      missingLogistics: product.heightCm === undefined || product.widthCm === undefined || product.lengthCm === undefined,
+    };
   });
 
   if (issues.length > 0) throw new CatalogManifestValidationError(issues);

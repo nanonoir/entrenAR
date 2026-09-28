@@ -5,6 +5,7 @@ import { Prisma, PrismaClient } from "../../generated/prisma/client";
 export const MUTATION_GATE_LOCK_KEY = 847_291_643;
 export const MUTATION_GATE_LOCK_TIMEOUT = "10s";
 export const MUTATION_GATE_TRANSACTION_TIMEOUT_MS = 12_000;
+export const CATALOG_IMPORT_TRANSACTION_TIMEOUT_MS = 30_000;
 
 type TransactionCallback<T> = (transaction: Prisma.TransactionClient) => Promise<T>;
 

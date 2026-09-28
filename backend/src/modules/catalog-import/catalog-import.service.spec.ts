@@ -3,7 +3,7 @@ import { CatalogImportService } from "./catalog-import.service";
 describe("CatalogImportService", () => {
   const manifest = {
     products: [{
-      slug: "whey-pro", name: "Whey Pro", price: 8000,
+      slug: "whey-pro", name: "Whey Pro", price: 8000, weightGrams: 1000,
       categorySlugs: ["protein"], variantProperties: [], tags: [], shippingRequired: true,
       images: [{ position: 1, storageKey: "products/whey-pro/1.webp" }],
       variants: [{ sku: "WHEY-001", name: "Simple", attributes: {}, stockMode: "TRACKED", quantity: 2 }],
@@ -64,6 +64,6 @@ describe("CatalogImportService", () => {
       existingCategorySlugs: async () => new Set(["protein"]), persist: async () => { throw new Error("secret database details"); },
     }, { exists: async () => true });
 
-    await expect(service.importCatalog(manifest)).resolves.toEqual({ ok: false, issues: [{ code: "PERSISTENCE_FAILURE", message: "Catalog import could not be completed." }] });
+    await expect(service.importCatalog(manifest)).resolves.toEqual({ ok: false, readiness: "NOT_READY", issues: [{ code: "PERSISTENCE_FAILURE", message: "Catalog import could not be completed." }] });
   });
 });
