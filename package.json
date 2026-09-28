@@ -15,6 +15,9 @@
     "verify:frontend-acceptance": "npx tsx tests/harnesses/frontend-acceptance.harness.ts",
     "db:migrate": "npm --prefix backend run db:migrate:dev",
     "db:seed": "npm --prefix backend run seed"
+    ,"catalog:scrape": "npm --prefix backend run catalog:scrape"
+    ,"catalog:sync-categories": "npm --prefix backend run catalog:sync-categories"
+    ,"catalog:handoff": "npm --prefix backend run catalog:handoff"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
