@@ -41,20 +41,20 @@ export class PrismaCatalogImportRepository implements CatalogImportRepository {
     return new Set(rows.map((row) => row.slug));
   }
 
+  async targetProductCount(): Promise<number> {
+    return this.prisma.product.count();
+  }
+
   async persist(plan: CatalogImportPlan): Promise<ImportCounts> {
     return this.mutationGate.runExclusive(this.prisma, async (transaction) => {
       await this.assertCleanTarget(transaction, plan);
-      let variants = 0;
-      let images = 0;
-
-      for (const product of plan.products) {
-        const categories = await transaction.category.findMany({
-          select: { id: true, slug: true },
-          where: { slug: { in: product.categorySlugs } },
-        });
-        const categoryIds = new Map(categories.map((category) => [category.slug, category.id]));
-        const productRecord = await transaction.product.create({
-          data: {
+      const categoryRows = await transaction.category.findMany({
+        select: { id: true, slug: true },
+        where: { slug: { in: [...new Set(plan.products.flatMap((product) => product.categorySlugs))] } },
+      });
+      const categoryIds = new Map(categoryRows.map((category) => [category.slug, category.id]));
+      const productRecords = await transaction.product.createManyAndReturn({
+        data: plan.products.map((product) => ({
             brand: product.brand,
             compareAtPrice: product.compareAtPrice,
             description: product.descriptionHtml,
@@ -66,44 +66,60 @@ export class PrismaCatalogImportRepository implements CatalogImportRepository {
             slug: product.slug,
             tags: product.tags as Prisma.InputJsonValue,
             variantProperties: product.variantProperties as Prisma.InputJsonValue,
+            missingLogistics: product.missingLogistics,
+            weightGrams: product.weightGrams,
+            heightCm: product.heightCm,
+            widthCm: product.widthCm,
+            lengthCm: product.lengthCm,
             visibility: CatalogVisibility.VISIBLE,
-          },
-        });
-
-        const imageIds = new Map<string, string>();
-        for (const image of product.images) {
-          const record = await transaction.productImage.create({
-            data: { altText: image.alt, position: image.position, productId: productRecord.id, storageKey: image.storageKey },
-          });
-          imageIds.set(record.storageKey, record.id);
-          images += 1;
-        }
-
-        await transaction.productCategory.createMany({
-          data: product.categorySlugs.map((slug) => ({ categoryId: categoryIds.get(slug) as string, productId: productRecord.id })),
-        });
-
-        for (const variant of product.variants) {
-          await transaction.productVariant.create({
-            data: {
-              attributes: variant.attributes as Prisma.InputJsonValue,
-              name: variant.name ?? variant.sku,
-              primaryImageId: variant.primaryImageStorageKey ? imageIds.get(variant.primaryImageStorageKey) : null,
-              productId: productRecord.id,
-              quantity: variant.stockMode === "INFINITE" ? null : variant.quantity ?? 0,
-              sku: variant.sku,
-              stockMode: variant.stockMode === "INFINITE" ? StockMode.INFINITE : StockMode.TRACKED,
-            },
-          });
-          variants += 1;
-        }
-      }
-
-      return { images, products: plan.products.length, variants };
-    });
+        })),
+        select: { id: true, slug: true },
+      });
+      const productIds = new Map(productRecords.map((record) => [record.slug, record.id]));
+      const imageRows = await transaction.productImage.createManyAndReturn({
+        data: plan.products.flatMap((product) => product.images.map((image) => ({
+          altText: image.alt,
+          position: image.position,
+          productId: productIds.get(product.slug) as string,
+          storageKey: image.storageKey,
+        }))),
+        select: { id: true, productId: true, storageKey: true },
+      });
+      const imageIds = new Map(imageRows.map((image) => [`${image.productId}:${image.storageKey}`, image.id]));
+      await transaction.productCategory.createMany({
+        data: plan.products.flatMap((product) => product.categorySlugs.map((slug) => ({
+          categoryId: categoryIds.get(slug) as string,
+          productId: productIds.get(product.slug) as string,
+        }))),
+      });
+      await transaction.productVariant.createMany({
+        data: plan.products.flatMap((product) => product.variants.map((variant) => ({
+          attributes: variant.attributes as Prisma.InputJsonValue,
+          name: variant.name ?? variant.sku,
+          primaryImageId: variant.primaryImageStorageKey ? imageIds.get(`${productIds.get(product.slug)}:${variant.primaryImageStorageKey}`) : null,
+          productId: productIds.get(product.slug) as string,
+          quantity: variant.stockMode === "INFINITE" ? null : variant.quantity ?? 0,
+          sku: variant.sku,
+          stockMode: variant.stockMode === "INFINITE" ? StockMode.INFINITE : StockMode.TRACKED,
+        }))),
+      });
+      return {
+        images: imageRows.length,
+        products: productRecords.length,
+        variants: plan.products.reduce((total, product) => total + product.variants.length, 0),
+      };
+    }, { timeout: 30_000 });
   }
 
   private async assertCleanTarget(transaction: TransactionClient, plan: CatalogImportPlan): Promise<void> {
+    const targetCount = await transaction.product.count();
+    if (targetCount > 0) {
+      throw new CatalogManifestValidationError([{
+        code: "TARGET_NOT_CLEAN",
+        field: "Product",
+        message: "Catalog import requires an empty Product table.",
+      }]);
+    }
     const slugs = plan.products.map((product) => product.slug);
     const publicSlugs = plan.products.map((product) => product.publicSlug);
     const skus = [...plan.skuSet];
@@ -134,5 +150,6 @@ export interface CatalogImportRepository {
   existingPublicSlugs(): Promise<ReadonlySet<string>>;
   existingVariantSkus(): Promise<ReadonlySet<string>>;
   existingCategorySlugs(): Promise<ReadonlySet<string>>;
+  targetProductCount?(): Promise<number>;
   persist(plan: CatalogImportPlan): Promise<ImportCounts>;
 }

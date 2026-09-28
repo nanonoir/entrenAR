@@ -7,8 +7,10 @@ import { PrismaCatalogImportRepository } from "../src/modules/catalog-import/cat
 import { CatalogImportService } from "../src/modules/catalog-import/catalog-import.service";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 
-describe("catalog import persistence boundary", () => {
-  const databaseUrl = process.env["DATABASE_URL"];
+const describeIsolated = process.env["DATABASE_URL_E2E"] ? describe : describe.skip;
+
+describeIsolated("catalog import persistence boundary", () => {
+  const databaseUrl = process.env["DATABASE_URL_E2E"];
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl ?? "" }) });
   const suffix = randomUUID().slice(0, 8);
   const slug = `import-e2e-${suffix}`;
@@ -19,6 +21,10 @@ describe("catalog import persistence boundary", () => {
       slug,
       name: "Imported E2E product",
       price: 8000,
+      weightGrams: 1000,
+      heightCm: 10,
+      widthCm: 20,
+      lengthCm: 5,
       compareAtPrice: 10000,
       variantProperties: [],
       categorySlugs: [categorySlug],
@@ -30,21 +36,24 @@ describe("catalog import persistence boundary", () => {
   };
 
   beforeAll(async () => {
-    if (!databaseUrl) throw new Error("DATABASE_URL is required for catalog import E2E tests.");
+    if (!databaseUrl) throw new Error("DATABASE_URL_E2E is required for the isolated catalog import E2E suite.");
     await prisma.category.create({ data: { id: `cat-${suffix}`, name: "Import E2E", slug: categorySlug, visibility: "VISIBLE", sortOrder: 999 } });
   });
 
   afterAll(async () => {
-    await prisma.productCategory.deleteMany({ where: { product: { slug } } });
-    await prisma.product.deleteMany({ where: { slug } });
+    await cleanupProducts();
     await prisma.category.deleteMany({ where: { slug: categorySlug } });
     await prisma.$disconnect();
+  });
+
+  afterEach(async () => {
+    await cleanupProducts();
   });
 
   it("imports once, rejects a second import, and exposes canonical rows immediately", async () => {
     const service = createService();
     await expect(service.importCatalog(manifest)).resolves.toMatchObject({ ok: true, counts: { products: 1, variants: 1, images: 1 } });
-    await expect(service.importCatalog(manifest)).resolves.toMatchObject({ ok: false, issues: expect.arrayContaining([expect.objectContaining({ code: "PRODUCT_SLUG_CONFLICT" })]) });
+    await expect(service.importCatalog(manifest)).resolves.toMatchObject({ ok: false, issues: expect.arrayContaining([expect.objectContaining({ code: "TARGET_NOT_CLEAN" })]) });
     await expect(prisma.product.findUnique({ where: { slug }, include: { images: true, variants: true, categories: true } })).resolves.toEqual(expect.objectContaining({
       price: expect.anything(),
       images: [expect.objectContaining({ storageKey })],
@@ -74,5 +83,12 @@ describe("catalog import persistence boundary", () => {
       new PrismaCatalogImportRepository(prisma as unknown as PrismaService, new MutationGate()),
       { exists: async () => true },
     );
+  }
+
+  async function cleanupProducts(): Promise<void> {
+    const products = await prisma.product.findMany({ where: { slug: { startsWith: slug } }, select: { id: true } });
+    if (products.length === 0) return;
+    await prisma.productCategory.deleteMany({ where: { productId: { in: products.map((product) => product.id) } } });
+    await prisma.product.deleteMany({ where: { id: { in: products.map((product) => product.id) } } });
   }
 });
