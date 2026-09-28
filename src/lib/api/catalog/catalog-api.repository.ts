@@ -43,6 +43,7 @@ type PublicCatalogProductDto = {
   brand?: string;
   categoryName?: string;
   categorySlug?: string;
+  categorySlugs?: string[];
   categories?: Array<{ id: string; name: string; slug: string }>;
   compareAtPrice?: number | string;
   description?: string;
@@ -226,6 +227,7 @@ function mapPublicProduct(product: PublicCatalogProductDto): ProductDetail {
     brand: product.brand ?? fallback?.brand ?? "EntrenAR",
     categoryName,
     categorySlug,
+    ...(product.categorySlugs ? { categorySlugs: product.categorySlugs } : {}),
     ...(product.categories ? { categories: product.categories } : {}),
     ...(product.compareAtPrice === undefined && fallback?.compareAtPrice === undefined
       ? {}

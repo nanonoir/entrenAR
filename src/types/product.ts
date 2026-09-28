@@ -36,6 +36,7 @@ export type ProductSummary = {
   name: string;
   brand: string;
   categorySlug: string;
+  categorySlugs?: string[];
   categoryName: string;
   categories?: Array<{ id: string; name: string; slug: string }>;
   imageTone: ProductImageTone;

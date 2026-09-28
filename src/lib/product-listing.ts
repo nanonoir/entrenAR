@@ -9,6 +9,7 @@ import type {
 } from "@/types/product-listing";
 import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { getShopNavItems } from "@/lib/data/navigation";
+import { productBelongsToCategory } from "@/lib/category-membership";
 import type { CategoryNavItem } from "@/types/navigation";
 
 type SearchParamsInput = Record<string, string | string[] | undefined>;
@@ -200,7 +201,7 @@ function resolveListingContext(
       ? categories.find((item) => item.slug === group.productCategorySlug)
       : undefined;
     const baseProducts = group.productCategorySlug
-      ? products.filter((product) => product.categorySlug === group.productCategorySlug)
+      ? products.filter((product) => productBelongsToCategory(product, group.productCategorySlug ?? ""))
       : [];
     const subcategoryProducts = secondSlug
       ? baseProducts.filter((product) => product.subcategorySlugs?.includes(secondSlug))
@@ -226,7 +227,7 @@ function resolveListingContext(
   const directCategory = directCategoryBySegment[section];
 
   if (directCategory) {
-    const baseProducts = products.filter((product) => product.categorySlug === directCategory.categorySlug);
+    const baseProducts = products.filter((product) => productBelongsToCategory(product, directCategory.categorySlug));
     const subcategoryProducts = firstSlug
       ? baseProducts.filter((product) => product.subcategorySlugs?.includes(firstSlug))
       : baseProducts;

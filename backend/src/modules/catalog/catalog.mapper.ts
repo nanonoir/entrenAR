@@ -192,6 +192,7 @@ export interface PublicCatalogProduct {
   brand: string;
   categoryName: string;
   categorySlug: string;
+  categorySlugs?: string[];
   categories?: Array<{ id: string; name: string; slug: string }>;
   compareAtPrice?: number;
   description: string;
@@ -222,7 +223,7 @@ export interface PublicCatalogVariant {
 }
 
 export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProduct {
-  const categories = [...product.categories].sort((left, right) => left.category.id.localeCompare(right.category.id));
+  const categories = [...product.categories].sort((left, right) => left.category.sortOrder - right.category.sortOrder || left.category.slug.localeCompare(right.category.slug));
   const primaryCategory = categories[0]?.category;
 
   return {
@@ -271,13 +272,14 @@ export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProd
 
 export function toPublicCatalogProduct(product: CatalogProduct): PublicCatalogProduct {
   const productPrice = decimalToNumber(product.price);
-  const categories = [...product.categories].sort((left, right) => left.category.id.localeCompare(right.category.id));
+  const categories = [...product.categories].sort((left, right) => left.category.sortOrder - right.category.sortOrder || left.category.slug.localeCompare(right.category.slug));
   const primaryCategory = categories[0]?.category;
 
   return {
     brand: product.brand ?? "EntrenAR",
     categoryName: primaryCategory?.name ?? "Uncategorized",
     categorySlug: primaryCategory?.slug ?? "uncategorized",
+    categorySlugs: categories.map(({ category }) => category.slug),
     categories: categories.map(({ category }) => ({ id: category.id, name: category.name, slug: category.slug })),
     ...(product.compareAtPrice ? { compareAtPrice: decimalToNumber(product.compareAtPrice) } : {}),
     description: product.description ?? product.shortDescription ?? product.name,
