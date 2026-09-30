@@ -13,6 +13,7 @@
     "seed": "prisma db seed",
     "showcase:reset": "node dist/src/modules/showcase-reset/showcase-reset.command.js",
     "catalog:import": "node dist/src/modules/catalog-import/catalog-import.main.js",
+    "catalog:reconcile-import": "node dist/src/modules/catalog-import/reconcile-import.main.js",
     "catalog:sync-categories": "node dist/src/modules/catalog-scraper/category-sync.main.js",
     "catalog:scrape": "node dist/src/modules/catalog-scraper/scrape.main.js",
     "catalog:reset-assets": "node dist/src/modules/catalog-scraper/storage.main.js reset",
