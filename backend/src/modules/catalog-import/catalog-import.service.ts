@@ -7,14 +7,14 @@ import {
   type CatalogImportIssue,
   type CatalogImportPlan,
 } from "./manifest-validator";
-import type { CatalogImportRepository } from "./catalog-import.repository";
+import type { CatalogImportRepository, ImportCounts, ImportReconciliation } from "./catalog-import.repository";
 import { CATALOG_IMPORT_REPOSITORY } from "./catalog-import.repository";
 import { OBJECT_EXISTENCE_PORT } from "./ports/object-existence.port";
 
 export interface CatalogImportReport {
   ok: boolean;
   runId?: string;
-  counts?: { products: number; variants: number; images: number };
+  counts?: ImportCounts;
   issues?: CatalogImportIssue[];
   readiness?: "READY" | "NOT_READY";
 }
@@ -76,11 +76,16 @@ export class CatalogImportService {
     return plan;
   }
 
-  async importCatalog(input: unknown): Promise<CatalogImportReport> {
+  async reconcile(input: unknown): Promise<ImportReconciliation> {
+    if (!this.repository.reconcile) throw new Error("Read-only import reconciliation is unavailable.");
+    return this.repository.reconcile(normalizeCatalogImportManifest(input));
+  }
+
+  async importCatalog(input: unknown, runId?: string): Promise<CatalogImportReport> {
     try {
       const plan = await this.preflight(input);
       const counts = await this.repository.persist(plan);
-      return { ok: true, runId: createRunId(), counts, readiness: "READY" };
+      return { ok: true, runId: runId ?? createRunId(), counts, readiness: "READY" };
     } catch (error) {
       if (error instanceof CatalogManifestValidationError) return { ok: false, readiness: "NOT_READY", issues: [...error.issues] };
       return { ok: false, readiness: "NOT_READY", issues: [{ code: "PERSISTENCE_FAILURE", message: "Catalog import could not be completed." }] };

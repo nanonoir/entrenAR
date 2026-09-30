@@ -86,7 +86,7 @@ export class PrismaCatalogImportRepository implements CatalogImportRepository {
         select: { id: true, productId: true, storageKey: true },
       });
       const imageIds = new Map(imageRows.map((image) => [`${image.productId}:${image.storageKey}`, image.id]));
-      await transaction.productCategory.createMany({
+      const categoryRowsCreated = await transaction.productCategory.createMany({
         data: plan.products.flatMap((product) => product.categorySlugs.map((slug) => ({
           categoryId: categoryIds.get(slug) as string,
           productId: productIds.get(product.slug) as string,
@@ -107,8 +107,37 @@ export class PrismaCatalogImportRepository implements CatalogImportRepository {
         images: imageRows.length,
         products: productRecords.length,
         variants: plan.products.reduce((total, product) => total + product.variants.length, 0),
+        categoryLinks: categoryRowsCreated.count,
       };
     }, { timeout: 30_000 });
+  }
+
+  async reconcile(plan: CatalogImportPlan): Promise<ImportReconciliation> {
+    const [products, variants, images, categoryLinks] = await Promise.all([
+      this.prisma.product.findMany({ select: { slug: true, publicSlug: true } }),
+      this.prisma.productVariant.findMany({ select: { sku: true, product: { select: { slug: true } } } }),
+      this.prisma.productImage.findMany({ select: { storageKey: true, position: true, product: { select: { slug: true } } } }),
+      this.prisma.productCategory.findMany({ select: { product: { select: { slug: true } }, category: { select: { slug: true } } } }),
+    ]);
+    const expectedProducts = plan.products.map((product) => `${product.slug}:${product.publicSlug}`).sort();
+    const actualProducts = products.map((product) => `${product.slug}:${product.publicSlug}`).sort();
+    const expectedVariants = plan.products.flatMap((product) => product.variants.map((variant) => `${product.slug}:${variant.sku}`)).sort();
+    const actualVariants = variants.map((variant) => `${variant.product.slug}:${variant.sku}`).sort();
+    const expectedImages = plan.products.flatMap((product) => product.images.map((image) => `${product.slug}:${image.storageKey}:${image.position}`)).sort();
+    const actualImages = images.map((image) => `${image.product.slug}:${image.storageKey}:${image.position}`).sort();
+    const expectedLinks = plan.products.flatMap((product) => product.categorySlugs.map((slug) => `${product.slug}:${slug}`)).sort();
+    const actualLinks = categoryLinks.map((link) => `${link.product.slug}:${link.category.slug}`).sort();
+    const mismatches = [
+      ...(sameValues(expectedProducts, actualProducts) ? [] : ["PRODUCT_ROWS_MISMATCH"]),
+      ...(sameValues(expectedVariants, actualVariants) ? [] : ["VARIANT_ROWS_MISMATCH"]),
+      ...(sameValues(expectedImages, actualImages) ? [] : ["IMAGE_ROWS_MISMATCH"]),
+      ...(sameValues(expectedLinks, actualLinks) ? [] : ["CATEGORY_LINK_ROWS_MISMATCH"]),
+    ];
+    return {
+      matches: mismatches.length === 0,
+      mismatches,
+      counts: { products: products.length, variants: variants.length, images: images.length, categoryLinks: categoryLinks.length },
+    };
   }
 
   private async assertCleanTarget(transaction: TransactionClient, plan: CatalogImportPlan): Promise<void> {
@@ -143,6 +172,13 @@ export interface ImportCounts {
   products: number;
   variants: number;
   images: number;
+  categoryLinks: number;
+}
+
+export interface ImportReconciliation {
+  matches: boolean;
+  mismatches: string[];
+  counts: ImportCounts;
 }
 
 export interface CatalogImportRepository {
@@ -152,4 +188,9 @@ export interface CatalogImportRepository {
   existingCategorySlugs(): Promise<ReadonlySet<string>>;
   targetProductCount?(): Promise<number>;
   persist(plan: CatalogImportPlan): Promise<ImportCounts>;
+  reconcile?(plan: CatalogImportPlan): Promise<ImportReconciliation>;
+}
+
+function sameValues(expected: readonly string[], actual: readonly string[]): boolean {
+  return expected.length === actual.length && expected.every((value, index) => value === actual[index]);
 }
