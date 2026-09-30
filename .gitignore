@@ -62,3 +62,6 @@ AGENTS.md
 
 #tests
 .playwright-mcp
+scrape-output/**
+!scrape-output/.gitkeep
+backend/scrape-output/**

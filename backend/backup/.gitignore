@@ -1,0 +1,3 @@
+# Database dumps can contain sensitive local records. Never commit backup contents.
+*
+!.gitignore
