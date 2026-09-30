@@ -1,4 +1,4 @@
-import { CatalogTaxonomySyncService, validateCategoryArtifact } from "./taxonomy";
+import { CatalogTaxonomySyncService, loadApprovedTaxonomy, resolveSourceMembership, validateCategoryArtifact, validateSourceCategoryMap } from "./taxonomy";
 
 describe("category artifact", () => {
   it("sorts deterministically and rejects cycles", () => {
@@ -10,6 +10,27 @@ describe("category artifact", () => {
       { slug: "a", name: "A", parentSlug: "b", visibility: "visible", sortOrder: 1 },
       { slug: "b", name: "B", parentSlug: "a", visibility: "visible", sortOrder: 2 },
     ])).toThrow("Category cycle");
+    expect(() => validateCategoryArtifact([
+      { slug: "root", name: "Root", visibility: "visible", sortOrder: 1 },
+      { slug: "root", name: "Duplicate", visibility: "visible", sortOrder: 2 },
+    ])).toThrow("Duplicate category slug");
+  });
+
+  it("loads the tracked 61-category taxonomy and exact approved source identities", async () => {
+    const { categories, mappings } = await loadApprovedTaxonomy();
+    expect(categories).toHaveLength(61);
+    expect(mappings).toHaveLength(61);
+    expect(mappings.find((mapping) => mapping.sourceCategory === "POLVOS & MEZCLAS")).toMatchObject({ sourceUrl: "https://www.entreno.com.ar/market/panqueques-mezclas/", normalizedSlug: "polvos-mezclas", action: "map" });
+    expect(mappings.some((mapping) => mapping.sourceCategory === "MARCAS")).toBe(false);
+    expect(resolveSourceMembership(["PROTEINAS"], categories, mappings).categorySlugs).toContain("suplementos");
+    expect(resolveSourceMembership(["PROTEINAS", "WHEY PROTEIN"], categories, mappings).categorySlugs).toEqual(expect.arrayContaining(["suplementos", "proteinas", "whey-protein"]));
+    expect(() => resolveSourceMembership(["UNAPPROVED"], categories, mappings)).toThrow("Unknown category drift");
+  });
+
+  it("rejects duplicate mappings and mappings to absent approved categories", async () => {
+    const { categories, mappings } = await loadApprovedTaxonomy();
+    expect(() => validateSourceCategoryMap([mappings[0]!, mappings[0]!, ...mappings.slice(1)], categories)).toThrow("Duplicate source category mapping");
+    expect(() => validateSourceCategoryMap(mappings.slice(1), categories)).toThrow("must contain 61 categories");
   });
 
   it("syncs hierarchy idempotently and preserves unrelated categories", async () => {
