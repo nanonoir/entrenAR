@@ -31,23 +31,16 @@ describe("PRD2 preparation behavioral coverage", () => {
     })).rejects.toThrow("aborted");
   });
 
-  it("excludes duplicate SKUs and missing weights while retaining zero stock", () => {
+  it("does not transform legacy shallow observations into fabricated variants", () => {
     const result = transformProducts([
       { url: "https://fixture.invalid/a", name: "Alpha", descriptionHtml: "", sku: "DUP-1", price: 10, images: ["a"], categories: ["performance"], variants: [{ weightGrams: 500, stock: 0, heightCm: 10, depth: 3 }] },
-      { url: "https://fixture.invalid/b", name: "Beta", descriptionHtml: "", sku: "DUP-1", price: 10, images: ["b"], categories: ["performance"], variants: [{ weightGrams: 500 }] },
-      { url: "https://fixture.invalid/c", name: "Gamma", descriptionHtml: "", sku: "GAM-1", price: 10, images: ["c"], categories: ["performance"], variants: [{ weightGrams: 0 }] },
     ]);
-    expect(result.manifest?.products[0]?.variants[0]?.quantity).toBe(0);
-    expect(result.exclusions.map((item) => item.code)).toEqual(["DUPLICATE_SKU", "MISSING_WEIGHT"]);
-    expect(result.warnings).toContain("Missing dimensions: alpha");
+    expect(result.manifest).toBeUndefined();
+    expect(result.exclusions[0]?.code).toBe("MISSING_STRUCTURED_SOURCE");
   });
 
-  it("maps depth to length and rejects malformed embedded variant data", () => {
-    const product = parseProductHtml("https://fixture.invalid/p", '<h1>Product</h1><div data-variants="[{&quot;sku&quot;:&quot;P-1&quot;,&quot;weightGrams&quot;:100}]"></div>');
-    expect(product.variants).toEqual([{ sku: "P-1", weightGrams: 100 }]);
-    expect(() => parseProductHtml("https://fixture.invalid/p", '<div data-variants="not-json"></div>')).toThrow("Malformed variant data");
-    const transformed = transformProducts([{ ...product, sku: "P-1", price: 20, images: ["image"], categories: ["performance"], variants: [{ weightGrams: 100, depth: 8 }] }]);
-    expect(transformed.manifest?.products[0]?.lengthCm).toBe(8);
+  it("rejects presentation-only HTML without recognized structured source state", () => {
+    expect(() => parseProductHtml("https://fixture.invalid/p", '<h1>Product</h1><div data-variants="not-json"></div>')).toThrow("Malformed structured product state.");
   });
 
   it("accepts RIFF/WEBP bytes only and renders secret-safe readiness reports", async () => {
