@@ -1,16 +1,12 @@
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { readR2Environment } from "./storage/r2-storage";
 
 export interface AssetObject { key: string; contentType: string; bytes: Uint8Array }
 export interface AssetStoragePort { put(object: AssetObject): Promise<void>; exists(key: string): Promise<boolean>; delete(key: string): Promise<void>; get(key: string): Promise<Uint8Array> }
 export interface GalleryResponse { status: number; contentType: string; arrayBuffer(): Promise<ArrayBuffer> }
 
 export function createR2StorageFromEnvironment(): AssetStoragePort {
-  const accountId = process.env["R2_ACCOUNT_ID"];
-  const accessKeyId = process.env["R2_ACCESS_KEY_ID"];
-  const secretAccessKey = process.env["R2_SECRET_ACCESS_KEY"];
-  const bucket = process.env["R2_BUCKET_NAME"];
-  const endpoint = process.env["R2_ENDPOINT"];
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !endpoint) throw new Error("R2 configuration is incomplete.");
+  const { accessKeyId, secretAccessKey, bucket, endpoint } = readR2Environment();
   const client = new S3Client({ endpoint, region: "auto", credentials: { accessKeyId, secretAccessKey } });
   return {
     async put(object) { await client.send(new PutObjectCommand({ Bucket: bucket, Key: object.key, Body: object.bytes, ContentType: object.contentType })); },
@@ -30,6 +26,7 @@ export function createR2StorageFromEnvironment(): AssetStoragePort {
 }
 
 export async function validateWebp(bytes: Uint8Array, contentType: string): Promise<boolean> {
+  if (bytes.byteLength > 10 * 1024 * 1024) return false;
   const riff = String.fromCharCode(...bytes.slice(0, 4)) === "RIFF";
   const webp = String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
   return riff && webp && /image\/(webp|x-webp)/i.test(contentType);
