@@ -25,6 +25,42 @@ export type CatalogReadResult<T> =
   | { status: typeof CATALOG_READ_STATUS.EMPTY; data: T }
   | { status: typeof CATALOG_READ_STATUS.ERROR; error: CatalogReadError };
 
+export const CATALOG_LISTING_SORT = {
+  BEST_SELLING: "best-selling",
+  FEATURED: "featured",
+  NEWEST: "newest",
+  PRICE_ASC: "price-asc",
+  PRICE_DESC: "price-desc",
+} as const;
+
+export type CatalogListingSort = (typeof CATALOG_LISTING_SORT)[keyof typeof CATALOG_LISTING_SORT];
+
+export type CatalogListingQuery = {
+  brandSlug?: string;
+  brandSlugs?: string[];
+  categorySlug?: string;
+  categorySlugs?: string[];
+  limit?: number;
+  maxPrice?: number;
+  minPrice?: number;
+  offersOnly?: boolean;
+  page?: number;
+  search?: string;
+  sort?: CatalogListingSort;
+  subcategorySlugs?: string[];
+};
+
+export type CatalogListingFacet = { count: number; label: string; slug: string };
+export type CatalogListingPage = {
+  facets: { brands: CatalogListingFacet[]; categories: CatalogListingFacet[]; subcategories: CatalogListingFacet[] };
+  items: ProductDetail[];
+  limit: number;
+  page: number;
+  priceBounds: { max: number; min: number };
+  total: number;
+  totalPages: number;
+};
+
 export type CatalogInventoryHistoryEntry = {
   actor: string;
   change: string;
@@ -48,6 +84,8 @@ export interface CatalogRepository {
   getPublicCategories(): Promise<CatalogReadResult<CategoryNavItem[]>>;
   getPublicProductBySlug(slug: string): Promise<CatalogReadResult<ProductDetail | null>>;
   getPublicProducts(): Promise<CatalogReadResult<ProductDetail[]>>;
+  getPublicListing(query: CatalogListingQuery): Promise<CatalogReadResult<CatalogListingPage>>;
+  getPublicBrands(): Promise<CatalogReadResult<CatalogListingFacet[]>>;
 }
 
 const mockCatalogRepository = new MockCatalogRepository();

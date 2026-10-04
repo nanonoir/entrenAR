@@ -1,4 +1,6 @@
 export type CategoryNavItem = {
+  id?: string;
+  parentId?: string;
   slug: string;
   label: string;
   description: string;

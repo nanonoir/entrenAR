@@ -81,4 +81,24 @@ export class CatalogPageDto {
 
   @ApiProperty()
   total!: number;
+
+  @ApiProperty()
+  totalPages!: number;
+
+  @ApiPropertyOptional({ type: Object })
+  facets?: object;
+
+  @ApiPropertyOptional({ type: Object })
+  priceBounds?: object;
+}
+
+export class PublicBrandDto {
+  @ApiProperty()
+  slug!: string;
+
+  @ApiProperty()
+  label!: string;
+
+  @ApiProperty()
+  count!: number;
 }

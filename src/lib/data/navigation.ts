@@ -63,7 +63,6 @@ const shopNavItems: ShopNavItem[] = [
           { label: "Col\u00e1geno", href: "/suplementos/proteinas/colageno" },
           { label: "Protein Bars", href: "/suplementos/proteinas/protein-bars" },
           { label: "Protein Foods", href: "/suplementos/proteinas/protein-foods" },
-          { label: "Shakers y Botellas", href: "/suplementos/proteinas/shakers-y-botellas" },
         ],
       },
       {

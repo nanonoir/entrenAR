@@ -18,6 +18,7 @@ export const CATALOG_ADMIN_PRODUCT_SORT = {
 } as const;
 
 export const CATALOG_PUBLIC_PRODUCT_SORT = {
+  BEST_SELLING: "best-selling",
   FEATURED: "featured",
   NEWEST: "newest",
   PRICE_ASC: "price-asc",

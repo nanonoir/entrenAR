@@ -3,6 +3,9 @@ import type {
   CatalogInventoryHistoryEntry,
   CatalogReadResult,
   CatalogRepository,
+  CatalogListingFacet,
+  CatalogListingPage,
+  CatalogListingQuery,
 } from "@/lib/api/catalog/catalog.repository";
 import { getCategories } from "@/lib/data/categories";
 import { getAllProductDetails } from "@/lib/data/products";
@@ -15,10 +18,13 @@ const PUBLIC_INFINITE_STOCK = Number.MAX_SAFE_INTEGER;
 const FALLBACK_IMAGE_TONE: ProductImageTone = "green";
 
 type CatalogPage<T> = {
+  facets?: CatalogListingPage["facets"];
   items: T[];
   limit: number;
   page: number;
+  priceBounds?: CatalogListingPage["priceBounds"];
   total: number;
+  totalPages: number;
 };
 
 type PublicCatalogCategoryDto = {
@@ -140,11 +146,11 @@ export class CatalogApiRepository implements CatalogRepository {
 
   async getAdminProducts(): Promise<CatalogReadResult<AdminProduct[]>> {
     return this.read(async () => {
-      const page = await this.client.get<CatalogPage<AdminCatalogProductDto>>(
-        "/admin/products?page=1&limit=100&sort=manual-order",
-        { admin: true },
+      const products = await this.allPages<AdminCatalogProductDto>(
+        (page) => `/admin/products?page=${page}&limit=100&sort=manual-order`,
+        true,
       );
-      return page.items.map(mapAdminProduct);
+      return products.map(mapAdminProduct);
     });
   }
 
@@ -175,11 +181,53 @@ export class CatalogApiRepository implements CatalogRepository {
 
   async getPublicProducts(): Promise<CatalogReadResult<ProductDetail[]>> {
     return this.read(async () => {
-      const page = await this.client.get<CatalogPage<PublicCatalogProductDto>>(
-        "/products?page=1&limit=100&sort=featured",
-      );
-      return page.items.map(mapPublicProduct);
+      const products = await this.allPages<PublicCatalogProductDto>((page) => `/products?page=${page}&limit=100&sort=featured`);
+      return products.map(mapPublicProduct);
     });
+  }
+
+  async getPublicListing(query: CatalogListingQuery): Promise<CatalogReadResult<CatalogListingPage>> {
+    try {
+      const params = listingSearchParams(query);
+      const page = await this.client.get<CatalogPage<PublicCatalogProductDto>>(`/products?${params.toString()}`);
+      validatePage(page, query.page ?? 1);
+      if (!page.facets || !page.priceBounds) throw new Error("Catalog response is missing complete-scope listing metadata.");
+      return {
+        data: {
+          facets: page.facets,
+          items: page.items.map(mapPublicProduct),
+          limit: page.limit,
+          page: page.page,
+          priceBounds: page.priceBounds,
+          total: page.total,
+          totalPages: page.totalPages,
+        },
+        status: page.total === 0 ? "empty" : "success",
+      };
+    } catch (error) {
+      return {
+        error: {
+          code: error instanceof CatalogApiError ? error.code : "CATALOG_ADAPTER_ERROR",
+          message: error instanceof Error ? error.message : "The catalog response could not be mapped.",
+        },
+        status: "error",
+      };
+    }
+  }
+
+  async getPublicBrands(): Promise<CatalogReadResult<CatalogListingFacet[]>> {
+    try {
+      const data = await this.client.get<CatalogListingFacet[]>("/brands");
+      return { data, status: data.length > 0 ? "success" : "empty" };
+    } catch (error) {
+      return {
+        error: {
+          code: error instanceof CatalogApiError ? error.code : "CATALOG_ADAPTER_ERROR",
+          message: error instanceof Error ? error.message : "The brand directory could not be mapped.",
+        },
+        status: "error",
+      };
+    }
   }
 
   private async read<T>(read: () => Promise<T[]>): Promise<CatalogReadResult<T[]>> {
@@ -188,6 +236,33 @@ export class CatalogApiRepository implements CatalogRepository {
       return data.length > 0 ? { data, status: "success" } : { data, status: "empty" };
     } catch (error) {
       return this.failureOrEmpty(error, []);
+    }
+  }
+
+  private async allPages<T>(path: (page: number) => string, admin = false): Promise<T[]> {
+    const first = await this.fetchRequiredPage<T>(path(1), admin);
+    validatePage(first, 1);
+    if (first.totalPages > 1_000) throw new Error("Catalog response exceeds the supported page boundary.");
+    const pages = await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+      this.fetchRequiredPage<T>(path(index + 2), admin)));
+    pages.forEach((page, index) => validatePage(page, index + 2, first));
+    const items = [...first.items, ...pages.flatMap(({ items: pageItems }) => pageItems)];
+    if (items.length !== first.total) throw new Error("Catalog pagination ended before the declared total was reached.");
+    const identifiers = items.map((item) => typeof item === "object" && item !== null && "id" in item ? item.id : undefined);
+    if (identifiers.some((id) => id === undefined) || new Set(identifiers).size !== identifiers.length) {
+      throw new Error("Catalog pagination contained missing or duplicate product IDs.");
+    }
+    return items;
+  }
+
+  private async fetchRequiredPage<T>(path: string, admin: boolean): Promise<CatalogPage<T>> {
+    try {
+      return await this.client.get<CatalogPage<T>>(path, { admin });
+    } catch (error) {
+      if (error instanceof CatalogApiError && error.status === 404) {
+        throw new Error("A required catalog page was not found; completeness cannot be guaranteed.");
+      }
+      throw error;
     }
   }
 
@@ -264,6 +339,8 @@ function mapPublicCategory(category: PublicCatalogCategoryDto): CategoryNavItem 
   const fallback = getCategories().find((item) => item.slug === category.slug);
 
   return {
+    id: category.id,
+    ...(category.parentId ? { parentId: category.parentId } : {}),
     description: fallback?.description ?? `Productos de ${category.name}.`,
     ...(fallback?.featured ? { featured: true } : {}),
     ...(fallback?.groups ? { groups: fallback.groups } : {}),
@@ -392,4 +469,37 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function listingSearchParams(query: CatalogListingQuery): URLSearchParams {
+  const params = new URLSearchParams({ limit: String(query.limit ?? 20), page: String(query.page ?? 1) });
+  for (const key of ["categorySlug", "brandSlug", "search", "sort"] as const) {
+    const value = query[key];
+    if (value) params.set(key, value);
+  }
+  for (const key of ["brandSlugs", "categorySlugs", "subcategorySlugs"] as const) {
+    const values = query[key];
+    if (values && values.length > 0) params.set(key, values.join(","));
+  }
+  if (query.minPrice !== undefined) params.set("minPrice", String(query.minPrice));
+  if (query.maxPrice !== undefined) params.set("maxPrice", String(query.maxPrice));
+  if (query.offersOnly) params.set("offersOnly", "true");
+  return params;
+}
+
+function validatePage<T>(page: CatalogPage<T>, expectedPage: number, firstPage?: CatalogPage<T>): void {
+  if (!Array.isArray(page.items) || page.page !== expectedPage || !Number.isInteger(page.total)
+    || page.total < 0 || !Number.isInteger(page.limit) || page.limit < 1 || page.limit > 100
+    || !Number.isInteger(page.totalPages) || page.totalPages < 0
+    || page.totalPages !== Math.ceil(page.total / page.limit)
+    || page.items.length > page.limit || (page.totalPages > 0 && expectedPage > page.totalPages)) {
+    throw new Error("Catalog pagination metadata is invalid.");
+  }
+  if (firstPage && (page.total !== firstPage.total || page.totalPages !== firstPage.totalPages || page.limit !== firstPage.limit)) {
+    throw new Error("Catalog pagination metadata changed between pages.");
+  }
+  const identifiers = page.items.map((item) => typeof item === "object" && item !== null && "id" in item ? item.id : undefined);
+  if (identifiers.some((id) => id === undefined) || new Set(identifiers).size !== identifiers.length) {
+    throw new Error("Catalog page contained missing or duplicate product IDs.");
+  }
 }

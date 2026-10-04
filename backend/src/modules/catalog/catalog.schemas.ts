@@ -18,6 +18,11 @@ const optionalSlugSchema = z.string().trim().min(1).max(160).optional();
 const moneySchema = z.number().finite().positive().multipleOf(0.01);
 const optionalMoneySchema = moneySchema.optional();
 const optionalPositiveIntegerSchema = z.number().int().positive().optional();
+const csvSlugSchema = z.string().trim().max(4_000).optional().transform((value) => {
+  if (!value) return undefined;
+  const slugs = value.split(",").map((slug) => slug.trim()).filter(Boolean);
+  return [...new Set(slugs)];
+}).pipe(z.array(z.string().min(1).max(160)).max(20).optional());
 
 const variantPropertyValueSchema = z.union([
   z.string().trim().min(1).max(80).transform((label) => ({ id: slugify(label), label })),
@@ -144,9 +149,21 @@ export const adminProductListQuerySchema = paginationSchema.extend({
 }).strict();
 
 export const publicProductListQuerySchema = paginationSchema.extend({
+  brandSlug: optionalSlugSchema,
+  brandSlugs: csvSlugSchema,
   categorySlug: optionalSlugSchema,
+  categorySlugs: csvSlugSchema,
+  maxPrice: z.coerce.number().finite().nonnegative().optional(),
+  minPrice: z.coerce.number().finite().nonnegative().optional(),
+  offersOnly: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+  search: z.string().trim().min(1).max(240).optional(),
+  subcategorySlugs: csvSlugSchema,
   sort: z.enum(catalogPublicProductSortValues).default(CATALOG_PUBLIC_PRODUCT_SORT.FEATURED),
-}).strict();
+}).strict().superRefine((query, context) => {
+  if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "minPrice must not exceed maxPrice.", path: ["minPrice"] });
+  }
+});
 
 export const categoryOrderSchema = z.object({
   categoryIds: z.array(identifierSchema).min(1).max(500),

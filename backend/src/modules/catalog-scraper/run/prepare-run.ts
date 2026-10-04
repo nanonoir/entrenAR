@@ -1,5 +1,5 @@
 import { discoverProductUrls, extractProducts, fetchWithRetry, type ExtractedProduct, type HttpPort } from "../scraper";
-import { loadApprovedTaxonomy } from "../taxonomy";
+import { loadActiveTaxonomy } from "../active-taxonomy";
 import { transformProducts, canonicalSlug } from "../transformer";
 import { assertExactLocalAssetSet, stageProductGallery, type LocalAssetFetcher, type LocalAssetInventoryItem } from "../storage/local-assets";
 import { createPipelineReport, renderReport } from "../report";
@@ -12,7 +12,7 @@ export interface PrepareRunPorts {
   store: RunStore;
   fetcher?: HttpPort;
   extract?: (urls: readonly string[]) => Promise<{ products: ExtractedProduct[]; failures: Array<{ url: string; code: string; message: string }> }>;
-  loadTaxonomy?: typeof loadApprovedTaxonomy;
+  loadTaxonomy?: typeof loadActiveTaxonomy;
   resolveCategoryMemberships?: typeof collectCategoryMemberships;
   fetchAsset?: LocalAssetFetcher;
 }
@@ -40,7 +40,7 @@ export async function prepareRun(sitemapUrl: string, ports: PrepareRunPorts): Pr
     report.stages.discovery = "ok";
 
     activeStage = "taxonomy";
-    const taxonomy = await (ports.loadTaxonomy ?? loadApprovedTaxonomy)();
+    const taxonomy = await (ports.loadTaxonomy ?? loadActiveTaxonomy)();
     report.stages.taxonomy = "ok";
     activeStage = "categoryMemberships";
     const memberships = await (ports.resolveCategoryMemberships ?? collectCategoryMemberships)(taxonomy.mappings, ports.fetcher);
