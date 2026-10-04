@@ -20,7 +20,16 @@ type NotFoundRoute = {
   type: "not-found";
 };
 
-export type ShopRouteResolution = ProductRoute | ListingRoute | NotFoundRoute;
+type CatalogErrorRoute = {
+  type: "catalog-error";
+  message: string;
+};
+
+export type ShopRouteResolution = ProductRoute | ListingRoute | NotFoundRoute | CatalogErrorRoute;
+
+export function isLegacyShakerRoute(segments: readonly string[]): boolean {
+  return segments.includes("shakers-y-botellas");
+}
 
 const supplementCategoryBySlug: Record<string, string> = {
   proteinas: "proteinas",
@@ -80,15 +89,18 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
   if (section === "productos" && firstSlug && !secondSlug) {
     const [productResult, productsResult] = await Promise.all([
       catalog.getPublicProductBySlug(firstSlug),
-      catalog.getPublicProducts(),
+      catalog.getPublicListing({ limit: 4, page: 1, sort: "featured" }),
     ]);
+    if (productResult.status === "error") return { type: "catalog-error", message: productResult.error.message };
+    if (productResult.status === "loading") return { type: "catalog-error", message: "El producto todavía se está cargando." };
     const product = catalogData(productResult, null);
 
     if (!product) {
       return { type: "not-found" };
     }
 
-    const products = catalogData(productsResult, []);
+    if (productsResult.status === "loading") return { type: "catalog-error", message: "El catálogo todavía se está cargando." };
+    const products = productsResult.status === "success" || productsResult.status === "empty" ? productsResult.data.items : [];
 
     return {
       type: "product",
@@ -155,6 +167,21 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
     const categoryProducts = products.filter((product) => product.categorySlug === simpleCategory.categorySlug);
 
     return listingRoute(simpleCategory.title, simpleCategory.description, categoryProducts);
+  }
+
+  const taxonomySlug = section === "suplementos"
+    ? (firstSlug ? supplementCategoryBySlug[firstSlug] ?? firstSlug : undefined)
+    : section;
+  const categoryRouteShape = section === "suplementos"
+    ? Boolean(firstSlug && !secondSlug)
+    : !firstSlug && segments.length === 1;
+  const publicCategory = categoryRouteShape && taxonomySlug ? categories.find((item) => item.slug === taxonomySlug) : undefined;
+  if (publicCategory) {
+    return listingRoute(
+      publicCategory.label,
+      publicCategory.description,
+      products.filter((product) => productBelongsToCategory(product, publicCategory.slug)),
+    );
   }
 
   return { type: "not-found" };

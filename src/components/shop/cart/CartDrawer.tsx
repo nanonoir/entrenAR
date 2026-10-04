@@ -37,6 +37,7 @@ export function CartDrawer() {
     setConfiguringOffer,
   } = useCartOffers({
     addItem,
+    enabled: isOpen,
     excludedProductIds: excludedOfferProductIds,
     items,
     removeItem,

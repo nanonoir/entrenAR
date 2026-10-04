@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownUp } from "lucide-react";
+import { useId } from "react";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { cn } from "@/lib/utils";
@@ -23,11 +24,13 @@ export function ProductListingSort({
   onCloseMobile,
   onChange,
 }: ProductListingSortProps) {
+  const selectId = useId();
   return (
     <>
-      <label className="hidden items-center gap-3 text-sm font-medium text-text lg:flex">
-        <span>Ordenar por</span>
+      <div className="hidden items-center gap-3 text-sm font-medium text-text lg:flex">
+        <label htmlFor={selectId}>Ordenar por</label>
         <select
+          id={selectId}
           className="h-10 min-w-48 rounded-button border border-border bg-surface px-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
           onChange={(event) => onChange(event.target.value as ProductListingSortValue)}
           value={value}
@@ -38,7 +41,7 @@ export function ProductListingSort({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
       <Button className="lg:hidden" onClick={onOpenMobile} size="sm" variant="secondary">
         <ArrowDownUp aria-hidden size={16} />

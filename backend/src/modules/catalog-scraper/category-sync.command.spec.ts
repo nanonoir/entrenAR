@@ -2,7 +2,8 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { RUN_STATUS, RunStore } from "./run/run-store";
-import { runBoundCategorySync } from "./category-sync.command";
+import { loadEditableCategoryArtifact, runBoundCategorySync } from "./category-sync.command";
+import type { ActiveTaxonomy } from "./active-taxonomy";
 
 async function fixture(): Promise<{ runId: string; root: string; store: RunStore; fingerprint: string }> {
   const root = await mkdtemp(join(tmpdir(), "category-sync-command-"));
@@ -80,5 +81,18 @@ describe("run-bound category synchronization", () => {
     expect(failed.stages.categories).toBe("failed");
     expect(failed.blockers).toContain("CATEGORY_SYNC_FAILED");
     expect(await value.store.evaluateReady(value.runId)).toBe(false);
+  });
+});
+
+describe("editable category synchronization", () => {
+  it("selects the active taxonomy by default while leaving frozen run sync separate", async () => {
+    const active: ActiveTaxonomy = {
+      categories: [{ slug: "shakers", name: "Shakers", visibility: "visible", sortOrder: 1 }],
+      mappings: [],
+    };
+    const loader = jest.fn(async () => active);
+
+    await expect(loadEditableCategoryArtifact(undefined, loader)).resolves.toEqual(active.categories);
+    expect(loader).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import { ProductGrid } from "@/components/shop/products/ProductGrid";
 import { QuickBuyController } from "@/components/shop/quick-buy/QuickBuyController";
 import { ProductListingFilters } from "@/components/shop/products/listing/ProductListingFilters";
 import { ProductListingSort } from "@/components/shop/products/listing/ProductListingSort";
+import { resetListingPage, withListingPage } from "@/components/shop/products/listing/listing-query";
 import type { ProductListingResult, ProductListingSortValue } from "@/types/product-listing";
 
 type ProductListingShellProps = {
@@ -42,13 +43,13 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
   }
 
   function handleToggleFilter(paramName: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = resetListingPage(new URLSearchParams(searchParams.toString()));
     setCsvParam(params, paramName, value);
     pushParams(params);
   }
 
   function handleApplyPrice(precioMin?: string, precioMax?: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = resetListingPage(new URLSearchParams(searchParams.toString()));
     const min = precioMin?.trim();
     const max = precioMax?.trim();
 
@@ -68,7 +69,7 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
   }
 
   function handleSortChange(value: ProductListingSortValue) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = resetListingPage(new URLSearchParams(searchParams.toString()));
 
     if (value === "relevantes") {
       params.delete("orden");
@@ -80,7 +81,7 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
   }
 
   function handleClearFilters() {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = resetListingPage(new URLSearchParams(searchParams.toString()));
 
     Array.from(params.keys()).forEach((key) => {
       if (
@@ -97,6 +98,18 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
 
     pushParams(params);
   }
+
+  function handlePageChange(page: number) {
+    pushParams(withListingPage(new URLSearchParams(searchParams.toString()), page));
+  }
+
+  const hasActiveFilters = listing.filterState.brandSlugs.length > 0
+    || listing.filterState.categorySlugs.length > 0
+    || listing.filterState.subcategorySlugs.length > 0
+    || listing.filterState.precioMin !== undefined
+    || listing.filterState.precioMax !== undefined;
+  const currentQuery = searchParams.toString();
+  const outOfRangePage = listing.totalCount > 0 && listing.products.length === 0;
 
   return (
     <>
@@ -136,23 +149,55 @@ export function ProductListingShell({ listing }: ProductListingShellProps) {
         </aside>
 
         <div>
-          {listing.products.length > 0 ? (
+          {listing.status === "error" ? (
+            <div aria-live="assertive" className="rounded-card border border-border bg-white p-6" role="alert">
+              <h2 className="font-subtitle text-lg font-semibold">No pudimos cargar el catálogo</h2>
+              <p className="mt-2 text-sm leading-6 text-text-muted">No pudimos cargar los productos. Intenta nuevamente más tarde.</p>
+              <a className="mt-4 inline-flex min-h-11 items-center rounded-button px-2 font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" href={currentQuery ? `${pathname}?${currentQuery}` : pathname}>
+                Reintentar
+              </a>
+            </div>
+          ) : listing.products.length > 0 ? (
             <QuickBuyController>
               <ProductGrid products={listing.products} />
             </QuickBuyController>
           ) : (
             <EmptyState
               action={
-                <Button onClick={handleClearFilters} variant="secondary">
-                  Limpiar filtros
+                <Button onClick={outOfRangePage ? () => handlePageChange(listing.totalPages) : handleClearFilters} variant="secondary">
+                  {outOfRangePage ? "Ir a la última página" : "Limpiar filtros"}
                 </Button>
               }
-              description="Probá quitando alguna marca, categoría o rango de precio."
-              title="No encontramos productos con esos filtros."
+              description={outOfRangePage
+                ? "Esta página ya no tiene resultados. Vuelve a una página disponible."
+                : hasActiveFilters || listing.context.type === "search"
+                ? "Ajusta los filtros o prueba con otros términos de búsqueda."
+                : `Todavía no hay productos disponibles en ${listing.context.title}.`}
+              title={outOfRangePage
+                ? "No hay productos en esta página."
+                : hasActiveFilters || listing.context.type === "search"
+                ? "No encontramos productos con esos filtros."
+                : "No hay productos disponibles."}
             />
           )}
         </div>
       </div>
+
+      {listing.totalPages > 1 ? (
+        <nav aria-label="Paginación de productos" className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <Button aria-label="Página anterior" className="min-h-11" disabled={listing.page <= 1} onClick={() => handlePageChange(listing.page - 1)} size="sm" variant="secondary">
+            <ChevronLeft aria-hidden size={16} />
+            Anterior
+          </Button>
+          <span aria-live="polite" className="px-2 text-sm font-medium text-text-muted">
+            Página {listing.page} de {listing.totalPages}
+          </span>
+          <Button aria-label="Página siguiente" className="min-h-11" disabled={listing.page >= listing.totalPages} onClick={() => handlePageChange(listing.page + 1)} size="sm" variant="secondary">
+            Siguiente
+            <ChevronRight aria-hidden size={16} />
+          </Button>
+        </nav>
+      ) : null}
 
       <Drawer onClose={() => setFiltersOpen(false)} open={filtersOpen} side="left" title="Filtros">
         <div className="flex min-h-0 flex-1 flex-col">

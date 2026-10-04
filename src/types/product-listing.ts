@@ -1,5 +1,7 @@
 import type { ProductSummary } from "@/types/product";
 
+export type ProductListingError = { code: string; message: string };
+
 export type ProductListingContextType =
   | "all"
   | "category"
@@ -18,6 +20,7 @@ export type ProductListingContext = {
   brandSlug?: string;
   searchQuery?: string;
   hideBrandFilter?: boolean;
+  canonicalPath?: string;
 };
 
 export type ProductListingFilterState = {
@@ -58,6 +61,10 @@ export type ProductListingSortOption = {
 export type ProductListingResult = {
   context: ProductListingContext;
   products: ProductSummary[];
+  status: "success" | "empty" | "error";
+  error?: ProductListingError;
+  page: number;
+  totalPages: number;
   totalCount: number;
   filterState: ProductListingFilterState;
   filterGroups: ProductListingFilterGroup[];

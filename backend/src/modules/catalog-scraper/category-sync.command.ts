@@ -3,21 +3,30 @@ import { readFile } from "node:fs/promises";
 import { NestFactory } from "@nestjs/core";
 import type { INestApplicationContext } from "@nestjs/common";
 import { AppModule } from "../../app.module";
+import { loadActiveTaxonomy, validateActiveCategoryArtifact } from "./active-taxonomy";
 import { CatalogTaxonomySyncService } from "./taxonomy";
+import type { CategoryArtifact } from "./taxonomy";
 import { RunStore, digest, RUN_STATUS } from "./run/run-store";
 import { identifyDatabaseTarget } from "./operations/database-target";
 
 export async function runCatalogCategorySyncCommand(filePath = process.argv[2]): Promise<number> {
   let application: INestApplicationContext | undefined;
   try {
-    if (!filePath) { process.stdout.write(JSON.stringify({ ok: false, code: "MISSING_INPUT" }) + "\n"); return 2; }
-    const input = JSON.parse(await readFile(filePath, "utf8")) as unknown;
+    const input = await loadEditableCategoryArtifact(filePath);
     application = await NestFactory.createApplicationContext(AppModule, { abortOnError: false, logger: false });
     const result = await application.get(CatalogTaxonomySyncService).sync(input);
     process.stdout.write(`${JSON.stringify({ ok: true, ...result })}\n`);
     return 0;
   } catch { process.stdout.write(JSON.stringify({ ok: false, code: "SYNC_FAILED" }) + "\n"); return 2; }
   finally { await application?.close(); }
+}
+
+export async function loadEditableCategoryArtifact(
+  filePath: string | undefined,
+  loadActive: typeof loadActiveTaxonomy = loadActiveTaxonomy,
+): Promise<CategoryArtifact[]> {
+  if (!filePath) return (await loadActive()).categories;
+  return validateActiveCategoryArtifact(JSON.parse(await readFile(filePath, "utf8")) as unknown);
 }
 
 export interface BoundCategorySyncDependencies {

@@ -1,28 +1,17 @@
-import type { ProductDetail, ProductSummary } from "@/types/product";
 import type {
-  ProductListingContext,
-  ProductListingFilterGroup,
-  ProductListingFilterState,
-  ProductListingResult,
-  ProductListingSortOption,
-  ProductListingSortValue,
-} from "@/types/product-listing";
-import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
+  CatalogListingFacet,
+  CatalogListingQuery,
+  CatalogReadError,
+  CatalogReadResult,
+  CatalogRepository,
+} from "@/lib/api/catalog/catalog.repository";
+import { CATALOG_LISTING_SORT, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { getShopNavItems } from "@/lib/data/navigation";
-import { productBelongsToCategory } from "@/lib/category-membership";
+import type { ProductListingContext, ProductListingFilterGroup, ProductListingFilterOption, ProductListingFilterState, ProductListingResult, ProductListingSortOption, ProductListingSortValue } from "@/types/product-listing";
 import type { CategoryNavItem } from "@/types/navigation";
 
 type SearchParamsInput = Record<string, string | string[] | undefined>;
-
-type ResolvedListingContext = ProductListingContext & {
-  baseProducts: ProductDetail[];
-  filterProducts?: ProductDetail[];
-};
-
-type SupplementListingGroup = {
-  title: string;
-  productCategorySlug?: string;
-};
+type RouteContext = ProductListingContext & { canonicalPath?: string };
 
 export const productListingSortOptions: ProductListingSortOption[] = [
   { value: "relevantes", label: "Más relevantes" },
@@ -32,480 +21,309 @@ export const productListingSortOptions: ProductListingSortOption[] = [
   { value: "mas-vendidos", label: "Más vendidos" },
 ];
 
-const supplementListingGroupsBySegment: Record<string, SupplementListingGroup> = {
-  proteinas: { title: "Proteínas", productCategorySlug: "proteinas" },
-  "pre-intra-creatina": { title: "Pre Intra & Creatina", productCategorySlug: "creatina-y-pre" },
-  "vitaminas-suplementos": { title: "Vitaminas & Suplementos", productCategorySlug: "vitaminas" },
-  performance: { title: "Performance" },
-  "control-de-peso": { title: "Control de peso" },
+const CATEGORY_ROUTE_ALIASES: Record<string, string> = {
+  "pre-intra-creatina": "creatina-y-pre",
+  "vitaminas-suplementos": "vitaminas",
 };
 
-const categorySegmentBySlug: Record<string, string> = {
-  proteinas: "proteinas",
-  "creatina-y-pre": "pre-intra-creatina",
-  vitaminas: "vitaminas-suplementos",
-  market: "market",
-  shakers: "shakers",
-  accesorios: "accesorios",
-  indumentaria: "indumentaria",
+const BRAND_ROUTE_ALIASES: Record<string, string> = {
+  "balboa-fit": "balboafit", framingham: "framingham-pharma",
+  notco: "not-co", "natures-bounty": "nature-s-bounty",
 };
 
-const directCategoryBySegment: Record<string, { categorySlug: string; title: string }> = {
-  market: { categorySlug: "market", title: "Market" },
-  shakers: { categorySlug: "shakers", title: "Shakers" },
-  accesorios: { categorySlug: "accesorios", title: "Accesorios" },
-  indumentaria: { categorySlug: "indumentaria", title: "Indumentaria" },
+const CATEGORY_TITLES: Record<string, string> = {
+  accesorios: "Accesorios",
+  "control-de-peso": "Control de peso",
+  "creatina-y-pre": "Creatina y pre",
+  indumentaria: "Indumentaria",
+  market: "Market",
+  performance: "Performance",
+  proteinas: "Proteínas",
+  shakers: "Shakers",
+  suplementos: "Suplementos",
+  vitaminas: "Vitaminas",
 };
 
-function getParam(searchParams: SearchParamsInput, key: string) {
-  const value = searchParams[key];
+function getParam(params: SearchParamsInput, key: string): string | undefined {
+  const value = params[key];
   return Array.isArray(value) ? value[0] : value;
 }
 
-function parseCsvParam(searchParams: SearchParamsInput, key: string) {
-  return (getParam(searchParams, key) ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
+function parseCsvParam(params: SearchParamsInput, key: string): string[] {
+  return [...new Set((getParam(params, key) ?? "").split(",").map((value) => value.trim()).filter(Boolean))];
 }
 
-function parsePriceParam(searchParams: SearchParamsInput, key: string) {
-  const parsed = Number(getParam(searchParams, key));
+function parsePriceParam(params: SearchParamsInput, key: string): number | undefined {
+  const value = getParam(params, key);
+  if (!value) return undefined;
+  const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-export function slugifyProductListingValue(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function parsePage(params: SearchParamsInput): number {
+  const page = Number(getParam(params, "page"));
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
-function normalizeSearchValue(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+export function slugifyProductListingValue(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase()
+    .replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function getBrandSlug(product: ProductSummary) {
-  return slugifyProductListingValue(product.brand);
+function decodeBrandLabel(segment: string): string | undefined {
+  try {
+    const decoded = decodeURIComponent(segment);
+    return /[\\/\u0000-\u001f]/.test(decoded) ? undefined : decoded;
+  } catch { return undefined; }
 }
 
-function getProductSearchText(product: ProductDetail) {
-  return normalizeSearchValue(
-    [
-      product.name,
-      product.brand,
-      product.categoryName,
-      product.shortDescription,
-      product.description,
-      product.tags.join(" "),
-    ].join(" "),
-  );
+function routeTitle(slug: string, categories: readonly CategoryNavItem[]): string {
+  return categories.find((category) => category.slug === slug)?.label
+    ?? CATEGORY_TITLES[slug]
+    ?? slug.split("-").map((part) => part.charAt(0).toLocaleUpperCase() + part.slice(1)).join(" ");
 }
 
-function productMatchesSearch(product: ProductDetail, query: string) {
-  const normalizedQuery = normalizeSearchValue(query.trim());
-  return normalizedQuery.length === 0 || getProductSearchText(product).includes(normalizedQuery);
-}
-
-function getSupplementSubcategorySlugs(segment: string) {
-  return getShopNavItems()
-    .find((item) => item.href === "/suplementos")
-    ?.groups?.find((group) => group.href === `/suplementos/${segment}`)
-    ?.links.map((link) => link.href.split("/").filter(Boolean).at(-1) ?? "")
-    .filter(Boolean) ?? [];
-}
-
-function resolveListingContext(
+function routeContext(
   segments: string[],
-  searchParams: SearchParamsInput,
-  products: ProductDetail[],
-  categories: CategoryNavItem[],
-): ResolvedListingContext | null {
-  const [section, firstSlug, secondSlug] = segments;
+  params: SearchParamsInput,
+  categories: readonly CategoryNavItem[],
+  brands: readonly CatalogListingFacet[],
+  allowUnknownRoute: boolean,
+): RouteContext | null {
+  const [section, first, second] = segments;
   const routePath = `/${segments.join("/")}`;
-
-  if (section === "productos" && !firstSlug) {
-    return {
-      type: "all",
-      title: "Todos los productos",
-      routePath,
-      baseProducts: products,
-    };
+  if (section === "productos" && !first) return { type: "all", title: "Todos los productos", routePath };
+  if (section === "buscar" && !first) {
+    const query = getParam(params, "q")?.trim() ?? "";
+    return { type: "search", title: query ? `Resultados para: ${query}` : "Buscar productos", routePath, searchQuery: query };
   }
+  if (section === "ofertas" && !first) return { type: "offers", title: "Ofertas", routePath };
 
-  if (section === "buscar" && !firstSlug) {
-    const query = getParam(searchParams, "q")?.trim() ?? "";
-
-    return {
-      type: "search",
-      title: `Resultados para: ${query}`,
-      routePath,
-      searchQuery: query,
-      baseProducts: products.filter((product) => productMatchesSearch(product, query)),
-    };
-  }
-
-  if (section === "marcas" && firstSlug && !secondSlug) {
-    const baseProducts = products.filter((product) => getBrandSlug(product) === firstSlug);
-
-    if (baseProducts.length === 0) {
-      return null;
+  if (section === "marcas" && first && !second) {
+    const candidate = decodeBrandLabel(first);
+    const candidateSlug = candidate === undefined ? undefined : slugifyProductListingValue(candidate);
+    const brand = brands.find((entry) => entry.slug === first)
+      ?? brands.find((entry) => entry.label === first && !/[\\/\u0000-\u001f]/.test(first))
+      ?? brands.find((entry) => candidateSlug !== undefined && (entry.slug === candidateSlug || slugifyProductListingValue(entry.label) === candidateSlug))
+      ?? brands.find((entry) => candidateSlug !== undefined && entry.slug === BRAND_ROUTE_ALIASES[candidateSlug]);
+    if (!brand) {
+      if (!allowUnknownRoute) return null;
+      return { type: "brand", title: first, routePath, brandSlug: first, hideBrandFilter: true };
     }
-
     return {
       type: "brand",
-      title: baseProducts[0]?.brand ?? "Marca",
+      title: brand.label,
       routePath,
-      brandSlug: firstSlug,
+      brandSlug: brand.slug,
       hideBrandFilter: true,
-      baseProducts,
-    };
-  }
-
-  if (section === "ofertas" && !firstSlug) {
-    return {
-      type: "offers",
-      title: "Ofertas",
-      routePath,
-      baseProducts: products.filter((product) => product.compareAtPrice && product.compareAtPrice > product.price),
+      ...(first === brand.slug ? {} : { canonicalPath: `/marcas/${encodeURIComponent(brand.slug)}` }),
     };
   }
 
   if (section === "suplementos") {
-    if (!firstSlug) {
-      const supplementSlugs = Object.values(supplementListingGroupsBySegment)
-        .map((group) => group.productCategorySlug)
-        .filter((categorySlug): categorySlug is string => Boolean(categorySlug));
-
-      return {
-        type: "category",
-        title: "Suplementos",
-        routePath,
-        baseProducts: products.filter((product) => supplementSlugs.includes(product.categorySlug)),
-      };
+    if (segments.length > 3) return null;
+    let categorySlug = first ? CATEGORY_ROUTE_ALIASES[first] ?? first : "suplementos";
+    const category = categories.find((entry) => entry.slug === categorySlug);
+    if (!category && !allowUnknownRoute && categorySlug !== "suplementos" && CATEGORY_TITLES[categorySlug] === undefined) return null;
+    if (second) {
+      const navSubcategories = subcategorySlugsFor(first ?? "");
+      const child = categories.find((entry) => entry.slug === second);
+      if (child?.id) {
+        if (!category?.id || child.parentId !== category.id) return null;
+        categorySlug = child.slug;
+      } else if (!navSubcategories.includes(second) && !allowUnknownRoute) return null;
     }
-
-    const group = supplementListingGroupsBySegment[firstSlug];
-
-    if (!group) {
-      return null;
-    }
-
-    const category = group.productCategorySlug
-      ? categories.find((item) => item.slug === group.productCategorySlug)
-      : undefined;
-    const baseProducts = group.productCategorySlug
-      ? products.filter((product) => productBelongsToCategory(product, group.productCategorySlug ?? ""))
-      : [];
-    const subcategoryProducts = secondSlug
-      ? baseProducts.filter((product) => product.subcategorySlugs?.includes(secondSlug))
-      : baseProducts;
-    const validSubcategorySlugs = getSupplementSubcategorySlugs(firstSlug);
-
-    if (secondSlug && !validSubcategorySlugs.includes(secondSlug)) {
-      return null;
-    }
-
     return {
-      type: secondSlug ? "subcategory" : "category",
-      title: category?.label ?? group.title,
+      type: second ? "subcategory" : "category",
+      title: routeTitle(categorySlug, categories),
       routePath,
-      categorySlug: group.productCategorySlug,
-      categorySegment: firstSlug,
-      subcategorySlug: secondSlug,
-      baseProducts: subcategoryProducts,
-      filterProducts: baseProducts,
+      categorySlug,
+      categorySegment: first ?? "suplementos",
+      ...(second ? { subcategorySlug: second } : {}),
     };
   }
 
-  const directCategory = directCategoryBySegment[section];
-
-  if (directCategory) {
-    const baseProducts = products.filter((product) => productBelongsToCategory(product, directCategory.categorySlug));
-    const subcategoryProducts = firstSlug
-      ? baseProducts.filter((product) => product.subcategorySlugs?.includes(firstSlug))
-      : baseProducts;
-
-    if (firstSlug && subcategoryProducts.length === 0) {
-      return null;
+  if (segments.length === 2 && first) {
+    const parent = categories.find((category) => category.slug === section);
+    const child = categories.find((category) => category.slug === first);
+    if (parent?.id && child?.id && child.parentId === parent.id) {
+      return { type: "category", title: child.label, routePath, categorySlug: child.slug, categorySegment: section };
     }
-
-    return {
-      type: firstSlug ? "subcategory" : "category",
-      title: directCategory.title,
-      routePath,
-      categorySlug: directCategory.categorySlug,
-      categorySegment: section,
-      subcategorySlug: firstSlug,
-      baseProducts: subcategoryProducts,
-      filterProducts: baseProducts,
-    };
+    const fixtureLink = !parent?.id && !child?.id && getShopNavItems().find((item) => item.href === `/${section}`)
+      ?.groups?.some((group) => group.links.some((link) => link.href === routePath));
+    if (parent && fixtureLink) return { type: "subcategory", title: routeTitle(first, categories), routePath,
+      categorySlug: section, categorySegment: section, subcategorySlug: first };
   }
 
+  if (segments.length === 1 && categories.some((category) => category.slug === section)) {
+    return { type: "category", title: routeTitle(section, categories), routePath, categorySlug: section, categorySegment: section };
+  }
+
+  const knownDirectRoute = CATEGORY_TITLES[section ?? ""] !== undefined;
+  if (segments.length === 1 && section && knownDirectRoute) {
+    return { type: "category", title: routeTitle(section ?? "", categories), routePath, categorySlug: section, categorySegment: section };
+  }
+  if (allowUnknownRoute && section && segments.length <= 3) {
+    return { type: "category", title: routeTitle(section, categories), routePath, categorySlug: section, categorySegment: section };
+  }
   return null;
 }
 
-function parseFilterState(searchParams: SearchParamsInput): ProductListingFilterState {
-  const sortParam = getParam(searchParams, "orden");
-  const sort = productListingSortOptions.some((option) => option.value === sortParam)
-    ? (sortParam as ProductListingSortValue)
-    : "relevantes";
+function subcategorySlugsFor(segment: string): string[] {
+  return getShopNavItems().find((item) => item.href === "/suplementos")?.groups
+    ?.find((group) => group.href === `/suplementos/${segment}`)?.links
+    .map((link) => link.href.split("/").filter(Boolean).at(-1) ?? "")
+    .filter(Boolean) ?? [];
+}
 
+function parseFilterState(params: SearchParamsInput): ProductListingFilterState {
+  const requestedSort = getParam(params, "orden");
+  const sortValues: Record<string, ProductListingSortValue> = {
+    "mayor-precio": "mayor-precio",
+    "mas-recientes": "mas-recientes",
+    "mas-vendidos": "mas-vendidos",
+    "menor-precio": "menor-precio",
+  };
   return {
-    brandSlugs: parseCsvParam(searchParams, "marca"),
-    categorySlugs: parseCsvParam(searchParams, "categoria"),
-    subcategorySlugs: parseCsvParam(searchParams, "subcategoria"),
-    precioMin: parsePriceParam(searchParams, "precioMin"),
-    precioMax: parsePriceParam(searchParams, "precioMax"),
-    sort,
+    brandSlugs: parseCsvParam(params, "marca"),
+    categorySlugs: parseCsvParam(params, "categoria"),
+    subcategorySlugs: parseCsvParam(params, "subcategoria"),
+    precioMin: parsePriceParam(params, "precioMin"),
+    precioMax: parsePriceParam(params, "precioMax"),
+    sort: (requestedSort && sortValues[requestedSort]) || "relevantes",
   };
 }
 
-function createOptionCounts(
-  products: ProductDetail[],
-  getValues: (product: ProductDetail) => Array<{ id: string; label: string }>,
-) {
-  const options = new Map<string, { id: string; label: string; count: number }>();
-
-  products.forEach((product) => {
-    getValues(product).forEach((value) => {
-      const current = options.get(value.id);
-      options.set(value.id, {
-        id: value.id,
-        label: current?.label ?? value.label,
-        count: (current?.count ?? 0) + 1,
-      });
-    });
-  });
-
-  return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, "es"));
+function serverSort(sort: ProductListingSortValue): CatalogListingQuery["sort"] {
+  if (sort === "menor-precio") return CATALOG_LISTING_SORT.PRICE_ASC;
+  if (sort === "mayor-precio") return CATALOG_LISTING_SORT.PRICE_DESC;
+  if (sort === "mas-recientes") return CATALOG_LISTING_SORT.NEWEST;
+  if (sort === "mas-vendidos") return CATALOG_LISTING_SORT.BEST_SELLING;
+  return CATALOG_LISTING_SORT.FEATURED;
 }
 
-function getCategorySubcategoryLinks(categorySlug: string) {
-  const categorySegment = categorySegmentBySlug[categorySlug];
-
-  if (!categorySegment) {
-    return [];
-  }
-
-  return getShopNavItems()
-    .flatMap((item) => item.groups ?? [])
-    .flatMap((group) => group.links)
-    .filter((link) => link.href.startsWith(`/${categorySegment}/`) || link.href.startsWith(`/suplementos/${categorySegment}/`));
+function option(facet: CatalogListingFacet, useNavigationLabel = false): ProductListingFilterOption {
+  return { count: facet.count, id: facet.slug, label: useNavigationLabel ? navigationLabel(facet.slug, facet.label) : facet.label };
 }
 
-function getSegmentSubcategoryLinks(segment: string) {
-  return getShopNavItems()
-    .flatMap((item) => item.groups ?? [])
-    .find((group) => group.href === `/suplementos/${segment}` || group.href === `/${segment}`)
-    ?.links ?? [];
-}
-
-function createCategoryOptions(products: ProductDetail[], categories: CategoryNavItem[]) {
-  const categoryLabels = new Map(categories.map((category) => [category.slug, category.label]));
-  const categoryOptions = createOptionCounts(products, (product) => [
-    {
-      id: product.categorySlug,
-      label: categoryLabels.get(product.categorySlug) ?? product.categoryName,
-    },
-  ]);
-
-  return categoryOptions.map((category) => {
-    const categoryProducts = products.filter((product) => product.categorySlug === category.id);
-    const seenSubcategories = new Set<string>();
-    const children = getCategorySubcategoryLinks(category.id)
-      .map((link) => {
-        const slug = link.href.split("/").filter(Boolean).at(-1) ?? "";
-        const count = categoryProducts.filter((product) => product.subcategorySlugs?.includes(slug)).length;
-
-        return {
-          id: slug,
-          label: link.label,
-          count,
-        };
-      })
-      .filter((subcategory) => {
-        if (seenSubcategories.has(subcategory.id) || subcategory.count === 0) {
-          return false;
-        }
-
-        seenSubcategories.add(subcategory.id);
-        return true;
-      });
-
-    return {
-      ...category,
-      children,
-    };
-  });
-}
-
-function createSubcategoryOptions(context: ProductListingContext, products: ProductDetail[]) {
-  const links = context.categorySlug
-    ? getCategorySubcategoryLinks(context.categorySlug)
-    : context.categorySegment
-      ? getSegmentSubcategoryLinks(context.categorySegment)
-      : [];
-
-  if (links.length === 0) {
-    return [];
-  }
-
-  const categoryProducts = context.categorySlug
-    ? products.filter((product) => product.categorySlug === context.categorySlug)
-    : products;
-  const seenSubcategories = new Set<string>();
-
-  return links
-    .map((link) => {
-      const slug = link.href.split("/").filter(Boolean).at(-1) ?? "";
-      const count = categoryProducts.filter((product) => product.subcategorySlugs?.includes(slug)).length;
-
-      return {
-        id: slug,
-        label: link.label,
-        count,
-      };
-    })
-    .filter((subcategory) => {
-      if (seenSubcategories.has(subcategory.id) || subcategory.count === 0) {
-        return false;
-      }
-
-      seenSubcategories.add(subcategory.id);
-      return true;
-    });
+function navigationLabel(slug: string, fallback: string): string {
+  const link = getShopNavItems().flatMap((item) => item.groups ?? []).flatMap((group) => group.links)
+    .find((entry) => slugifyProductListingValue(entry.href.split("/").filter(Boolean).at(-1) ?? "") === slug);
+  return link?.label ?? fallback;
 }
 
 function createFilterGroups(
   context: ProductListingContext,
-  products: ProductDetail[],
-  categories: CategoryNavItem[],
+  facets: { brands: CatalogListingFacet[]; categories: CatalogListingFacet[]; subcategories: CatalogListingFacet[] },
 ): ProductListingFilterGroup[] {
   const groups: ProductListingFilterGroup[] = [];
-  const hasRouteCategoryContext = Boolean(context.categorySlug || context.categorySegment);
-  const categoryOptions = hasRouteCategoryContext
-    ? createSubcategoryOptions(context, products)
-    : createCategoryOptions(products, categories);
-
+  const showsSubcategories = Boolean(context.categorySlug && context.categorySlug !== "suplementos" && !context.subcategorySlug);
+  const categoryOptions = context.subcategorySlug
+    ? []
+    : showsSubcategories
+      ? facets.subcategories.map((facet) => option(facet, true))
+      : facets.categories.map((facet) => option(facet));
   if (categoryOptions.length > 0) {
     groups.push({
-      id: hasRouteCategoryContext ? "subcategory" : "category",
-      label: hasRouteCategoryContext ? "Subcategorías" : "Categorías",
-      paramName: hasRouteCategoryContext ? "subcategoria" : "categoria",
+      id: showsSubcategories ? "subcategory" : "category",
+      label: showsSubcategories ? "Subcategorías" : "Categorías",
+      paramName: showsSubcategories ? "subcategoria" : "categoria",
       options: categoryOptions,
     });
   }
-
-  if (!context.hideBrandFilter) {
-    const options = createOptionCounts(products, (product) => [
-      { id: getBrandSlug(product), label: product.brand },
-    ]);
-
-    if (options.length > 1) {
-      groups.push({ id: "brand", label: "Marcas", paramName: "marca", options });
-    }
+  if (!context.hideBrandFilter && facets.brands.length > 0) {
+    groups.push({ id: "brand", label: "Marcas", paramName: "marca", options: facets.brands.map((facet) => option(facet)) });
   }
-
   return groups;
 }
 
-function applyFilters(products: ProductDetail[], filterState: ProductListingFilterState) {
-  return products.filter((product) => {
-    if (filterState.brandSlugs.length > 0 && !filterState.brandSlugs.includes(getBrandSlug(product))) {
-      return false;
-    }
-
-    if (filterState.categorySlugs.length > 0 && !filterState.categorySlugs.includes(product.categorySlug)) {
-      return false;
-    }
-
-    if (
-      filterState.subcategorySlugs.length > 0 &&
-      !filterState.subcategorySlugs.some((slug) => product.subcategorySlugs?.includes(slug))
-    ) {
-      return false;
-    }
-
-    if (filterState.precioMin !== undefined && product.price < filterState.precioMin) {
-      return false;
-    }
-
-    if (filterState.precioMax !== undefined && product.price > filterState.precioMax) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-function sortProducts(products: ProductDetail[], filterState: ProductListingFilterState, allProducts: ProductDetail[]) {
-  const originalIndex = new Map(allProducts.map((product, index) => [product.id, index]));
-
-  return [...products].sort((a, b) => {
-    if (filterState.sort === "menor-precio") {
-      return a.price - b.price;
-    }
-
-    if (filterState.sort === "mayor-precio") {
-      return b.price - a.price;
-    }
-
-    if (filterState.sort === "mas-vendidos") {
-      const bestSellerDelta = Number(Boolean(b.isBestSeller)) - Number(Boolean(a.isBestSeller));
-      return bestSellerDelta || b.reviews - a.reviews;
-    }
-
-    return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0);
-  });
-}
-
-function getPriceBounds(products: ProductDetail[]) {
-  if (products.length === 0) {
-    return { min: 0, max: 0 };
-  }
-
+function errorListing(context: RouteContext, error: CatalogReadError, page: number, filterState: ProductListingFilterState): ProductListingResult {
   return {
-    min: Math.min(...products.map((product) => product.price)),
-    max: Math.max(...products.map((product) => product.price)),
+    context,
+    products: [],
+    status: "error",
+    error,
+    page,
+    totalPages: 0,
+    totalCount: 0,
+    filterState,
+    filterGroups: [],
+    sortOptions: productListingSortOptions,
+    priceBounds: { min: 0, max: 0 },
   };
+}
+
+function readError(result: CatalogReadResult<unknown>): CatalogReadError | undefined {
+  return result.status === "error" ? result.error : undefined;
 }
 
 export async function resolveProductListing(
   segments: string[],
   searchParams: SearchParamsInput = {},
+  catalog: CatalogRepository = getCatalogRepository(),
 ): Promise<ProductListingResult | null> {
-  const catalog = getCatalogRepository();
-  const [productsResult, categoriesResult] = await Promise.all([
-    catalog.getPublicProducts(),
-    catalog.getPublicCategories(),
-  ]);
-  const allProducts = catalogData(productsResult, []);
-  const categories = catalogData(categoriesResult, []);
-  const resolvedContext = resolveListingContext(segments, searchParams, allProducts, categories);
-
-  if (!resolvedContext) {
-    return null;
-  }
-
-  const { baseProducts, filterProducts, ...context } = resolvedContext;
+  const page = parsePage(searchParams);
   const filterState = parseFilterState(searchParams);
-  const filteredProducts = applyFilters(baseProducts, filterState);
-  const sortedProducts = sortProducts(filteredProducts, filterState, allProducts);
+  const isBrandRoute = segments[0] === "marcas" && Boolean(segments[1]);
+  const categoriesResult = isBrandRoute ? undefined : await catalog.getPublicCategories();
+  const brandsResult = isBrandRoute ? await catalog.getPublicBrands() : undefined;
+  const categories = categoriesResult && (categoriesResult.status === "success" || categoriesResult.status === "empty")
+    ? categoriesResult.data
+    : [];
+  const brands = brandsResult && (brandsResult.status === "success" || brandsResult.status === "empty")
+    ? brandsResult.data
+    : [];
+  const route = routeContext(
+    segments,
+    searchParams,
+    categories,
+    brands,
+    categoriesResult?.status === "error" || brandsResult?.status === "error" || categoriesResult?.status === "loading" || brandsResult?.status === "loading",
+  );
+  if (!route) return null;
 
+  if (route.canonicalPath) route.routePath = route.canonicalPath;
+  const routeError = (isBrandRoute ? readError(brandsResult!) : readError(categoriesResult!));
+  if (routeError) return errorListing(route, routeError, page, filterState);
+  if (categoriesResult?.status === "loading" || brandsResult?.status === "loading") return errorListing(route, {
+    code: "CATALOG_LOADING", message: "El catálogo todavía se está cargando.",
+  }, page, filterState);
+
+  const selectedSubcategories = route.subcategorySlug
+    ? filterState.subcategorySlugs.length > 0 && !filterState.subcategorySlugs.includes(route.subcategorySlug)
+      ? ["__no_matching_subcategory__"]
+      : [route.subcategorySlug]
+    : filterState.subcategorySlugs;
+  const query: CatalogListingQuery = {
+    limit: 20,
+    page,
+    sort: serverSort(filterState.sort),
+    ...(route.categorySlug ? { categorySlug: route.categorySlug } : {}),
+    ...(route.brandSlug ? { brandSlug: route.brandSlug } : {}),
+    ...(route.type === "offers" ? { offersOnly: true } : {}),
+    ...(route.searchQuery ? { search: route.searchQuery } : {}),
+    ...(filterState.brandSlugs.length ? { brandSlugs: filterState.brandSlugs } : {}),
+    ...(filterState.categorySlugs.length ? { categorySlugs: filterState.categorySlugs } : {}),
+    ...(selectedSubcategories.length ? { subcategorySlugs: selectedSubcategories } : {}),
+    ...(filterState.precioMin === undefined ? {} : { minPrice: filterState.precioMin }),
+    ...(filterState.precioMax === undefined ? {} : { maxPrice: filterState.precioMax }),
+  };
+  const result = await catalog.getPublicListing(query);
+  if (result.status === "error") return errorListing(route, result.error, page, filterState);
+  if (result.status === "loading") return errorListing(route, {
+    code: "CATALOG_LOADING", message: "El catálogo todavía se está cargando.",
+  }, page, filterState);
+  const listing = result.data;
   return {
-    context,
-    products: sortedProducts,
-    totalCount: sortedProducts.length,
+    context: route,
+    products: listing.items,
+    status: listing.total === 0 ? "empty" : "success",
+    page: listing.page,
+    totalPages: listing.totalPages,
+    totalCount: listing.total,
     filterState,
-    filterGroups: createFilterGroups(context, filterProducts ?? baseProducts, categories),
+    filterGroups: createFilterGroups(route, listing.facets),
     sortOptions: productListingSortOptions,
-    priceBounds: getPriceBounds(baseProducts),
+    priceBounds: listing.priceBounds,
   };
 }

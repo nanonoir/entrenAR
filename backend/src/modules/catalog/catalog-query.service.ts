@@ -16,12 +16,17 @@ import {
 import { CATALOG_ADMIN_PRODUCT_SORT, CATALOG_PUBLIC_PRODUCT_SORT } from "./catalog.constants";
 import { CatalogRepository } from "./catalog.repository";
 import type { AdminProductListQuery, PublicProductListQuery } from "./catalog.schemas";
+import { filterPublicListing, publicBrandDirectory, publicListingMetadata, publicListingScope } from "./public-listing";
+import type { PublicListingMetadata } from "./public-listing";
 
 export interface CatalogPage<T> {
   items: T[];
   limit: number;
   page: number;
   total: number;
+  totalPages: number;
+  facets?: PublicListingMetadata["facets"];
+  priceBounds?: PublicListingMetadata["priceBounds"];
 }
 
 @Injectable()
@@ -51,6 +56,14 @@ export class CatalogQueryService {
     return toPublicCategories(await this.catalogRepository.allCategoriesWithClient());
   }
 
+  async publicBrands() {
+    const [products, categories] = await Promise.all([
+      this.catalogRepository.allProductsWithClient(),
+      this.catalogRepository.allCategoriesWithClient(),
+    ]);
+    return publicBrandDirectory(publicListingScope(products, toPublicCategories(categories)));
+  }
+
   async publicProduct(publicSlug: string): Promise<PublicCatalogProduct> {
     const [product, categories] = await Promise.all([
       this.catalogRepository.productByPublicSlugWithClient(publicSlug),
@@ -66,17 +79,12 @@ export class CatalogQueryService {
       this.catalogRepository.allCategoriesWithClient(),
     ]);
     const publicCategories = toPublicCategories(categories);
-    const allowedCategoryIds = new Set(publicCategories.map((category) => category.id));
-    const filtered = products.filter((product) => {
-      if (product.visibility !== CatalogVisibility.VISIBLE) return false;
-      const productCategoryIds = product.categories.map((entry) => entry.categoryId);
-      if (!productCategoryIds.some((id) => allowedCategoryIds.has(id))) return false;
-      if (!query.categorySlug) return true;
-      return publicCategories.some((category) => category.slug === query.categorySlug && productCategoryIds.includes(category.id));
-    });
+    const routeScope = publicListingScope(products, publicCategories, query.categorySlug, query.brandSlug);
+    const metadata = publicListingMetadata(routeScope, publicCategories, query.categorySlug);
+    const filtered = filterPublicListing(routeScope, query, publicCategories);
     filtered.sort((left, right) => this.comparePublicProducts(left, right, query.sort));
     const mapped = filtered.map(toPublicCatalogProduct);
-    return page(mapped, query.page, query.limit);
+    return { ...page(mapped, query.page, query.limit), ...metadata };
   }
 
   private compareAdminProducts(
@@ -100,6 +108,11 @@ export class CatalogQueryService {
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.PRICE_ASC) return leftPrice - rightPrice || left.id.localeCompare(right.id);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.PRICE_DESC) return rightPrice - leftPrice || left.id.localeCompare(right.id);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.NEWEST) return right.createdAt.getTime() - left.createdAt.getTime() || left.id.localeCompare(right.id);
+    if (sort === CATALOG_PUBLIC_PRODUCT_SORT.BEST_SELLING) {
+      return Number(right.isBestSeller) - Number(left.isBestSeller)
+        || right.salesCount - left.salesCount
+        || left.id.localeCompare(right.id);
+    }
     return Number(right.isFeatured) - Number(left.isFeatured) || left.manualOrder - right.manualOrder || left.id.localeCompare(right.id);
   }
 
@@ -121,6 +134,7 @@ function page<T>(items: readonly T[], currentPage: number, limit: number): Catal
     limit,
     page: currentPage,
     total: items.length,
+    totalPages: Math.ceil(items.length / limit),
   };
 }
 

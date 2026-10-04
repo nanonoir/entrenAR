@@ -81,6 +81,7 @@ async function run(): Promise<void> {
           limit: 100,
           page: 1,
           total: 1,
+          totalPages: 1,
         } as T;
       }
 
@@ -112,6 +113,7 @@ async function run(): Promise<void> {
           limit: 100,
           page: 1,
           total: 1,
+          totalPages: 1,
         } as T;
       }
 
@@ -145,6 +147,66 @@ async function run(): Promise<void> {
     throw new Error("API Decimal/infinite-stock mapping failed.");
   }
 
+  const makePagedProduct = (index: number) => ({
+    id: `paged-${index}`,
+    name: `Paged ${index}`,
+    price: 10,
+    slug: `paged-${index}`,
+    stock: 1,
+    variants: [],
+  });
+  const pagedCalls: string[] = [];
+  const pagedApi = new CatalogApiRepository({
+    get: async <T>(path: string): Promise<T> => {
+      pagedCalls.push(path);
+      const page = Number(new URL(path, "http://localhost").searchParams.get("page"));
+      return {
+        items: page === 1 ? Array.from({ length: 100 }, (_, index) => makePagedProduct(index)) : [makePagedProduct(100)],
+        limit: 100,
+        page,
+        total: 101,
+        totalPages: 2,
+      } as T;
+    },
+  });
+  const allPublicProducts = await pagedApi.getPublicProducts();
+  if (allPublicProducts.status !== "success" || allPublicProducts.data.length !== 101
+    || pagedCalls.length !== 2 || !pagedCalls[1]?.includes("page=2")) {
+    throw new Error("Catalog adapter did not validate and traverse every bounded result page.");
+  }
+
+  const duplicateApi = new CatalogApiRepository({
+    get: async <T>(): Promise<T> => ({
+      items: [makePagedProduct(7), makePagedProduct(7)], limit: 100, page: 1, total: 2, totalPages: 1,
+    } as T),
+  });
+  if ((await duplicateApi.getPublicProducts()).status !== "error") {
+    throw new Error("Catalog adapter accepted duplicate IDs in a supposedly complete result.");
+  }
+
+  let listingPath = "";
+  const listingApi = new CatalogApiRepository({
+    get: async <T>(path: string): Promise<T> => {
+      listingPath = path;
+      if (path === "/brands") return [{ count: 2, label: "ENA", slug: "ena" }] as T;
+      return {
+        facets: { brands: [{ count: 2, label: "ENA", slug: "ena" }], categories: [], subcategories: [] },
+        items: [], limit: 10, page: 2, priceBounds: { max: 80, min: 20 }, total: 12, totalPages: 2,
+      } as T;
+    },
+  });
+  const filteredListing = await listingApi.getPublicListing({
+    brandSlug: "ena", categorySlug: "creatina", limit: 10, maxPrice: 80, minPrice: 20,
+    offersOnly: true, page: 2, sort: "best-selling",
+  });
+  const filteredPath = listingPath;
+  const brands = await listingApi.getPublicBrands();
+  if (filteredListing.status !== "success" || filteredListing.data.page !== 2
+    || !filteredPath.includes("categorySlug=creatina") || !filteredPath.includes("offersOnly=true")
+    || listingPath !== "/brands" || brands.status !== "success" || brands.data[0]?.slug !== "ena") {
+    throw new Error("Catalog filtered-page or brand-directory mapping failed.");
+  }
+
   const adminProducts = await api.getAdminProducts();
 
   if (
@@ -163,7 +225,7 @@ async function run(): Promise<void> {
   }
 
   const empty = new CatalogApiRepository({
-    get: async <T>(): Promise<T> => ({ items: [], limit: 100, page: 1, total: 0 } as T),
+    get: async <T>(): Promise<T> => ({ items: [], limit: 100, page: 1, total: 0, totalPages: 0 } as T),
   });
   const emptyProducts = await empty.getPublicProducts();
 

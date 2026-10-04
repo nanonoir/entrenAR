@@ -6,7 +6,7 @@ import { ApiErrorResponseDto } from "../../common/errors/api-error-response.dto"
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { CatalogQueryService } from "./catalog-query.service";
 import { identifierSchema, publicProductListQuerySchema, type PublicProductListQuery } from "./catalog.schemas";
-import { CatalogPageDto } from "./dto/catalog-openapi.dto";
+import { CatalogPageDto, PublicBrandDto } from "./dto/catalog-openapi.dto";
 
 @Public()
 @ApiTags("Catalog")
@@ -19,6 +19,13 @@ export class PublicCatalogController {
   @ApiOkResponse({ description: "Visible flat category collection." })
   async categories() {
     return this.catalogQueries.publicCategories();
+  }
+
+  @Get("brands")
+  @ApiOperation({ summary: "List brands with eligible public catalog products" })
+  @ApiOkResponse({ description: "Canonical public brand directory.", type: [PublicBrandDto] })
+  async brands() {
+    return this.catalogQueries.publicBrands();
   }
 
   @Get("products")
