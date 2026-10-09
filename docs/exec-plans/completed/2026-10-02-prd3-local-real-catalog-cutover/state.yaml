@@ -1,0 +1,186 @@
+schemaName: nanoir.sdd-status
+schemaVersion: 1
+changeName: prd3-local-real-catalog-cutover
+artifactStore: hybrid
+executionMode: auto
+localCutoverResult:
+  status: verified-pass
+  receiptPath: local-cutover-receipt.md
+  cleanupDeletedRecords: 8007
+  cleanupReconciliation: pass
+  preservedAuditedRecords: 233
+  preflight: PREFLIGHT_READY
+  importedCounts: {products: 649, variants: 1119, images: 3790, categoryLinks: 2124}
+  importReconciliation: matches-true-zero-mismatches
+  r2Writes: false
+  productionWrites: false
+  finalPlaywrightVerification: pass
+  verificationReportPath: cutover-final-verification.md
+focusedMaintenanceFlow:
+  approved: true
+  evidence: User approved inline correction, delegated isolated tests/backup restore, inline cleanup/import after both pass, then delegated final data and Playwright verification.
+  status: final-verification-passed
+  implementation: transaction-only exact-ledger-row function replacement, original function restored before commit; no persistent migration or role provisioning
+  checkpointReport: pre-cutover-checkpoint.md
+  finalVerificationReport: cutover-final-verification.md
+  storefrontVerification: pass
+  adminVerification: pass
+  checkpointEvidence:
+    unitTests: 23-passed-0-failed
+    scratchIntegration: 6-passed-0-failed
+    liveAuditBlockers: 0
+    liveAuditRecords: 8240
+    livePopulationDigest: d60f382a231d320033eeb7c1e662497da78951d36ed21ed868cf148639bafe0e
+    restoredPopulationDigest: d60f382a231d320033eeb7c1e662497da78951d36ed21ed868cf148639bafe0e
+    backupRestorationProof: verified-exact-measured-recovery-zero-drift
+    coverageEvidencePath: backend/backup/local-cutover-backup-coverage.json
+    databaseProtectionInvariance: verified-identical-after-success-and-failure-no-real-mutation
+    hostToolingNote: pg_restore not in Windows host PATH (available in postgres container)
+  prerequisites: scratch integration pass and verified recoverable backup covering actual audited scope
+  fullSddVerification: not completed; do not mark final verify pass from this checkpoint
+localCutoverAuthorization:
+  approved: true
+  evidence: User explicitly confirmed scoped commercial mock cleanup and new product import preserving admins, 61 categories, configuration and R2, and requested execution without deviations.
+  trustModel: trusted privileged local owner maintenance; no hostile-superuser defense or role-separation prerequisite
+  scope: necessary narrow ledger exception, scratch proof, verified backup restore, bounded commercial cleanup, frozen real-catalog import and reconciliation
+  prerequisites: exact local fingerprint, complete audited selectors, restored backup, preservation and drift checks, immutable import and R2 checks
+  excludes: database drop, blanket reset, cluster role provisioning, runtime credential changes, production, R2 mutation, Git delivery
+  authorizationMemory: 2022
+scratchTestAuthorization:
+  approved: true
+  target: 127.0.0.1:5432/entrenar_catalog_cutover_scratch/public
+  scope: isolated scratch provisioning, migrations, integration test truncation and seeding only
+  evidence: User explicitly replied apruebo to isolated database preparation and integration tests without touching entrenar.
+  excludes: production, R2, Git delivery; real-local operations use the separate localCutoverAuthorization below
+scratchTestSetup:
+  status: prepared
+  target: 127.0.0.1:5432/entrenar_catalog_cutover_scratch/public
+  createdThisSession: true
+  migrationsApplied: 16
+  publicModelTables: 39
+  nonMigrationRowsAtSetup: 0
+  largeObjectsAtSetup: 0
+  integrationRun: 6-passed-0-failed
+  rerunPending: false
+  latestAttemptContents: restored-verified-archive-scratch-state
+  connectionOverrides: child-process only; no persistent .env/process changes
+planningHome:
+  mode: repo-local
+  path: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec
+changeRoot: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover
+artifactPaths:
+  prd: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/prd.md]
+  proposal: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/proposal.md]
+  specs: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/specs/local-catalog-cutover/spec.md, C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/specs/inventory-management/spec.md]
+  frontendSpec: []
+  design: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/design.md]
+  tasks: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/tasks.md]
+  applyProgress: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/apply-progress.md]
+  verifyReport: []
+  delivery: []
+contextFiles:
+  prd: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/prd.md]
+  proposal: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/proposal.md]
+  specs: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/specs/local-catalog-cutover/spec.md, C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/specs/inventory-management/spec.md]
+  frontendSpec: []
+  design: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/design.md]
+  tasks: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/tasks.md]
+  applyProgress: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/apply-progress.md]
+  verifyReport: []
+  delivery: []
+artifacts:
+  prd: done
+  proposal: partial
+  specs: partial
+  frontendSpec: not_required
+  design: partial
+  tasks: partial
+  applyProgress: partial
+  verifyReport: missing
+  delivery: missing
+deliveryDisposition: null
+taskProgress:
+  total: 25
+  completed: 17
+  pending: 8
+  allComplete: false
+dependencies:
+  init: all_done
+  prdCreate: all_done
+  prdRefine: all_done
+  proposal: ready
+  specs: blocked
+  frontendSpecs: all_done
+  design: blocked
+  tasks: blocked
+  apply: blocked
+  verify: blocked
+  archive: blocked
+applyState: blocked
+actionContext:
+  mode: repo-local
+  workspaceRoot: C:/Users/Nahuel/Desktop/Trabajo/entrenAR
+  allowedEditRoots: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/src/modules/catalog-cutover, C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/test/catalog-cutover.integration-spec.ts, C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/package.json, C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover]
+relationships:
+  dependsOn: []
+  supersedes: []
+  amends: []
+  conflictsWith: []
+  sameDomainActiveChanges: []
+frontendSpecResolution:
+  status: not_required
+  previousStatus: not_required
+  rationale: >-
+    Revalidated against the amended PRD, proposal, and both behavioral specs.
+    The added exact-row local inventory-ledger exception changes database
+    authorization and transaction behavior only; it introduces no user-facing
+    screen, control, copy, or interaction. Existing storefront/admin catalog UI
+    verification remains behavioral acceptance, not a new visual contract.
+nextRecommended: sdd-propose
+designRevision: 5
+tasksRefreshRequired: true
+designCorrection:
+  status: blocked
+  evidencePath: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/design-correction.md
+  latestRuntimeEvidence:
+    source: orchestrator-reported; no executor rerun
+    scratchIntegration: 1-passed-3-failed
+    focusedUnit: 21-passed-1-failed
+  decisionRequired: null
+  architectureAmendmentApproved: true
+  approvalEvidence: Initial design approval was followed by explicit scoped local cleanup and import authorization; see localCutoverAuthorization and canonical PRD.
+  affectedWorkUnits: [1, 2, 4, 5]
+  historicalTaskCompletionPreserved: true
+  privilegeBoundary:
+    status: excluded-from-current-scope
+    liveRoleAudit: read-only inspection confirmed local superuser and no restricted login principals
+    reason: Owner requested trusted local maintenance without role-separation detours. Cluster-wide roles and runtime credential changes remain excluded and do not block this cutover.
+    proposedMigration: backend/prisma/migrations/20261002000000_scoped_fixture_ledger_cleanup/migration.sql
+    proposedAdapter: backend/src/modules/catalog-cutover/ledger-cleanup.adapter.ts
+    proposedBoundaryTest: backend/test/catalog-cutover-ledger.integration-spec.ts
+    proposedWorkUnits: [WU1-R, WU2-R, WU-L1, WU-L2, WU-L3, WU5-R, WU6-R]
+    scopeEvidence: design-correction.md
+    schemaModelChanges: none
+    realTargetMigrationApproved: true
+    realTargetEnrollmentApproved: false
+    realCleanupApproved: true
+    realImportApproved: true
+    approvalScope: Only minimally necessary prospective ledger exception and bounded local cleanup/frozen import after scratch proof, restored backup, target, scope, preservation and drift checks; no role enrollment authorized.
+phaseInstructions:
+  apply:
+    - 'Future implementation roots, separate from this planning phase edit scope: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/src/modules/catalog-cutover; C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/test; C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/package.json; C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover.'
+    - Runtime-only private backup evidence may use C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/backup; it is not an implementation edit root and must remain Git-excluded.
+    - 'Reuse-only paths are read-only: backend/src/common/prisma/mutation-gate.ts; backend/src/modules/showcase-reset/fixtures/showcase-fixture-manifest.ts; backend/src/modules/catalog-scraper/operations/database-target.ts; backend/src/modules/catalog-scraper/preflight.command.ts; backend/src/modules/catalog-import/approval.ts.'
+    - 'No frontend, Prisma model changes, importer/reset implementation changes, R2 mutation or production writes. Historical migrations remain read-only. Exact prospective ledger migration path must be specified before expanding implementation edit roots.'
+    - Local cleanup and import are explicitly authorized through localCutoverAuthorization, but MUST remain pending until scratch proof, backup restoration and their actual evidence-bound prerequisites pass. No role provisioning or unrestricted reset is authorized.
+blockedReasons:
+  - 'Only targeted document reconciliation remains for the trusted local maintenance authorization. Role separation is explicitly outside scope, not an unresolved decision or prerequisite. Do not regenerate unchanged upstream artifacts or relaunch the full SDD planning cycle for metadata corrections.'
+  - 'Revision 5: shared dependency schedule excludes operation-group membership from precedence while retaining impact closure/compensation FK order; User CUSTOMER eligibility preserves ADMIN sessions and collateral blockers. Proposed paths/work-unit amendments are in design-correction.md; preserve historical 17/25 completion and refresh affected validations only.'
+  - 'Bounded local cleanup/frozen import are approved (2022), not executed. The remaining actual blockers are failing scratch tests and unverified backup restoration/audit evidence; authorization does not waive these prerequisites.'
+  - Work Unit 7 is read-only against the confirmed local target and may begin only after implementation Units 1-6; restore is scratch-only.
+  - 'Latest orchestrator scratch evidence: integration 1 passed/3 failed; unit 21 passed/1 failed. WU2.1/WU5.1 remain pending; any future runner must use process-scoped variables bound only to 127.0.0.1:5432/entrenar_catalog_cutover_scratch/public.'
+recovery:
+  prdSource: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/prd3-local-real-catalog-cutover/prd.md
+  refinementEvidence: Canonical PRD includes Owner Attestation Amendment (2009), scoped ledger amendment (2018) and Trusted Local Maintenance Scope and Execution Authorization (2022). No per-row manifests or role-separation prerequisite. Bounded local cleanup/import approved; backup and scratch proof still required. Legacy openspec/PRDs source is non-authoritative.
+  initEvidence: openspec/config.yaml and Engram sdd-init/entrenar observation 892.
+  stackAuthority: openspec/config.yaml supersedes outdated stack details in the init memory.

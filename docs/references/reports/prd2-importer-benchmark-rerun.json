@@ -1,0 +1,79 @@
+{
+  "dataset": {
+    "products": 657,
+    "variants": 1131,
+    "images": 3869,
+    "links": 804
+  },
+  "runs": [
+    {
+      "run": 1,
+      "durationMs": 1398.1221,
+      "products": 657,
+      "variants": 1131,
+      "images": 3869,
+      "links": 804,
+      "queryCount": 20
+    },
+    {
+      "run": 2,
+      "durationMs": 1308.6495,
+      "products": 657,
+      "variants": 1131,
+      "images": 3869,
+      "links": 804,
+      "queryCount": 20
+    },
+    {
+      "run": 3,
+      "durationMs": 1294.7398000000003,
+      "products": 657,
+      "variants": 1131,
+      "images": 3869,
+      "links": 804,
+      "queryCount": 20
+    },
+    {
+      "run": 4,
+      "durationMs": 1267.3429999999998,
+      "products": 657,
+      "variants": 1131,
+      "images": 3869,
+      "links": 804,
+      "queryCount": 20
+    },
+    {
+      "run": 5,
+      "durationMs": 1245.8984,
+      "products": 657,
+      "variants": 1131,
+      "images": 3869,
+      "links": 804,
+      "queryCount": 20
+    }
+  ],
+  "maxDurationMs": 1398.1221,
+  "meanDurationMs": 1302.95056,
+  "batching": {
+    "categoryResolution": 1,
+    "productInsert": 1,
+    "imageInsert": 1,
+    "linkInsert": 1,
+    "variantInsert": 1,
+    "expectedPersistenceStatements": 5
+  },
+  "rollback": {
+    "ok": true,
+    "rowsAfterFailure": {
+      "products": 0,
+      "variants": 0,
+      "images": 0,
+      "links": 0
+    }
+  },
+  "cleanup": {
+    "products": 0,
+    "categories": 61
+  },
+  "applicationDatabaseTouched": false
+}

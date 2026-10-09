@@ -1,0 +1,42 @@
+﻿# Design Documents Catalog
+
+Catalog of durable technical architecture and design decisions for EntrenAR.
+- [`2026-06-03-checkout-flow.md`](./2026-06-03-checkout-flow.md): Design: Checkout Flow
+- [`2026-06-05-footer-static-legal-support-pages.md`](./2026-06-05-footer-static-legal-support-pages.md): Design: footer-static-legal-support-pages
+- [`2026-06-07-separate-overlay-presence-and-scroll-lock.md`](./2026-06-07-separate-overlay-presence-and-scroll-lock.md): Design: Separate Overlay Presence and Scroll Lock (Deferred Navigation)
+- [`2026-06-08-client-support-actions-pages.md`](./2026-06-08-client-support-actions-pages.md): Design: Client Support Actions Pages
+- [`2026-06-11-crm-admin-mock-dashboard.md`](./2026-06-11-crm-admin-mock-dashboard.md): Design: CRM Admin Mock Dashboard
+- [`2026-06-13-sales-flow.md`](./2026-06-13-sales-flow.md): Design: Admin Sales Flow
+- [`2026-06-20-drawers-redesign.md`](./2026-06-20-drawers-redesign.md): CRM Products Drawers Redesign: Technical Design
+- [`2026-06-25-clients-crm.md`](./2026-06-25-clients-crm.md): Design: Clients CRM
+- [`2026-06-25-feat-crm-payment-methods.md`](./2026-06-25-feat-crm-payment-methods.md): Design: CRM Payment Methods (`feat/crm-payment-methods`)
+- [`2026-06-25-shipcrm.md`](./2026-06-25-shipcrm.md): Design: ShipCRM Admin Shipping MVP
+- [`2026-06-29-AdminDrawerNormalization.md`](./2026-06-29-AdminDrawerNormalization.md): Design: Admin Filter Drawers Normalization
+- [`2026-06-29-DiscountCRM.md`](./2026-06-29-DiscountCRM.md): Design: DiscountCRM
+- [`2026-07-01-AdminFormActionsStandardization.md`](./2026-07-01-AdminFormActionsStandardization.md): Design: AdminFormActionsStandardization
+- [`2026-07-02-AdminFormValidationStandardization.md`](./2026-07-02-AdminFormValidationStandardization.md): Design: AdminFormValidationStandardization
+- [`2026-08-24-backend-core-catalog.md`](./2026-08-24-backend-core-catalog.md): Design: Backend Core Phase 2 Catalog
+- [`2026-08-24-backend-core-phase-1-foundation.md`](./2026-08-24-backend-core-phase-1-foundation.md): Design: Backend Core Phase 1 Foundation
+- [`2026-08-30-backend-core-phase-3-customer-account.md`](./2026-08-30-backend-core-phase-3-customer-account.md): Design: Backend Core Phase 3 Customer Account
+- [`2026-08-31-backend-core-phase-4-commerce-configuration.md`](./2026-08-31-backend-core-phase-4-commerce-configuration.md): Design: Backend Core Phase 4 Commerce Configuration
+- [`2026-09-03-backend-core-phase-5-checkout.md`](./2026-09-03-backend-core-phase-5-checkout.md): Design: backend-core-phase-5-checkout
+- [`2026-09-04-backend-core-phase-6-sales-crm.md`](./2026-09-04-backend-core-phase-6-sales-crm.md): Design: Backend Core Phase 6 - Sales & CRM
+- [`2026-09-04-backend-core-phase-7-customers-crm.md`](./2026-09-04-backend-core-phase-7-customers-crm.md): Design: Backend Core Phase 7 â€” Customers CRM
+- [`2026-09-05-backend-core-phase-8-abandoned-carts-recovery.md`](./2026-09-05-backend-core-phase-8-abandoned-carts-recovery.md): Design: Backend Core Phase 8 â€” Abandoned Carts Recovery
+- [`2026-09-07-backend-core-phase-10-hardening.md`](./2026-09-07-backend-core-phase-10-hardening.md): Design: backend-core-phase-10-hardening
+- [`2026-09-07-backend-core-phase-9-statistics.md`](./2026-09-07-backend-core-phase-9-statistics.md): Design: Backend Core Phase 9 â€” Statistics
+- [`2026-09-22-admin-auth-isolation-route-protection-branded-error-system.md`](./2026-09-22-admin-auth-isolation-route-protection-branded-error-system.md): Design: Admin Authentication Isolation, Operational Route Cloaking & Branded Error System
+- [`2026-09-23-backend-core-p0-stabilization.md`](./2026-09-23-backend-core-p0-stabilization.md): Design: Backend Core P0 Stabilization
+- [`2026-09-23-sales-flow-archives-abandoned-carts.md`](./2026-09-23-sales-flow-archives-abandoned-carts.md): Design: Sales Flow Archives & Abandoned Carts
+- [`2026-09-23-sales-flow-manual-fixes.md`](./2026-09-23-sales-flow-manual-fixes.md): Design: Sales Flow Manual Fixes
+- [`2026-09-24-crm-products.md`](./2026-09-24-crm-products.md): Design: CRM Products Management
+- [`2026-09-24-showcase-crm-data-reset-hourly.md`](./2026-09-24-showcase-crm-data-reset-hourly.md): Design: Hourly CRM Showcase Data Reset
+- [`2026-09-26-catalog-import-readiness.md`](./2026-09-26-catalog-import-readiness.md): Design: Catalog Import Readiness
+- [`2026-09-27-prd2-entreno-catalog-scraper-import-pipeline.md`](./2026-09-27-prd2-entreno-catalog-scraper-import-pipeline.md): Design: Entreno Catalog Scraper and Import Preparation Pipeline
+- [`2026-09-28-prd3-entreno-live-run-preparation.md`](./2026-09-28-prd3-entreno-live-run-preparation.md): Design: Entreno Live Run Preparation
+- [`2026-09-28-prd3-entreno-real-catalog-ingestion.md`](./2026-09-28-prd3-entreno-real-catalog-ingestion.md): Design: Entreno Real Catalog Ingestion and R2 Handoff
+- [`2026-09-28-prd3-real-r2-operational-handoff.md`](./2026-09-28-prd3-real-r2-operational-handoff.md): Design: PRD3 Real R2 Operational Handoff
+- [`2026-09-29-prd3-local-catalog-import-safety.md`](./2026-09-29-prd3-local-catalog-import-safety.md): Design: Run-Bound Catalog Import Safety
+- [`2026-10-02-prd3-local-real-catalog-cutover.md`](./2026-10-02-prd3-local-real-catalog-cutover.md): Design: Local Real Catalog Cutover
+- [`2026-10-04-catalog-listing-taxonomy-alignment.md`](./2026-10-04-catalog-listing-taxonomy-alignment.md): Design: Catalog Listing and Taxonomy Alignment
+
