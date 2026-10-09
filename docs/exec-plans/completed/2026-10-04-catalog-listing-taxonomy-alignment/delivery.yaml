@@ -1,0 +1,167 @@
+version: 1
+status: delivered
+authorization:
+  approved_by: user
+  approved_at: '2026-10-04T04:08:00.000Z'
+  plan_digest: 'sha256:14e9b05b5803cbcea2a5f55557f2c5112fbc08bd1c55c9a4b19967d3edd61f09'
+  scope: {commit: true, push: true, create_pr: true, create_branch: true, merge: true, bootstrap_main: false}
+  requires_additional_confirmation: false
+target:
+  repository_root: C:/Users/Nahuel/Desktop/Trabajo/entrenAR
+  branch: fix/catalog-listing-taxonomy-alignment
+  remote: origin
+  remote_url: git@github.com:nanonoir/entrenAR.git
+  base_branch: main
+plan:
+  starting_branch: main
+  starting_head: '00edf559bbd2aab9dd940ca26590d93c528497d3'
+  bootstrap_root_commit: null
+  files: &verified_files
+    - backend/src/modules/catalog/public-listing.ts
+    - backend/src/modules/catalog/public-listing.spec.ts
+    - backend/src/modules/catalog/catalog-query.service.ts
+    - backend/src/modules/catalog/catalog-query.service.spec.ts
+    - backend/src/modules/catalog/catalog.constants.ts
+    - backend/src/modules/catalog/catalog.schemas.ts
+    - backend/src/modules/catalog/catalog.schemas.spec.ts
+    - backend/src/modules/catalog/dto/catalog-openapi.dto.ts
+    - backend/src/modules/catalog/public-catalog.controller.ts
+    - backend/src/modules/catalog-scraper/active-taxonomy.ts
+    - backend/src/modules/catalog-scraper/active-taxonomy.spec.ts
+    - backend/src/modules/catalog-scraper/run/prepare-run.ts
+    - backend/src/modules/catalog-scraper/category-sync.command.ts
+    - backend/src/modules/catalog-scraper/category-sync.command.spec.ts
+    - backend/src/modules/catalog-scraper/operations/shaker-consolidation.ts
+    - backend/src/modules/catalog-scraper/operations/shaker-consolidation.spec.ts
+    - src/lib/api/catalog/catalog.repository.ts
+    - src/lib/api/catalog/catalog-api.repository.ts
+    - src/lib/api/catalog/mock-catalog.repository.ts
+    - src/lib/api/catalog/catalog-adapter.harness.ts
+    - src/lib/category-membership.ts
+    - src/lib/data/navigation.ts
+    - src/lib/data/shop-routes.ts
+    - src/lib/product-listing.ts
+    - src/types/navigation.ts
+    - src/types/product-listing.ts
+    - src/app/(shop)/[...segments]/page.tsx
+    - src/components/shop/products/listing/ProductListingShell.tsx
+    - src/components/shop/products/listing/BrandDirectory.tsx
+    - src/components/shop/products/listing/listing-query.ts
+    - src/components/shop/products/listing/ProductListingSort.tsx
+    - src/components/shop/cart/CartDrawer.tsx
+    - tests/harnesses/prd2-catalog-routes.harness.ts
+    - tests/harnesses/catalog-brand-navigation.harness.ts
+    - tests/harnesses/catalog-listing-ui.harness.ts
+    - tests/harnesses/catalog-listing-acceptance.harness.ts
+    - tests/e2e/catalog-listing.spec.ts
+  changes:
+    - {path: backend/src/modules/catalog/public-listing.ts, before_blob: null, after_blob: '0893e75bdb8853d26655ce4c648027712e6cd515'}
+    - {path: backend/src/modules/catalog/public-listing.spec.ts, before_blob: null, after_blob: '7d59514215bbbfe799b21b65fa356e7166e01e15'}
+    - {path: backend/src/modules/catalog/catalog-query.service.ts, before_blob: 'ac802599f90c0a5752303653eca01799e5862ac3', after_blob: '97a47a1909360549fc97b1af858ae5ded85247a0'}
+    - {path: backend/src/modules/catalog/catalog-query.service.spec.ts, before_blob: null, after_blob: '89a8a9e5dfa18f9b408757ca11b3703d4a53ed13'}
+    - {path: backend/src/modules/catalog/catalog.constants.ts, before_blob: '26af425fd8fd6061b0f496d803291a686001f15b', after_blob: 'c167ef1a0091e0f6f374a5bbeabe3c35df8c41aa'}
+    - {path: backend/src/modules/catalog/catalog.schemas.ts, before_blob: '79fe582e295bbf43eea9b7489711ab90f562f4a3', after_blob: 'a91a6b7080109c9de012619a5e26bbba1350333f'}
+    - {path: backend/src/modules/catalog/catalog.schemas.spec.ts, before_blob: '1f79549e345df42a5d1ede5bafc8b1f4b4ff7806', after_blob: 'e2bcf0389bdc1674cb8aced4ed4a2355efdd2c3d'}
+    - {path: backend/src/modules/catalog/dto/catalog-openapi.dto.ts, before_blob: '5f05157744c79f10753240577486d1b18ab50af9', after_blob: '34a1c1eb9e5e92066697c2800de6c2a40f60c69f'}
+    - {path: backend/src/modules/catalog/public-catalog.controller.ts, before_blob: '87935f8a1c25a472a0ea976ad00c25b76a98c9c0', after_blob: '54d75565de9afc9f0ce9c62a27c0295511a97a91'}
+    - {path: backend/src/modules/catalog-scraper/active-taxonomy.ts, before_blob: null, after_blob: '5cea2aab89c1cd67a137c1c2c55fca0a9c34d6d1'}
+    - {path: backend/src/modules/catalog-scraper/active-taxonomy.spec.ts, before_blob: null, after_blob: '64c2019944f5110262dc8f3044133b1e86c9fed8'}
+    - {path: backend/src/modules/catalog-scraper/run/prepare-run.ts, before_blob: '3faae0b733bb5dab48a3b3f4c9cb91d2bd17d2fa', after_blob: 'b74b18a7f3891f71a922a91f2445d0400eefcf9c'}
+    - {path: backend/src/modules/catalog-scraper/category-sync.command.ts, before_blob: 'bda9824597ba13fbe9653f4d386a82e6c511e80f', after_blob: '4784c5c99d5b5df5883367ce0bbef3c5eb9304c7'}
+    - {path: backend/src/modules/catalog-scraper/category-sync.command.spec.ts, before_blob: '3d07bc775f7a73a6cdade8cc7e578c5289d617d3', after_blob: '4b1db3222feda37d306693d73aa2ba18f9151be6'}
+    - {path: backend/src/modules/catalog-scraper/operations/shaker-consolidation.ts, before_blob: null, after_blob: '016c39c4bd7fc1e53e79f90450a0fa0cc0414675'}
+    - {path: backend/src/modules/catalog-scraper/operations/shaker-consolidation.spec.ts, before_blob: null, after_blob: '56a5694698b24119d35c9245d5819dfbbd90cf7d'}
+    - {path: src/lib/api/catalog/catalog.repository.ts, before_blob: 'c40932fadcae10219d374150df6f0449b9322d17', after_blob: '444fdbdecb5f6217e84782e1e1f552ff7f58e165'}
+    - {path: src/lib/api/catalog/catalog-api.repository.ts, before_blob: 'a19699d441396ab579ab8d7f5353a2f6ff4db093', after_blob: '938e48cd1462005863e9eb1c34fe8904910ad9c4'}
+    - {path: src/lib/api/catalog/mock-catalog.repository.ts, before_blob: 'f25315d1acc53650e4e80c18be916a1580faed3d', after_blob: '006b1e885ccbbc143d1e7234295411ee774ca080'}
+    - {path: src/lib/api/catalog/catalog-adapter.harness.ts, before_blob: '03a54775da77b90370670f15d6c60977b15f8f16', after_blob: 'e1be8d9780e7d6de4fff4e4033b54c2cc1690fce'}
+    - {path: src/lib/category-membership.ts, before_blob: 'd40bdcde0bf833d458964d555cc8a0c7593c0e42', after_blob: 'f95f2267c3cdcebd950bcaf5af991ed8fa7ca8ab'}
+    - {path: src/lib/data/navigation.ts, before_blob: 'fab0d2e87404b546ef3fc94205aab1decd54db18', after_blob: '584b4f03af52b7c1b76d39475ca2d2c60dba0fe1'}
+    - {path: src/lib/data/shop-routes.ts, before_blob: 'ed731f2fe6dc3427575b1d1ad07fa2bd8066da62', after_blob: 'd277836f9218d908498d01634bd7131d3af66cd1'}
+    - {path: src/lib/product-listing.ts, before_blob: '9e61ee9004d18085038255a6c972a9c7740214a6', after_blob: 'f164ee9a84be1f8dce0ec2d155e670c5e2cd791e'}
+    - {path: src/types/navigation.ts, before_blob: '76f96b5e30de12218cd5f6710926cb9322b953e8', after_blob: 'a0dd7addcbf1be8f868bbe68dc434206470ac4b7'}
+    - {path: src/types/product-listing.ts, before_blob: '4332fc0c75bea2ae5d0246e65d8a9292527bf629', after_blob: '770c7d7142c9fc56c14eb2e0dbd5e572915e1ddc'}
+    - {path: 'src/app/(shop)/[...segments]/page.tsx', before_blob: '63d1d9e936c4a40722c21095d18484ee29192101', after_blob: 'f07de7f19f9ad98fd4ef4aac8f7d07b818615797'}
+    - {path: src/components/shop/products/listing/ProductListingShell.tsx, before_blob: '06ee0ff657b0f491b9811e6b8c193689a7bc47a8', after_blob: '7260a015d55890a536778c61734fcd9a2e694ef7'}
+    - {path: src/components/shop/products/listing/BrandDirectory.tsx, before_blob: null, after_blob: '33fc5614f0dbb3da7cb74ef0b1b2f999787c4e73'}
+    - {path: src/components/shop/products/listing/listing-query.ts, before_blob: null, after_blob: '86ecb92a4db1e261b2eb6af776bd2bc4e00103c4'}
+    - {path: src/components/shop/products/listing/ProductListingSort.tsx, before_blob: '02e92911213fb95039b37bc14f1455ab43d298d8', after_blob: '141ab5149ffbc2761442f9e39159a4d47d5bf641'}
+    - {path: src/components/shop/cart/CartDrawer.tsx, before_blob: 'f673a86927a12d38b5e01cee10d6d541dcda02c1', after_blob: '0dd9cf24feae9b6913563f3fd65e3735cb54c802'}
+    - {path: tests/harnesses/prd2-catalog-routes.harness.ts, before_blob: '06acad852f928f3124eb2db5d8c948ebf3915ca2', after_blob: '584133a8daecdce2a136e9cd3d64edf6aa82aae7'}
+    - {path: tests/harnesses/catalog-brand-navigation.harness.ts, before_blob: null, after_blob: '6c61296fd4aaeb7958c45caa52d7bdc00f048386'}
+    - {path: tests/harnesses/catalog-listing-ui.harness.ts, before_blob: null, after_blob: '4bdbdec2e6630706075d3be165a1c368b424bc24'}
+    - {path: tests/harnesses/catalog-listing-acceptance.harness.ts, before_blob: null, after_blob: 'b4586b42f03bcf3d0e3159d9caeb8ee66e4b0d1a'}
+    - {path: tests/e2e/catalog-listing.spec.ts, before_blob: null, after_blob: '154d429cc92e2f3adf8fc261f01de2edb3ef2bb3'}
+  patches: {}
+  excluded_paths:
+    - README.md
+    - backend/package.json
+    - backend/OPERATIONS.md
+    - backend/src/modules/catalog-cutover/
+    - backend/test/catalog-cutover.integration-spec.ts
+    - backend/src/modules/catalog-scraper/generate-handoff.fixture.ts
+    - docker-compose.yml
+    - package.json
+    - scripts/
+    - recordings/
+    - test-results/
+    - backend/backup/
+    - scrape-output/
+    - openspec/
+    - .env*
+    - backend/.env*
+  commit_message: 'fix(catalog): align public listings and canonical taxonomy'
+  pr_title: 'fix(catalog): align public listings and canonical taxonomy'
+  pr_body: |
+    ## Summary
+    - Query the complete public catalog with server-side filtering, pagination and truthful facets.
+    - Resolve canonical categories, brand index and published aliases without false empty results or 404s.
+    - Consolidate active shaker taxonomy and provide the guarded local operation; do not execute it during delivery.
+    - Preserve accessible responsive controls and avoid closed-cart catalog request fan-out.
+
+    ## Scope
+    Exactly the 37 verified implementation/test files in the approved delivery plan. Previous cutover tooling, environment setup, unrelated docs, private evidence and generated browser artifacts are excluded and preserved.
+
+    ## Test plan
+    Existing verification PASS, zero blockers/critical findings: build/typecheck/lint/harnesses, 60 public categories, 18 corrective navigation paths, 12 additional Playwright scenarios, Offers 649 products over 33 pages, Suplementos 579 over 29 pages, and fresh read-only protected database integrity.
+    Reuse current persisted evidence; do not rerun full tests during Git delivery. Observe required GitHub checks before merge.
+
+    ## Review size exception
+    This atomic delivery contains 2,948 changed lines (2,487 additions and 461 deletions), including coupled API/adapters/routes and their tests. It requires explicit maintainer approval of the size exception before delivery. This is not an automatic exception or authorization.
+
+    ## Rollback
+    Revert the feature commit through normal review. Git rollback does not reverse the already completed local category consolidation; no database operation is performed by this delivery.
+  pr_labels: [type:bug]
+  pull_request_number: null
+  merge_method: merge
+  review_size:
+    additions: 2487
+    deletions: 461
+    total_changed_lines: 2948
+    requires_explicit_size_exception: true
+    exception_rationale: Deliver the exact jointly verified implementation as one atomic PR rather than invent unverified intermediate patches of the large route replacement.
+  work_units:
+    reference: openspec/changes/catalog-listing-taxonomy-alignment/tasks.md
+    included: [WU1, WU2, WU3, WU4, WU5, WU6, WU7, WU8]
+    grouping: One atomic change commit with behavior, tests and local operational tooling together; oversized grouping requires the explicitly requested exception.
+  execution_constraints:
+    - No direct push to main; push only the planned feature branch and merge its exact created PR into main.
+    - No force push, rebase, hard reset, clean, stash, branch deletion, source edits, unrelated staging or issue creation.
+    - Do not commit delivery.yaml, other OpenSpec operational files, secrets, backups, recordings or test-results.
+    - Do not execute category consolidation, cutover, reset, import, migration or R2 operations.
+    - If any approved file content or verification identity changed, stop with VERIFY_STALE or PLAN_MISMATCH.
+    - Merge only the exact planned PR/head after required checks pass and no conflicts or branch protection block it.
+    - Missing labels or unsupported merge permissions block rather than creating labels or relaxing protection.
+    - Preserve all excluded working-tree changes; leave the local workspace on the planned feature branch after delivery.
+  verification:
+    report: openspec/changes/catalog-listing-taxonomy-alignment/verify-report.md
+    evidence_revision: 'sha256:504a202a9b93e7063d6eb3171ae8dd09bb5cbf52f4087f7c78e42ccfb20c1d13'
+    implementation_snapshot: 'sha256:9de0ff317a3686a6db8a7b3549614eaff55b928687eb45bce1a5a39f399ad15c'
+    implementation_files: *verified_files
+result:
+  commit_sha: e360464e79c8c5159e61f076fe4fa199479fbca6
+  pushed: true
+  pull_request: {number: 166, url: 'https://github.com/nanonoir/entrenAR/pull/166'}
+  merge_sha: 4036a5d2706443c44cf04b14189d645ed1f4ec25
+blocked:
+  reason: null

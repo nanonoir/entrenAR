@@ -1,0 +1,299 @@
+schemaName: nanoir.sdd-status
+schemaVersion: 1
+changeName: catalog-listing-taxonomy-alignment
+artifactStore: hybrid
+executionMode: auto
+verificationExecutionBlocker:
+  code: PROVIDER_QUOTA
+  status: resolved
+  detail: After quota restoration, the verifier persisted the new read-only snapshot, passing integrity test and final report before its response transport timed out. Completion recovered from persisted evidence, not assumed from the failed tool response.
+  remaining: null
+  lastCompleted: Fresh integrity captured at 2026-10-04T01:23:46.290Z; test exit code 0, 5.3 seconds, approved snapshot hash matched.
+  finalVerdict: pass
+  resolvedEvidence: verify-report.md and verification-progress.md
+planningHome: {mode: repo-local, path: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec}
+changeRoot: C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment
+artifactPaths:
+  prd: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/prd.md]
+  proposal: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/proposal.md]
+  specs:
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-brand-navigation/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-public-api/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-frontend-adapters/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-taxonomy-sync/spec.md
+  frontendSpec: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/frontend-spec.md]
+  design: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/design.md]
+  tasks: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/tasks.md]
+  applyProgress: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/apply-progress.md]
+  verifyReport: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/verify-report.md]
+  delivery: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/delivery.yaml]
+contextFiles:
+  prd: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/prd.md]
+  proposal: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/proposal.md]
+  specs:
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-brand-navigation/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-public-api/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-frontend-adapters/spec.md
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/specs/catalog-taxonomy-sync/spec.md
+  frontendSpec: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/frontend-spec.md]
+  design: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/design.md]
+  tasks: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/tasks.md]
+  applyProgress: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/apply-progress.md]
+  verifyReport: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/verify-report.md]
+  delivery: [C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment/delivery.yaml]
+artifacts:
+  prd: done
+  proposal: done
+  specs: done
+  frontendSpec: done
+  design: done
+  tasks: done
+  applyProgress: done
+  verifyReport: done
+  delivery: done
+taskProgress: {total: 28, completed: 28, pending: 0, allComplete: true}
+dependencies:
+  init: all_done
+  prdCreate: all_done
+  prdRefine: all_done
+  proposal: all_done
+  specs: all_done
+  frontendSpecs: all_done
+  design: all_done
+  tasks: all_done
+  apply: all_done
+  verify: all_done
+  archive: ready
+applyState: all_done
+delivery:
+  status: delivered
+  commit: e360464e79c8c5159e61f076fe4fa199479fbca6
+  pr: https://github.com/nanonoir/entrenAR/pull/166
+  merge_commit: 4036a5d2706443c44cf04b14189d645ed1f4ec25
+actionContext:
+  mode: repo-local
+  workspaceRoot: C:/Users/Nahuel/Desktop/Trabajo/entrenAR
+  allowedEditRoots:
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/src/modules/catalog
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/src/modules/catalog-scraper
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/backend/backup
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/lib/api/catalog
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/lib/product-listing.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/lib/category-membership.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/lib/data/shop-routes.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/lib/data/navigation.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/types/navigation.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/types/product-listing.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/app/(shop)/[...segments]/page.tsx
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/components/shop/products/listing
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/src/components/shop/cart/CartDrawer.tsx
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/tests/harnesses/prd2-catalog-routes.harness.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/tests/harnesses/catalog-brand-navigation.harness.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/tests/harnesses/catalog-listing-ui.harness.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/tests/harnesses/catalog-listing-acceptance.harness.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/tests/e2e/catalog-listing.spec.ts
+    - C:/Users/Nahuel/Desktop/Trabajo/entrenAR/openspec/changes/catalog-listing-taxonomy-alignment
+relationships:
+  dependsOn: []
+  supersedes: []
+  amends: [prd3-local-real-catalog-cutover]
+  conflictsWith: []
+  sameDomainActiveChanges: [prd3-local-real-catalog-cutover]
+operationalAuthorization:
+  approved: true
+  evidence: User requested consolidation on the same local database and approved the plan by requesting tasks then apply and verify with Playwright across all categories.
+  scope: bounded local shaker category consolidation only, preserve all other product/data/config/R2 invariants
+  separateDatabaseAllowed: false
+  gitDeliveryApproved: false
+timeouts: {requestsSeconds: 15, browserSeconds: 30, diagnosticsSeconds: 60, testBuildSeconds: 180}
+nextRecommended: sdd-archive
+blockedReasons: []
+recoveryCheckpoint:
+  finalLiveSnapshotIntegrityPassed: true
+  finalSnapshotCapturedAt: "2026-10-04T01:23:46.290Z"
+  finalSnapshotHash: 8568d37871ad6d3baeb0c8785c559c12de3ed62808e734a48f28669b09437439
+  finalManifestHash: 9de0ff317a3686a6db8a7b3549614eaff55b928687eb45bce1a5a39f399ad15c
+  finalEvidenceRevision: 504a202a9b93e7063d6eb3171ae8dd09bb5cbf52f4087f7c78e42ccfb20c1d13
+  wu8SuplementosScope: verified-pass-579-products-29-pages
+  wu8OffersBeyond100: verified-pass-649-products-33-pages
+  wu8CartFanOutCorrection: verified-pass
+  wu8CartFanOutPriorPartialEdit: false
+  wu8CartFanOutAddedLines: 44
+  wu8CartFanOutRemovedLines: 1
+  wu8CartFanOutFiles: [src/components/shop/cart/CartDrawer.tsx, tests/e2e/catalog-listing.spec.ts]
+  wu8CartFanOutEvidenceReuse: cart-lifecycle-full-offers-and-suplementos-verified-pass
+  wu8OffersFanOutDiagnostic: complete
+  wu8OffersPacingEvidenceNeeded: false
+  wu8OffersRootCause: cart-drawer-mount-triggers-7-page-client-fetch-on-every-hard-goto
+  wu8OffersRecommendedFix: pass-enabled-isOpen-to-useCartOffers-in-CartDrawer
+  wu8CheckboxE2E: verified-pass
+  wu8CheckboxE2EAddedLines: 5
+  wu8CheckboxE2ERemovedLines: 1
+  wu8CheckboxE2EEvidenceReuse: application-a11y-harness-category60-nav18-brand-backend-database-unchanged
+  wu8SortAccessibility: verified-pass
+  wu8SortAccessibilityAddedLines: 20
+  wu8SortAccessibilityRemovedLines: 4
+  wu8SortAccessibilityFiles: [src/components/shop/products/listing/ProductListingSort.tsx, tests/harnesses/catalog-listing-ui.harness.ts]
+  wu8SortMobileImplementation: verified-pass-runtime-hydration-confirmed
+  wu8BrandFixtureTyping: verified-pass
+  wu8BrandFixtureTypingAddedLines: 2
+  wu8BrandFixtureTypingRemovedLines: 1
+  wu8BrandFixtureTypingEvidenceReuse: live-brand-redirect-and-runtime-harness-verified-pass
+  wu8Implementation: complete
+  wu8TasksCompleted: [8.1, 8.2, 8.3]
+  wu8AddedLines: 228
+  wu8SizeException: false
+  wu8Files: [src/lib/product-listing.ts, tests/harnesses/catalog-listing-acceptance.harness.ts, tests/e2e/catalog-listing.spec.ts]
+  wu8RuntimeVerification: stage-b-offers-rate-limited
+  wu8BrandNormalization: verified-pass-live-e2e
+  wu8BrandNormalizationPriorPartialEdit: false
+  wu8BrandNormalizationAddedLines: 25
+  wu8BrandNormalizationRemovedLines: 2
+  wu8BrandNormalizationFiles: [src/lib/product-listing.ts, tests/harnesses/catalog-listing-acceptance.harness.ts]
+  wu8BrandNormalizationVerification: verified-pass
+  wu8BrandNormalizationEvidenceReuse: category60-navigation18-backend-database-unchanged-targets-retained-focused-brand-regression-required
+  wu8FixtureCorrection: verified-pass
+  wu8FixtureAffectedEvidence: acceptance-harness-and-typecheck-passed
+  wu8ApplicationEvidence: unchanged-canonical60-and-live-navigation18-proof-retained
+  stageBAdditionalCheckpoint2Evidence:
+    performanceScopePassed: true
+    controlPesoScopePassed: true
+    inclusiveFiltersPassed: true
+    shakersAndPermanentAliasesPassed: true
+    encodedStarRedirectPassed: true
+    desktopUrlControlsPassed: true
+    mobileUrlControlsPassed: true
+    offersBeyond100Passed: false
+    offersFailedPage: 11
+    offersTotalPages: 33
+  stageBNavigationCoverage:
+    passedPublishedUrls:
+      - /market/alfajor
+      - /market/barras
+      - /market/endulzantes
+      - /market/enlatado
+      - /market/frutos-secos
+      - /market/hierba-mate
+      - /market/jerky
+      - /market/pastas-de-mani
+      - /market/polvos-mezclas
+      - /market/salsas
+      - /indumentaria/entreno
+      - /indumentaria/shark
+      - /indumentaria/symmetry
+      - /indumentaria/xbelt
+      - /marcas/balboa-fit
+      - /marcas/framingham
+      - /marcas/notco
+      - /marcas/natures-bounty
+    totalCovered: 18
+    totalNavigationUrls: 18
+    allPublishedNavigationPassed: true
+    nextOffset: null
+    remainingNavigationCount: 0
+  wu8EvidenceReuse: {backendAndDatabase: unchanged, canonicalHealthyBranches: unchanged-selective-regression-required, navigationAndAliasTargets: stale, frontendBuildAndAffectedHarnesses: stale}
+  implementedTasks: [6.1, 6.2, 6.3, 6.4]
+  nextTask: null
+  mergeExecuted: true
+  focusedMockVerification: pass-primary-reported
+  backupPath: backend/backup/shaker-current-b8eeee8f-1089-4fb8-b097-cac60c1d41d9.json
+  backupHash: 3c53c71cbf6be9e2882f898a4d72723f18b4c541e544a8eef872c2196df10cd8
+  externalMockEvidence: {suitesPassed: 1, testsPassed: 12, durationSeconds: 13.062, outerTimeoutMilliseconds: 30000, rerun: false}
+  mergeStatus: committed
+  executedAt: '2026-10-03T02:44:13.893Z'
+  mergeReceipt: {added: 4, removed: 23, deleted: 1, noop: false}
+  executionReceiptPath: backend/backup/shaker-execution-31c15b99-c803-46dc-a47e-6eda6e1835ee.json
+  executionReceiptHash: 43fb109d620cccd6f610207c8ea7883d88feaf4cf16cc826ef401d2bb4cc2308
+  postCommitSnapshotHash: 8568d37871ad6d3baeb0c8785c559c12de3ed62808e734a48f28669b09437439
+  allProtectedTablesUnchanged: true
+  postCommitCounts: {products: 649, variants: 1119, images: 3790, categories: 60, links: 2105, rootMemberships: 23, obsoleteCategories: 0}
+  wu7Authoring: complete
+  wu7Files: [tests/harnesses/catalog-listing-acceptance.harness.ts, tests/e2e/catalog-listing.spec.ts]
+  wu7TasksCompleted: [7.1, 7.2, 7.3]
+  wu7RuntimeVerification: stage-b-additional-checkpoint-1
+  compilationCorrection: verified-pass
+  correctionAddedLines: 15
+  stageBAdditionalCheckpoint1:
+    starBrandPassed: true
+    enaBrandPassed: true
+    marcasDirectory86Passed: true
+    brandAliasesAudit: "4 aliases returned 404 (needs alias redirect)"
+    navCategoryAudit: "37/51 passed, 14 returned 404 (/market/*, /indumentaria/* nested links)"
+  stageBChunkCoverage:
+    backendLiveImage: verified-rebuilt
+    databaseSnapshotHash: 8568d37871ad6d3baeb0c8785c559c12de3ed62808e734a48f28669b09437439
+    catalogReferenceHash: 2dde25cdc2536566c46b25a05e90871c8f7bf8bab037be80c4f47f0807dee58e
+    coveredCategories:
+      - accesorios
+      - adaptogenos-hierbas
+      - alfajor
+      - antioxidantes
+      - barras
+      - cafe
+      - cafeina
+      - cinturones
+      - cla
+      - colageno
+      - combos
+      - control-de-apetito
+      - control-de-peso
+      - creatina
+      - creatina-y-pre
+      - eeas-bcaas
+      - endulzantes
+      - enlatado
+      - entrenamiento
+      - entreno
+      - fish-oil-omegas
+      - frutos-secos
+      - ganadores
+      - glutamina
+      - hidratacion-resistencia
+      - hierba-mate
+      - huesos-articulaciones
+      - indumentaria
+      - jerky
+      - l-carnitina
+      - market
+      - multivitaminicos
+      - munequeras
+      - nootropicos-concentracion
+      - pastas-de-mani
+      - performance
+      - plant-protein
+      - polvos-mezclas
+      - pre-intra-entreno
+      - probioticos-digestivos
+      - protein-bars
+      - protein-foods
+      - proteinas
+      - pump-vasodilatadores
+      - quemadores-de-grasa
+      - raw
+      - salsas
+      - shakers
+      - shark
+      - straps
+      - stress-sueno
+      - suplementos
+      - symmetry
+      - tinta-de-competicion
+      - vendas
+      - verdes-superalimentos
+      - vitaminas
+      - vitaminas-a-z
+      - whey-protein
+      - xbelt
+    totalCovered: 60
+    totalDiscovered: 60
+    allPublicCategoriesPassed: true
+    nextOffset: null
+    remainingCategoriesCount: 0
+  correctionRecoveredNewSourceLines: 0
+  correctionFiles: [src/lib/data/shop-routes.ts, src/lib/product-listing.ts, tests/e2e/catalog-listing.spec.ts, tests/harnesses/catalog-listing-acceptance.harness.ts]
+  stageAEvidenceReuse: {backendUnits: partial-reuse-unchanged-suites, backendBuild: verified, frontendAffectedTargets: verified, frontendUnchangedTargets: reusable, browser: in-progress-chunks}
+  canonicalNestedCorrection: verified-pass
+  canonicalNestedCorrectionFiles: [backend/src/modules/catalog/public-listing.ts, backend/src/modules/catalog/public-listing.spec.ts, backend/src/modules/catalog/catalog-query.service.ts, src/lib/product-listing.ts, tests/harnesses/catalog-listing-acceptance.harness.ts, tests/e2e/catalog-listing.spec.ts]
+  canonicalNestedAddedLines: 107
+  cumulativeAdditionBudgets: {wu1: 386, wu2: 348, wu4: 576, wu7: 451}
+  postNestedCorrectionEvidenceReuse: {catalogListingQueryUnits: verified-pass, backendBuildAndDeployment: verified-pass, frontendAffectedTargets: verified-pass, categoryBrowserSnapshot: chunk-0-pass, unrelatedSuites: reusable, databaseOracle: unchanged-verified-stage-b1}

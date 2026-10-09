@@ -1,0 +1,83 @@
+﻿# Product Specifications Catalog
+
+Catalog of canonical product and behavioral specifications for EntrenAR.
+- [`abandoned-carts`](./abandoned-carts/spec.md): Abandoned Carts Specification
+- [`admin-abandoned-carts-frontend-adapters`](./admin-abandoned-carts-frontend-adapters/spec.md): Admin Abandoned Carts Frontend Adapters Specification
+- [`admin-abandoned-carts-lifecycle`](./admin-abandoned-carts-lifecycle/spec.md): Admin Abandoned Carts Lifecycle Specification
+- [`admin-abandoned-carts-rbac-security`](./admin-abandoned-carts-rbac-security/spec.md): Admin Abandoned Carts RBAC Security Specification
+- [`admin-abandoned-carts-settings`](./admin-abandoned-carts-settings/spec.md): Admin Abandoned Carts Settings Specification
+- [`admin-auth-gateway`](./admin-auth-gateway/spec.md): Admin Auth Gateway Specification
+- [`admin-coupons`](./admin-coupons/spec.md): Admin Coupons Specification
+- [`admin-customers`](./admin-customers/spec.md): Admin Customers Specification
+- [`admin-customers-anonymization`](./admin-customers-anonymization/spec.md): Admin Customers Anonymization Specification
+- [`admin-customers-export`](./admin-customers-export/spec.md): Admin Customers Export Specification
+- [`admin-customers-frontend-adapters`](./admin-customers-frontend-adapters/spec.md): Admin Customers Frontend Adapters Specification
+- [`admin-customers-lifecycle`](./admin-customers-lifecycle/spec.md): Admin Customers Lifecycle Specification
+- [`admin-customers-rbac-security`](./admin-customers-rbac-security/spec.md): Admin Customers RBAC Security Specification
+- [`admin-dashboard`](./admin-dashboard/spec.md): Admin Dashboard Specification
+- [`admin-data-mocks`](./admin-data-mocks/spec.md): Admin Data Mocks Specification
+- [`admin-dirty-state-guard`](./admin-dirty-state-guard/spec.md): Admin Dirty State Guard Specification
+- [`admin-filter-drawers`](./admin-filter-drawers/spec.md): Admin Filter Drawers Specification
+- [`admin-form-actions`](./admin-form-actions/spec.md): Admin Form Actions Specification
+- [`admin-form-validation`](./admin-form-validation/spec.md): Admin Form Validation Specification
+- [`admin-layout`](./admin-layout/spec.md): Admin Layout Specification
+- [`admin-navigation`](./admin-navigation/spec.md): Admin Navigation Specification
+- [`admin-payment-methods`](./admin-payment-methods/spec.md): Admin Payment Methods Specification
+- [`admin-product-management`](./admin-product-management/spec.md): Admin Product Management Shipping Delta
+- [`admin-purchase-orders`](./admin-purchase-orders/spec.md): Admin Purchase Orders Specification
+- [`admin-route-cloaking`](./admin-route-cloaking/spec.md): Admin Route Cloaking Specification
+- [`admin-sales-flow`](./admin-sales-flow/spec.md): Admin Sales Flow Specification
+- [`admin-sales-frontend-adapters`](./admin-sales-frontend-adapters/spec.md): Admin Sales Frontend Adapters Specification
+- [`admin-sales-lifecycle`](./admin-sales-lifecycle/spec.md): Admin Sales Lifecycle Specification
+- [`admin-sales-rbac-security`](./admin-sales-rbac-security/spec.md): Admin Sales RBAC Security Specification
+- [`admin-shared-toasts`](./admin-shared-toasts/spec.md): Admin Shared Toasts Specification
+- [`admin-shipping-discounts`](./admin-shipping-discounts/spec.md): Admin Shipping Discounts Specification
+- [`admin-shipping-pickups`](./admin-shipping-pickups/spec.md): Admin Shipping Pickups Specification
+- [`admin-shipping-providers`](./admin-shipping-providers/spec.md): Admin Shipping Providers Specification
+- [`admin-shipping-tracking`](./admin-shipping-tracking/spec.md): Admin Shipping Tracking Specification
+- [`admin-statistics-aggregation-engine`](./admin-statistics-aggregation-engine/spec.md): Admin Statistics Aggregation Engine Specification
+- [`admin-statistics-api`](./admin-statistics-api/spec.md): Admin Statistics API Specification
+- [`admin-statistics-frontend-adapters`](./admin-statistics-frontend-adapters/spec.md): Admin Statistics Frontend Adapters Specification
+- [`admin-statistics-ui-integration`](./admin-statistics-ui-integration/spec.md): Admin Statistics UI Integration Specification
+- [`api-contract`](./api-contract/spec.md): API Contract Specification
+- [`auth-foundation`](./auth-foundation/spec.md): Auth Foundation Specification
+- [`backend-workspace`](./backend-workspace/spec.md): Backend Workspace Specification
+- [`branded-error-system`](./branded-error-system/spec.md): Branded Error System Specification
+- [`catalog-admin-api`](./catalog-admin-api/spec.md): Catalog Admin API Specification
+- [`catalog-brand-navigation`](./catalog-brand-navigation/spec.md): Catalog Brand Navigation Specification
+- [`catalog-consumer-compatibility`](./catalog-consumer-compatibility/spec.md): Catalog Consumer Compatibility Specification
+- [`catalog-frontend-adapters`](./catalog-frontend-adapters/spec.md): Catalog Frontend Adapters Specification
+- [`catalog-import-hardening`](./catalog-import-hardening/spec.md): Catalog Import Hardening Specification
+- [`catalog-ingestion-run`](./catalog-ingestion-run/spec.md): Catalog Ingestion Run Specification
+- [`catalog-manifest-import`](./catalog-manifest-import/spec.md): Catalog Manifest Import Specification
+- [`catalog-persistence`](./catalog-persistence/spec.md): Catalog Persistence Specification
+- [`catalog-product-model`](./catalog-product-model/spec.md): Catalog Product Model Specification
+- [`catalog-public-api`](./catalog-public-api/spec.md): Catalog Public API Specification
+- [`catalog-scraper-preparation`](./catalog-scraper-preparation/spec.md): Catalog Scraper Preparation Specification
+- [`catalog-target-identity`](./catalog-target-identity/spec.md): Catalog Target Identity Specification
+- [`catalog-taxonomy-sync`](./catalog-taxonomy-sync/spec.md): Catalog Taxonomy Sync Specification
+- [`checkout-complete`](./checkout-complete/spec.md): Checkout Complete Specification
+- [`checkout-quote`](./checkout-quote/spec.md): Checkout Quote Specification
+- [`checkout-ui-flow`](./checkout-ui-flow/spec.md): Checkout UI Flow Specification
+- [`client-support-actions`](./client-support-actions/spec.md): Client Support Actions Specification
+- [`commerce-coupons`](./commerce-coupons/spec.md): Commerce Coupons Specification
+- [`commerce-payments`](./commerce-payments/spec.md): Commerce Payments Specification
+- [`commerce-shipping`](./commerce-shipping/spec.md): Commerce Shipping Specification
+- [`crm-categories-management`](./crm-categories-management/spec.md): CRM Categories Management Specification
+- [`crm-inventory-tracking`](./crm-inventory-tracking/spec.md): CRM Inventory Tracking Specification
+- [`crm-products-drawers-redesign`](./crm-products-drawers-redesign/spec.md): CRM Products Drawers Redesign Specification
+- [`crm-products-list`](./crm-products-list/spec.md): CRM Products List Specification
+- [`crm-products-management`](./crm-products-management/spec.md): CRM Products Management Specification
+- [`customer-account`](./customer-account/spec.md): Customer Account Specification
+- [`database-foundation`](./database-foundation/spec.md): Database Foundation Specification
+- [`inventory-management`](./inventory-management/spec.md): Inventory Management Specification
+- [`inventory-sales-transactions`](./inventory-sales-transactions/spec.md): Inventory Sales Transactions Specification
+- [`local-catalog-cutover`](./local-catalog-cutover/spec.md): Local Catalog Cutover Specification
+- [`mock-deletion-gate`](./mock-deletion-gate/spec.md): Mock Deletion Gate Specification
+- [`money-calculation-engine`](./money-calculation-engine/spec.md): Money Calculation Engine Specification
+- [`order-history`](./order-history/spec.md): Order History Specification
+- [`production-hardening`](./production-hardening/spec.md): Production Hardening Specification
+- [`showcase-crm-data-reset`](./showcase-crm-data-reset/spec.md): Showcase CRM Data Reset Specification
+- [`static-support-pages`](./static-support-pages/spec.md): Static Support Pages Specification
+- [`ui-overlays`](./ui-overlays/spec.md): UI Overlays Specification
+

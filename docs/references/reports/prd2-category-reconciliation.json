@@ -1,0 +1,1168 @@
+{
+  "metadata": {
+    "generatedAt": "2026-09-27T02:16:39.855Z",
+    "targetCatalog": "https://entreno.com.ar/",
+    "sourceSitemap": "https://www.entreno.com.ar/sitemap.xml",
+    "totalCatalogProducts": 676,
+    "catalogCoverageRate": "100.00%",
+    "totalEvaluatedCategories": 65,
+    "activeProposedCategoriesCount": 61,
+    "rejectedCategoriesCount": 4,
+    "readinessForPrdRefinement": true
+  },
+  "summaryCounts": {
+    "totalSourceCategoriesEvaluated": 65,
+    "totalProposedActiveCategories": 61,
+    "actionBreakdown": {
+      "keep": 6,
+      "map": 15,
+      "create": 40,
+      "reject": 4
+    },
+    "productCategorization": {
+      "totalProductsInCatalog": 676,
+      "productsWithAtLeastOneCategory": 676,
+      "uncategorizedProductsCount": 0,
+      "productsWithAtLeastOneLeafCategory": 663,
+      "productsWithMidLevelCategoryOnly": 13,
+      "productsWithMultipleLeafCategories": 132
+    }
+  },
+  "validationInvariants": {
+    "uniqueActiveSlugs": true,
+    "validParentHierarchy": true,
+    "acyclicHierarchy": true,
+    "deterministicOrdering": true,
+    "notes": "All active normalized slugs are globally unique. Every parent reference resolves to a valid category slug. No cycles or self-ancestor chains exist."
+  },
+  "sourceTaxonomyFacts": {
+    "rootCategoriesCount": 9,
+    "functionalSubcategoriesCount": 5,
+    "functionalLeafCategoriesCount": 50,
+    "promotionalCategoriesCount": 2,
+    "marketingCollectionsCount": 1,
+    "brandCountInNav": 40,
+    "leafCategoryProductDistribution": {
+      "singleLeaf": 531,
+      "twoLeaves": 109,
+      "threeLeaves": 13,
+      "fourLeaves": 10
+    },
+    "topMultiCategoryOverlaps": [
+      {
+        "combination": "SHAKER + SHAKERS Y BOTELLAS",
+        "productCount": 20,
+        "reason": "Shakers cross-listed in root Shakers and Proteínas drinkware subcategory"
+      },
+      {
+        "combination": "BARRAS + PROTEIN BARS",
+        "productCount": 19,
+        "reason": "Protein bars cross-listed in Market Bars and Supplement Protein Bars"
+      },
+      {
+        "combination": "POLVOS & MEZCLAS + PROTEIN FOODS",
+        "productCount": 9,
+        "reason": "Functional pancake and meal mixes cross-listed in Market and Proteínas"
+      },
+      {
+        "combination": "GANADORES + WHEY PROTEIN",
+        "productCount": 8,
+        "reason": "High-protein gainer blends cross-listed in both Proteínas subcategories"
+      },
+      {
+        "combination": "ADAPTOGENOS Y HIERBAS + ENDULZANTES + PROBIOTICOS Y DIGESTIVOS + VERDES Y SUPERALIMENTOS",
+        "productCount": 7,
+        "reason": "Multi-ingredient superfood greens formulations"
+      },
+      {
+        "combination": "COLAGENO + HUESOS Y ARTICULACIONES",
+        "productCount": 5,
+        "reason": "Joint support collagen formulas cross-listed in Proteínas and Vitaminas"
+      },
+      {
+        "combination": "BARRAS + PROTEIN BARS + PROTEIN FOODS",
+        "productCount": 4,
+        "reason": "Functional high-protein bars cross-listed in three subcategories"
+      },
+      {
+        "combination": "PASTAS DE MANI + PROTEIN BARS",
+        "productCount": 3,
+        "reason": "Nut-butter protein snack bars"
+      },
+      {
+        "combination": "CONTROL DE APETITO + ENLATADO + PROTEIN FOODS",
+        "productCount": 3,
+        "reason": "High-protein canned meals marketed for appetite control"
+      },
+      {
+        "combination": "ALFAJOR + PROTEIN FOODS",
+        "productCount": 3,
+        "reason": "Protein alfajores categorized in Market Alfajores and Proteínas Foods"
+      },
+      {
+        "combination": "PRE & INTRA ENTRENO + PUMP & VASODILATADORES",
+        "productCount": 3,
+        "reason": "Dual-action pre-workout pump formulas"
+      },
+      {
+        "combination": "HUESOS Y ARTICULACIONES + VITAMINAS A-Z",
+        "productCount": 3,
+        "reason": "Calcium and D3 supplements for joint and bone health"
+      }
+    ],
+    "midLevelOnlyProducts": [
+      {
+        "id": "369791666",
+        "name": "INTEGRALMEDICA Beef Protein 900g – 30g Proteina Carne Zerolac",
+        "slug": "integralmedica-beef-protein-900g-30g-proteina-carne-zerolac-1iqgc",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "PROTEINAS"
+        ],
+        "missingLeafReason": "Beef protein does not fit into whey-protein or plant-protein subcategories."
+      },
+      {
+        "id": "354315913",
+        "name": "NATUSVITA Vitamina C Liposomal 500 mg + Zinc Bisglicinato - Softgel 60caps",
+        "slug": "natusvita-vitamina-c-liposomal-500-mg-zinc-bisglicinato-softgel-60caps-gyxoy",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "349704507",
+        "name": "FLINT Citrato de magnesio en polvo 300g - Sin TACC",
+        "slug": "flint-citrato-de-magnesio-en-polvo-300g-sin-tacc-s6lcy",
+        "assignedSourceCategories": [
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "349887384",
+        "name": "FLINT Citrato de Magnesio 60 Cápsulas - Máxima Absorción",
+        "slug": "flint-citrato-de-magnesio-60-capsulas-maxima-absorcion-jdvzl",
+        "assignedSourceCategories": [
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "345079678",
+        "name": "Gold Nutrition NAD Precursor 30 cápsulas",
+        "slug": "gold-nutrition-nad-precursor-30-capsulas-1vf1k",
+        "assignedSourceCategories": [
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "334184029",
+        "name": "RAW Beta Alanina en polvo 312g",
+        "slug": "raw-beta-alanina-en-polvo-312g-cws1i",
+        "assignedSourceCategories": [
+          "PRE INTRA & CREATINA"
+        ],
+        "missingLeafReason": "Beta alanine does not fit Creatina, Pre-Entreno, or BCAAs."
+      },
+      {
+        "id": "336730609",
+        "name": "AMPK Batido proteico listo para tomar 330ml",
+        "slug": "ampk-batido-proteico-listo-para-tomar-330ml-1l7fb",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "PROTEINAS"
+        ],
+        "missingLeafReason": "Ready-to-drink protein shake assigned only to parent Proteínas."
+      },
+      {
+        "id": "318346878",
+        "name": "GAT SPORT Suplemento Testrol Gold ES 60 caps",
+        "slug": "gat-sport-suplemento-testrol-gold-es-60-caps-83g1g",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Testosterone booster assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "280222867",
+        "name": "GRAVITON Protein 20 Sobres - comprar online",
+        "slug": "graviton-protein-20-sobres",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "PROTEINAS"
+        ],
+        "missingLeafReason": "Protein powder sachets assigned only to parent Proteínas."
+      },
+      {
+        "id": "271854186",
+        "name": "MRS TASTE Salsa de Soja Reducida en Sodio 160 ml - comprar online",
+        "slug": "mrs-taste-salsa-de-soja-reducida-en-sodio-160-ml",
+        "assignedSourceCategories": [
+          "MARKET"
+        ],
+        "missingLeafReason": "Omitted leaf checkbox in source store; assigned only to root Market."
+      },
+      {
+        "id": "271853711",
+        "name": "GOLD NUTRITION Hair Complex Skin & Nails 60 Cápsulas - comprar online",
+        "slug": "gold-nutrition-hair-complex-skin-nails-60-capsulas",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "Beauty complex assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "271853674",
+        "name": "GOLD NUTRITION ZMA 60 Cápsulas - comprar online",
+        "slug": "gold-nutrition-zma-60-capsulas",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "HOT ENTRENO",
+          "VITAMINAS & SUPLEMENTOS"
+        ],
+        "missingLeafReason": "ZMA formula assigned only to parent Vitaminas & Suplementos."
+      },
+      {
+        "id": "271853641",
+        "name": "GOLD NUTRITION HMB Ultra Concentrated 60 Cápsulas - comprar online",
+        "slug": "gold-nutrition-hmb-ultra-concentrated-60-capsulas",
+        "assignedSourceCategories": [
+          "SUPLEMENTOS",
+          "HOT ENTRENO",
+          "PERFORMANCE"
+        ],
+        "missingLeafReason": "HMB formula assigned only to parent Performance."
+      }
+    ]
+  },
+  "frontendRouteCompatibilityAndGaps": {
+    "severity": "HIGH",
+    "identifiedGaps": [
+      {
+        "gapCode": "CONTROL_DE_PESO_404",
+        "impactedRoutes": [
+          "/suplementos/control-de-peso",
+          "/suplementos/control-de-peso/*"
+        ],
+        "affectedProducts": 45,
+        "mechanism": "src/lib/data/shop-routes.ts omits 'control-de-peso' from supplementCategoryBySlug, returning { type: 'not-found' }. src/lib/product-listing.ts omits productCategorySlug from supplementListingGroupsBySegment, returning empty baseProducts.",
+        "recommendedFix": "Add 'control-de-peso' category to Prisma Category table, add to supplementCategoryBySlug in shop-routes.ts, and set productCategorySlug in product-listing.ts."
+      },
+      {
+        "gapCode": "PERFORMANCE_EMPTY_LISTING",
+        "impactedRoutes": [
+          "/suplementos/performance",
+          "/suplementos/performance/*"
+        ],
+        "affectedProducts": 82,
+        "mechanism": "In src/lib/data/shop-routes.ts, 'performance' is aliased to 'creatina-y-pre', but in src/lib/product-listing.ts, 'performance' has productCategorySlug: undefined, returning baseProducts: [].",
+        "recommendedFix": "Create dedicated 'performance' category under Suplementos in DB and map properly across shop-routes.ts and product-listing.ts."
+      },
+      {
+        "gapCode": "SUBCATEGORY_SLUGS_IMPORTER_GAP",
+        "impactedRoutes": [
+          "/suplementos/*/*",
+          "/market/*",
+          "/indumentaria/*"
+        ],
+        "affectedProducts": 663,
+        "mechanism": "src/lib/product-listing.ts filters subcategories using product.subcategorySlugs.includes(slug). The current catalog importer persists categories in ProductCategory join table but leaves Product.subcategorySlugs as empty array []. All subcategory listing pages consequently render 0 products or trigger notFound().",
+        "recommendedFix": "Update backend catalog-import repository or mapper to automatically populate Product.subcategorySlugs from the assigned ProductCategory leaf slugs."
+      },
+      {
+        "gapCode": "INDUMENTARIA_SUFFIX_COLLISION_MISMATCH",
+        "impactedRoutes": [
+          "/indumentaria/shark",
+          "/indumentaria/entreno",
+          "/indumentaria/xbelt",
+          "/indumentaria/symmetry",
+          "/indumentaria/raw"
+        ],
+        "affectedProducts": 24,
+        "mechanism": "Entreno uses Tiendanube suffixed slugs (shark1, entreno2, xbelt1, symmetry1, raw1) because brand slugs already existed. EntrenAR navigation.ts links to /indumentaria/shark, etc. Importing raw source slugs would cause 404.",
+        "recommendedFix": "Map suffixed source slugs to clean unsuffixed slugs (shark, entreno, xbelt, symmetry, raw) under parent 'indumentaria'."
+      },
+      {
+        "gapCode": "MARKET_SLUG_NAME_MISMATCH",
+        "impactedRoutes": [
+          "/market/polvos-mezclas"
+        ],
+        "affectedProducts": 16,
+        "mechanism": "Entreno URL slug is 'panqueques-mezclas', but visual navigation label and EntrenAR navigation.ts href is '/market/polvos-mezclas'.",
+        "recommendedFix": "Map source slug 'panqueques-mezclas' to normalized slug 'polvos-mezclas'."
+      },
+      {
+        "gapCode": "CREATINA_CITRULINA_SLUG_MISMATCH",
+        "impactedRoutes": [
+          "/suplementos/pre-intra-creatina/pump-vasodilatadores"
+        ],
+        "affectedProducts": 6,
+        "mechanism": "Entreno URL slug is 'citrulina', but navigation menu and EntrenAR navigation.ts href is '/suplementos/pre-intra-creatina/pump-vasodilatadores'.",
+        "recommendedFix": "Map source slug 'citrulina' to normalized slug 'pump-vasodilatadores'."
+      },
+      {
+        "gapCode": "PRIMARY_CATEGORY_ALPHA_SORT_BIAS",
+        "impactedRoutes": [
+          "/suplementos/proteinas",
+          "/market",
+          "/shakers"
+        ],
+        "affectedProducts": 132,
+        "mechanism": "backend/src/modules/catalog/catalog.mapper.ts determines product.categorySlug by picking categories[0] sorted alphabetically by category.id. A multi-category product (e.g. Shaker in Shakers and Proteínas) will have its primary category chosen arbitrarily based on CUID string order, hiding it from the other category's listing.",
+        "recommendedFix": "In PRD2, establish deterministic primary category selection rules (e.g. parent category preference or explicit hierarchy-derived primary flag)."
+      }
+    ]
+  },
+  "proposedCategorySnapshot": [
+    {
+      "sourceCategory": "SUPLEMENTOS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/",
+      "normalizedSlug": "suplementos",
+      "name": "Suplementos",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 575,
+      "currentEntrenArMapping": "suplementos (id: cat-supplements)",
+      "action": "keep",
+      "rationale": "Core root category in EntrenAR baseline. Contains all sports nutrition, proteins, creatines, vitamins, and performance formulas."
+    },
+    {
+      "sourceCategory": "MARKET",
+      "sourceUrl": "https://www.entreno.com.ar/market/",
+      "normalizedSlug": "market",
+      "name": "Market",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 101,
+      "currentEntrenArMapping": "market (id: cat-market)",
+      "action": "keep",
+      "rationale": "Core root category in EntrenAR baseline. Covers functional foods, protein bars, nut butters, and healthy pantry items."
+    },
+    {
+      "sourceCategory": "INDUMENTARIA",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/",
+      "normalizedSlug": "indumentaria",
+      "name": "Indumentaria",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 24,
+      "currentEntrenArMapping": "indumentaria (id: cat-clothing)",
+      "action": "keep",
+      "rationale": "Core root category in EntrenAR baseline for fitness clothing and athletic apparel."
+    },
+    {
+      "sourceCategory": "SHAKER",
+      "sourceUrl": "https://www.entreno.com.ar/shaker/",
+      "normalizedSlug": "shakers",
+      "name": "Shakers",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 20,
+      "currentEntrenArMapping": "shakers (id: cat-shakers)",
+      "action": "map",
+      "rationale": "Map singular Tiendanube URL slug 'shaker' to plural EntrenAR baseline slug 'shakers'."
+    },
+    {
+      "sourceCategory": "ACCESORIOS",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/",
+      "normalizedSlug": "accesorios",
+      "name": "Accesorios",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 7,
+      "currentEntrenArMapping": "accesorios (id: cat-accessories, currently hidden)",
+      "action": "keep",
+      "rationale": "Existing category in EntrenAR baseline. Requires updating visibility from HIDDEN to VISIBLE to accommodate 7 gear products."
+    },
+    {
+      "sourceCategory": "COMBOS",
+      "sourceUrl": "https://www.entreno.com.ar/combos/",
+      "normalizedSlug": "combos",
+      "name": "Combos",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 4,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Active promotional pack root category in Entreno containing 4 multi-product bundles (Protein + Creatine + Shaker)."
+    },
+    {
+      "sourceCategory": "ENTRENAMIENTO",
+      "sourceUrl": null,
+      "normalizedSlug": "entrenamiento",
+      "name": "Entrenamiento",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 0,
+      "currentEntrenArMapping": "entrenamiento (id: cat-training)",
+      "action": "keep",
+      "rationale": "Retained EntrenAR showcase category for local fixture compatibility. Does not conflict with scraped catalog."
+    },
+    {
+      "sourceCategory": "CINTURONES",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/cinturones/",
+      "normalizedSlug": "cinturones",
+      "name": "Cinturones",
+      "level": 1,
+      "parentSlug": "accesorios",
+      "sourceParentPath": "/accesorios/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Powerlifting and weightlifting belts."
+    },
+    {
+      "sourceCategory": "MUÑEQUERAS",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/munequeras/",
+      "normalizedSlug": "munequeras",
+      "name": "Muñequeras",
+      "level": 1,
+      "parentSlug": "accesorios",
+      "sourceParentPath": "/accesorios/",
+      "affectedProductCount": 3,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Wrist straps and wraps."
+    },
+    {
+      "sourceCategory": "STRAPS",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/straps/",
+      "normalizedSlug": "straps",
+      "name": "Straps",
+      "level": 1,
+      "parentSlug": "accesorios",
+      "sourceParentPath": "/accesorios/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Pull straps for deadlifts and heavy pulling."
+    },
+    {
+      "sourceCategory": "TINTA DE COMPETICION",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/tinta-de-competicion/",
+      "normalizedSlug": "tinta-de-competicion",
+      "name": "Tinta de Competición",
+      "level": 1,
+      "parentSlug": "accesorios",
+      "sourceParentPath": "/accesorios/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Bodybuilding contest tan and coloring."
+    },
+    {
+      "sourceCategory": "VENDAS",
+      "sourceUrl": "https://www.entreno.com.ar/accesorios/vendas/",
+      "normalizedSlug": "vendas",
+      "name": "Vendas",
+      "level": 1,
+      "parentSlug": "accesorios",
+      "sourceParentPath": "/accesorios/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Elastic knee and joint wraps."
+    },
+    {
+      "sourceCategory": "ENTRENO",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/entreno2/",
+      "normalizedSlug": "entreno",
+      "name": "Entreno",
+      "level": 1,
+      "parentSlug": "indumentaria",
+      "sourceParentPath": "/indumentaria/",
+      "affectedProductCount": 5,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map Tiendanube collision slug 'entreno2' to navigation slug 'entreno' (linked under /indumentaria/entreno)."
+    },
+    {
+      "sourceCategory": "RAW",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/raw1/",
+      "normalizedSlug": "raw",
+      "name": "Raw",
+      "level": 1,
+      "parentSlug": "indumentaria",
+      "sourceParentPath": "/indumentaria/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map Tiendanube collision slug 'raw1' to navigation slug 'raw' (linked under /indumentaria/raw)."
+    },
+    {
+      "sourceCategory": "SHARK",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/shark1/",
+      "normalizedSlug": "shark",
+      "name": "Shark",
+      "level": 1,
+      "parentSlug": "indumentaria",
+      "sourceParentPath": "/indumentaria/",
+      "affectedProductCount": 16,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map Tiendanube collision slug 'shark1' to navigation slug 'shark' (linked under /indumentaria/shark)."
+    },
+    {
+      "sourceCategory": "SYMMETRY",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/symmetry1/",
+      "normalizedSlug": "symmetry",
+      "name": "Symmetry",
+      "level": 1,
+      "parentSlug": "indumentaria",
+      "sourceParentPath": "/indumentaria/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map Tiendanube collision slug 'symmetry1' to navigation slug 'symmetry' (linked under /indumentaria/symmetry)."
+    },
+    {
+      "sourceCategory": "XBELT",
+      "sourceUrl": "https://www.entreno.com.ar/indumentaria/xbelt1/",
+      "normalizedSlug": "xbelt",
+      "name": "Xbelt",
+      "level": 1,
+      "parentSlug": "indumentaria",
+      "sourceParentPath": "/indumentaria/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map Tiendanube collision slug 'xbelt1' to navigation slug 'xbelt' (linked under /indumentaria/xbelt)."
+    },
+    {
+      "sourceCategory": "ALFAJOR",
+      "sourceUrl": "https://www.entreno.com.ar/market/alfajor/",
+      "normalizedSlug": "alfajor",
+      "name": "Alfajores Proteicos",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 9,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Protein-enriched alfajores; linked in navigation.ts under /market/alfajor."
+    },
+    {
+      "sourceCategory": "BARRAS",
+      "sourceUrl": "https://www.entreno.com.ar/market/barras/",
+      "normalizedSlug": "barras",
+      "name": "Barras",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 25,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Energy, cereal, and oat bars; linked in navigation.ts under /market/barras."
+    },
+    {
+      "sourceCategory": "CAFE",
+      "sourceUrl": "https://www.entreno.com.ar/market/cafe/",
+      "normalizedSlug": "cafe",
+      "name": "Café Funcional",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Infused specialty fitness coffee."
+    },
+    {
+      "sourceCategory": "ENDULZANTES",
+      "sourceUrl": "https://www.entreno.com.ar/market/endulzantes/",
+      "normalizedSlug": "endulzantes",
+      "name": "Endulzantes",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 7,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Non-caloric natural sweeteners; linked in navigation.ts under /market/endulzantes."
+    },
+    {
+      "sourceCategory": "ENLATADO",
+      "sourceUrl": "https://www.entreno.com.ar/market/enlatado/",
+      "normalizedSlug": "enlatado",
+      "name": "Enlatados",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 4,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Canned tuna, chicken, and high protein pantry goods; linked in navigation.ts under /market/enlatado."
+    },
+    {
+      "sourceCategory": "FRUTOS SECOS",
+      "sourceUrl": "https://www.entreno.com.ar/market/frutos-secos/",
+      "normalizedSlug": "frutos-secos",
+      "name": "Frutos Secos",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 4,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Almonds, walnuts, and dried fruit mixes; linked in navigation.ts under /market/frutos-secos."
+    },
+    {
+      "sourceCategory": "HIERBA MATE",
+      "sourceUrl": "https://www.entreno.com.ar/market/hierba-mate/",
+      "normalizedSlug": "hierba-mate",
+      "name": "Hierba Mate",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 2,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Organic and functional yerba mate; linked in navigation.ts under /market/hierba-mate."
+    },
+    {
+      "sourceCategory": "JERKY",
+      "sourceUrl": "https://www.entreno.com.ar/market/jerky/",
+      "normalizedSlug": "jerky",
+      "name": "Jerky",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 1,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Dried meat snacks; linked in navigation.ts under /market/jerky."
+    },
+    {
+      "sourceCategory": "PASTAS DE MANI",
+      "sourceUrl": "https://www.entreno.com.ar/market/pastas-de-mani/",
+      "normalizedSlug": "pastas-de-mani",
+      "name": "Pastas de Maní",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 12,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Peanut and nut butters; linked in navigation.ts under /market/pastas-de-mani."
+    },
+    {
+      "sourceCategory": "POLVOS & MEZCLAS",
+      "sourceUrl": "https://www.entreno.com.ar/market/panqueques-mezclas/",
+      "normalizedSlug": "polvos-mezclas",
+      "name": "Polvos & Mezclas",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 16,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'panqueques-mezclas' to navigation slug 'polvos-mezclas'."
+    },
+    {
+      "sourceCategory": "SALSAS",
+      "sourceUrl": "https://www.entreno.com.ar/market/salsas/",
+      "normalizedSlug": "salsas",
+      "name": "Salsas",
+      "level": 1,
+      "parentSlug": "market",
+      "sourceParentPath": "/market/",
+      "affectedProductCount": 19,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Zero calorie syrups and dressings; linked in navigation.ts under /market/salsas."
+    },
+    {
+      "sourceCategory": "CONTROL DE PESO",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/",
+      "normalizedSlug": "control-de-peso",
+      "name": "Control de peso",
+      "level": 1,
+      "parentSlug": "suplementos",
+      "sourceParentPath": "/suplementos/",
+      "affectedProductCount": 45,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Missing category in EntrenAR database and route maps. Linked in navigation.ts; produces 404 in frontend without DB category."
+    },
+    {
+      "sourceCategory": "PRE INTRA & CREATINA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/pre-intra-creatina/",
+      "normalizedSlug": "creatina-y-pre",
+      "name": "Creatina y pre",
+      "level": 1,
+      "parentSlug": "suplementos",
+      "sourceParentPath": "/suplementos/",
+      "affectedProductCount": 124,
+      "currentEntrenArMapping": "creatina-y-pre (id: cat-creatine-pre)",
+      "action": "map",
+      "rationale": "Map source slug 'pre-intra-creatina' to established EntrenAR baseline slug 'creatina-y-pre'."
+    },
+    {
+      "sourceCategory": "PERFORMANCE",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/performance/",
+      "normalizedSlug": "performance",
+      "name": "Performance",
+      "level": 1,
+      "parentSlug": "suplementos",
+      "sourceParentPath": "/suplementos/",
+      "affectedProductCount": 82,
+      "currentEntrenArMapping": "creatina-y-pre (route fallback in shop-routes.ts, missing in DB and product-listing.ts)",
+      "action": "create",
+      "rationale": "Missing category in EntrenAR database. Covers endurance, hydration, and glutamine. Produces empty listing in frontend if not created."
+    },
+    {
+      "sourceCategory": "PROTEINAS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/",
+      "normalizedSlug": "proteinas",
+      "name": "Proteínas",
+      "level": 1,
+      "parentSlug": "suplementos",
+      "sourceParentPath": "/suplementos/",
+      "affectedProductCount": 237,
+      "currentEntrenArMapping": "proteinas (id: cat-protein)",
+      "action": "keep",
+      "rationale": "Core subcategory for proteins under Suplementos in EntrenAR baseline."
+    },
+    {
+      "sourceCategory": "VITAMINAS & SUPLEMENTOS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/",
+      "normalizedSlug": "vitaminas",
+      "name": "Vitaminas",
+      "level": 1,
+      "parentSlug": "suplementos",
+      "sourceParentPath": "/suplementos/",
+      "affectedProductCount": 148,
+      "currentEntrenArMapping": "vitaminas (id: cat-vitamins)",
+      "action": "map",
+      "rationale": "Map source slug 'vitaminas-suplementos' to established EntrenAR baseline slug 'vitaminas'."
+    },
+    {
+      "sourceCategory": "CAFEINA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/cafeina/",
+      "normalizedSlug": "cafeina",
+      "name": "Cafeína",
+      "level": 2,
+      "parentSlug": "control-de-peso",
+      "sourceParentPath": "/suplementos/control-de-peso/",
+      "affectedProductCount": 6,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Caffeine tablets and energy boosters; linked in navigation.ts under /suplementos/control-de-peso/cafeina."
+    },
+    {
+      "sourceCategory": "CLA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/cla/",
+      "normalizedSlug": "cla",
+      "name": "CLA",
+      "level": 2,
+      "parentSlug": "control-de-peso",
+      "sourceParentPath": "/suplementos/control-de-peso/",
+      "affectedProductCount": 4,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Conjugated linoleic acid softgels; linked in navigation.ts under /suplementos/control-de-peso/cla."
+    },
+    {
+      "sourceCategory": "CONTROL DE APETITO",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/control-de-apetito/",
+      "normalizedSlug": "control-de-apetito",
+      "name": "Control de Apetito",
+      "level": 2,
+      "parentSlug": "control-de-peso",
+      "sourceParentPath": "/suplementos/control-de-peso/",
+      "affectedProductCount": 8,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Satiety capsules; linked in navigation.ts under /suplementos/control-de-peso/control-de-apetito."
+    },
+    {
+      "sourceCategory": "L-CARNITINA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/l-carnitina/",
+      "normalizedSlug": "l-carnitina",
+      "name": "L-Carnitina",
+      "level": 2,
+      "parentSlug": "control-de-peso",
+      "sourceParentPath": "/suplementos/control-de-peso/",
+      "affectedProductCount": 7,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "L-carnitine liquids and capsules; linked in navigation.ts under /suplementos/control-de-peso/l-carnitina."
+    },
+    {
+      "sourceCategory": "QUEMADORES DE GRASA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/control-de-peso/quemadores-de-grasa/",
+      "normalizedSlug": "quemadores-de-grasa",
+      "name": "Quemadores de Grasa",
+      "level": 2,
+      "parentSlug": "control-de-peso",
+      "sourceParentPath": "/suplementos/control-de-peso/",
+      "affectedProductCount": 18,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Thermogenics and fat loss complexes; linked in navigation.ts under /suplementos/control-de-peso/quemadores-de-grasa."
+    },
+    {
+      "sourceCategory": "CREATINA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/pre-intra-creatina/creatina/",
+      "normalizedSlug": "creatina",
+      "name": "Creatina",
+      "level": 2,
+      "parentSlug": "creatina-y-pre",
+      "sourceParentPath": "/suplementos/pre-intra-creatina/",
+      "affectedProductCount": 61,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Creatine monohydrate, creapure, and blends; linked in navigation.ts under /suplementos/pre-intra-creatina/creatina."
+    },
+    {
+      "sourceCategory": "EEAs & BCAAs",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/pre-intra-creatina/eeas-bcaas/",
+      "normalizedSlug": "eeas-bcaas",
+      "name": "EEAs & BCAAs",
+      "level": 2,
+      "parentSlug": "creatina-y-pre",
+      "sourceParentPath": "/suplementos/pre-intra-creatina/",
+      "affectedProductCount": 27,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Essential and branched-chain amino acids; linked in navigation.ts under /suplementos/pre-intra-creatina/eeas-bcaas."
+    },
+    {
+      "sourceCategory": "PRE & INTRA ENTRENO",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/pre-intra-creatina/pre-intra-entreno/",
+      "normalizedSlug": "pre-intra-entreno",
+      "name": "Pre & Intra Entreno",
+      "level": 2,
+      "parentSlug": "creatina-y-pre",
+      "sourceParentPath": "/suplementos/pre-intra-creatina/",
+      "affectedProductCount": 29,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Pre-workout stimulant formulas; linked in navigation.ts under /suplementos/pre-intra-creatina/pre-intra-entreno."
+    },
+    {
+      "sourceCategory": "PUMP & VASODILATADORES",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/pre-intra-creatina/citrulina/",
+      "normalizedSlug": "pump-vasodilatadores",
+      "name": "Pump & Vasodilatadores",
+      "level": 2,
+      "parentSlug": "creatina-y-pre",
+      "sourceParentPath": "/suplementos/pre-intra-creatina/",
+      "affectedProductCount": 6,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'citrulina' to navigation-defined slug 'pump-vasodilatadores' (linked in navigation.ts)."
+    },
+    {
+      "sourceCategory": "GLUTAMINA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/performance/glutamina/",
+      "normalizedSlug": "glutamina",
+      "name": "Glutamina",
+      "level": 2,
+      "parentSlug": "performance",
+      "sourceParentPath": "/suplementos/performance/",
+      "affectedProductCount": 15,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "L-glutamine powders; linked in navigation.ts under /suplementos/performance/glutamina."
+    },
+    {
+      "sourceCategory": "HIDRATACION Y RESISTENCIA",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/performance/hidratacion-y-resistencia/",
+      "normalizedSlug": "hidratacion-resistencia",
+      "name": "Hidratación y Resistencia",
+      "level": 2,
+      "parentSlug": "performance",
+      "sourceParentPath": "/suplementos/performance/",
+      "affectedProductCount": 57,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'hidratacion-y-resistencia' to navigation slug 'hidratacion-resistencia'."
+    },
+    {
+      "sourceCategory": "COLAGENO",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/colageno/",
+      "normalizedSlug": "colageno",
+      "name": "Colágeno",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 37,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Hydrolyzed collagen powders and blends; linked in navigation.ts under /suplementos/proteinas/colageno."
+    },
+    {
+      "sourceCategory": "GANADORES",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/ganadores/",
+      "normalizedSlug": "ganadores",
+      "name": "Ganadores de Peso",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 20,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Mass and weight gainers; linked in navigation.ts under /suplementos/proteinas/ganadores."
+    },
+    {
+      "sourceCategory": "PLANT PROTEIN",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/plant-protein/",
+      "normalizedSlug": "plant-protein",
+      "name": "Plant Protein",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 11,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Vegan / vegetarian protein powders; linked in navigation.ts under /suplementos/proteinas/plant-protein."
+    },
+    {
+      "sourceCategory": "PROTEIN BARS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/protein-bars/",
+      "normalizedSlug": "protein-bars",
+      "name": "Protein Bars",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 45,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "High protein snack bars; linked in navigation.ts under /suplementos/proteinas/protein-bars."
+    },
+    {
+      "sourceCategory": "PROTEIN FOODS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/protein-foods/",
+      "normalizedSlug": "protein-foods",
+      "name": "Protein Foods",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 29,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Protein puddings, pancake mixes, and meals; linked in navigation.ts under /suplementos/proteinas/protein-foods."
+    },
+    {
+      "sourceCategory": "SHAKERS Y BOTELLAS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/shakers-y-botellas/",
+      "normalizedSlug": "shakers-y-botellas",
+      "name": "Shakers y Botellas",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 24,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Sub-branch for drinkware inside Proteínas; linked in navigation.ts under /suplementos/proteinas/shakers-y-botellas."
+    },
+    {
+      "sourceCategory": "WHEY PROTEIN",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/proteinas/whey-protein/",
+      "normalizedSlug": "whey-protein",
+      "name": "Whey Protein",
+      "level": 2,
+      "parentSlug": "proteinas",
+      "sourceParentPath": "/suplementos/proteinas/",
+      "affectedProductCount": 94,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Primary protein powder segment; linked in navigation.ts under /suplementos/proteinas/whey-protein."
+    },
+    {
+      "sourceCategory": "ADAPTOGENOS Y HIERBAS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/adaptogenos-y-hierbas/",
+      "normalizedSlug": "adaptogenos-hierbas",
+      "name": "Adaptógenos y Hierbas",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 23,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'adaptogenos-y-hierbas' to navigation slug 'adaptogenos-hierbas'."
+    },
+    {
+      "sourceCategory": "ANTIOXIDANTES",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/antioxidantes/",
+      "normalizedSlug": "antioxidantes",
+      "name": "Antioxidantes",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 18,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Cellular antioxidant formulas; linked in navigation.ts under /suplementos/vitaminas-suplementos/antioxidantes."
+    },
+    {
+      "sourceCategory": "FISH OIL & OMEGAS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/fish-oil-omegas/",
+      "normalizedSlug": "fish-oil-omegas",
+      "name": "Fish Oil & Omegas",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 18,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Omega 3, 6, 9 and fish oil softgels; linked in navigation.ts under /suplementos/vitaminas-suplementos/fish-oil-omegas."
+    },
+    {
+      "sourceCategory": "HUESOS Y ARTICULACIONES",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/huesos-y-articulaciones/",
+      "normalizedSlug": "huesos-articulaciones",
+      "name": "Huesos y Articulaciones",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 21,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'huesos-y-articulaciones' to navigation slug 'huesos-articulaciones'."
+    },
+    {
+      "sourceCategory": "MULTIVITAMINICOS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/multivitaminicos/",
+      "normalizedSlug": "multivitaminicos",
+      "name": "Multivitamínicos",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 22,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Multivitamin complexes; linked in navigation.ts under /suplementos/vitaminas-suplementos/multivitaminicos."
+    },
+    {
+      "sourceCategory": "NOOTROPICOS & CONCENTRACION",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/nootropicos-concentracion/",
+      "normalizedSlug": "nootropicos-concentracion",
+      "name": "Nootrópicos & Concentración",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 4,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Brain performance, focus, and memory; linked in navigation.ts under /suplementos/vitaminas-suplementos/nootropicos-concentracion."
+    },
+    {
+      "sourceCategory": "PROBIOTICOS Y DIGESTIVOS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/probioticos-y-digestivos/",
+      "normalizedSlug": "probioticos-digestivos",
+      "name": "Probióticos y Digestivos",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 15,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'probioticos-y-digestivos' to normalized slug 'probioticos-digestivos'."
+    },
+    {
+      "sourceCategory": "STRESS & SUEÑO",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/stress-sueno/",
+      "normalizedSlug": "stress-sueno",
+      "name": "Stress & Sueño",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 8,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Melatonin, GABA, and sleep aids; linked in navigation.ts under /suplementos/vitaminas-suplementos/stress-sueno."
+    },
+    {
+      "sourceCategory": "VERDES Y SUPERALIMENTOS",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/verdes-y-superalimentos/",
+      "normalizedSlug": "verdes-superalimentos",
+      "name": "Verdes y Superalimentos",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 9,
+      "currentEntrenArMapping": null,
+      "action": "map",
+      "rationale": "Map source URL 'verdes-y-superalimentos' to navigation slug 'verdes-superalimentos'."
+    },
+    {
+      "sourceCategory": "VITAMINAS A-Z",
+      "sourceUrl": "https://www.entreno.com.ar/suplementos/vitaminas-suplementos/vitaminas-a-z/",
+      "normalizedSlug": "vitaminas-a-z",
+      "name": "Vitaminas A-Z",
+      "level": 2,
+      "parentSlug": "vitaminas",
+      "sourceParentPath": "/suplementos/vitaminas-suplementos/",
+      "affectedProductCount": 41,
+      "currentEntrenArMapping": null,
+      "action": "create",
+      "rationale": "Single vitamins and minerals; linked in navigation.ts under /suplementos/vitaminas-suplementos/vitaminas-a-z."
+    },
+    {
+      "sourceCategory": "HOT ENTRENO",
+      "sourceUrl": "https://www.entreno.com.ar/hot-entreno/",
+      "normalizedSlug": null,
+      "name": "Hot Entreno",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 59,
+      "currentEntrenArMapping": null,
+      "action": "reject",
+      "rationale": "Temporary seasonal marketing collection; not a persistent functional taxonomy category."
+    },
+    {
+      "sourceCategory": "LIQUIDACION",
+      "sourceUrl": "https://www.entreno.com.ar/liquidacion/",
+      "normalizedSlug": null,
+      "name": "Liquidación",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 28,
+      "currentEntrenArMapping": "EntrenAR /ofertas route",
+      "action": "reject",
+      "rationale": "Promotional outlet collection; in EntrenAR, sale items are computed dynamically via compareAtPrice > price on /ofertas."
+    },
+    {
+      "sourceCategory": "MARCAS",
+      "sourceUrl": "https://www.entreno.com.ar/marcas/",
+      "normalizedSlug": null,
+      "name": "Marcas",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 676,
+      "currentEntrenArMapping": "Product.brand & /marcas/[slug]",
+      "action": "reject",
+      "rationale": "Brands are natively modeled in EntrenAR via Product.brand field and /marcas/[slug] route, not as database categories."
+    },
+    {
+      "sourceCategory": "OBJETIVOS",
+      "sourceUrl": "https://www.entreno.com.ar/objetivos/",
+      "normalizedSlug": null,
+      "name": "Objetivos",
+      "level": 0,
+      "parentSlug": null,
+      "sourceParentPath": null,
+      "affectedProductCount": 0,
+      "currentEntrenArMapping": null,
+      "action": "reject",
+      "rationale": "Static marketing landing page collection, not a functional catalog category in the navigation menu."
+    }
+  ]
+}
