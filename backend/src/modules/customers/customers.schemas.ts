@@ -16,7 +16,7 @@ export const customerIdentifierSchema = z.string({ error: "Customer ID must be a
   .trim()
   .min(1, { error: "Customer ID is required." })
   .max(128, { error: "Customer ID is too long." })
-  .regex(/^[A-Za-z0-9_-]+$/, { error: "Customer ID contains invalid characters." });
+  .regex(/^(?:[A-Za-z0-9_-]+|crm-showcase:[a-f0-9]{64})$/, { error: "Customer ID contains invalid characters." });
 
 export const customerIdParamSchema = z.object({ id: customerIdentifierSchema }).strict();
 export const customerIdSchema = customerIdentifierSchema;

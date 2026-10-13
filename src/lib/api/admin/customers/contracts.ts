@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { CustomerApiIssue, ParsedCustomerListQuery } from "./types";
 import { CUSTOMER_SORT_BY } from "./types";
 
-const identifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
+const identifierSchema = z.string().trim().min(1).max(128).regex(/^(?:[A-Za-z0-9_-]+|crm-showcase:[a-f0-9]{64})$/);
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 const emailSchema = z.string().trim().pipe(z.email()).transform((email) => email.toLowerCase());
 const addressFields = { city: optionalText(120), country: optionalText(120), floorOrApartment: optionalText(80), neighborhood: optionalText(120), number: optionalText(32), postalCode: optionalText(24), provinceOrState: optionalText(120), street: optionalText(200) } as const;

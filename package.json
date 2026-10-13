@@ -15,6 +15,8 @@
     "verify:frontend-acceptance": "npx tsx tests/harnesses/frontend-acceptance.harness.ts",
     "db:migrate": "npm --prefix backend run db:migrate:dev",
     "db:seed": "npm --prefix backend run seed"
+    ,"seed:crm-showcase": "npm --prefix backend run seed:crm-showcase --"
+    ,"test:crm-showcase": "npm --prefix backend run test:crm-showcase --"
     ,"catalog:scrape": "npm --prefix backend run catalog:scrape"
     ,"catalog:sync-categories": "npm --prefix backend run catalog:sync-categories"
     ,"catalog:handoff": "npm --prefix backend run catalog:handoff"

@@ -3,8 +3,11 @@ import { CustomersApiError, FetchCustomersApiClient } from "../client";
 import { MockCustomersRepository } from "../mock-customers.repository";
 import type { CreateCustomerInput } from "../types";
 import { clearAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
+import { customerIdSchema } from "../contracts";
 
 async function run(): Promise<void> {
+  assert(customerIdSchema.safeParse(`crm-showcase:${"a".repeat(64)}`).success, "Reserved deterministic showcase customer ID rejected.");
+  assert(!customerIdSchema.safeParse("other:identifier").success && !customerIdSchema.safeParse("crm-showcase:partial").success, "Showcase exception broadened arbitrary customer IDs.");
   await runMockScenario();
   await runApiScenario();
   await runFallbackAndErrorScenarios();
