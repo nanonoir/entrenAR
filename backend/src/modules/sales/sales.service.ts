@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { addMoney, multiplyMoney, normalizeMoney, subtractMoney } from "../../common/money/money.utils";
+import { calculateManualSale } from "./manual-sale.calculation";
 import { Prisma } from "../../generated/prisma/client";
-import { InventoryMovementKind, InventoryReferenceType, OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus, Role } from "../../generated/prisma/enums";
+import { InventoryMovementKind, InventoryReferenceType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus, Role } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { InventoryRepository } from "../inventory/inventory.repository";
 import { toAdminSaleDetailDto, toAdminSaleSummaryDto, type AdminSaleDetailDto, type AdminSaleSummaryDto, type SalesOrderRecord } from "./sales.mapper";
-import { manualSaleRecord, SalesRepository, type AppendHistoryInput, type CreateSaleRecord, type ManualSaleCalculatedValues, type TransactionClient } from "./sales.repository";
+import { manualSaleRecord, SalesRepository, type AppendHistoryInput, type CreateSaleRecord, type TransactionClient } from "./sales.repository";
 import { SALE_COMMAND, type AddSaleNote, type CancelSale, type ConvertOrderToSale, type CreateManualSale, type SalesCommand, type SalesListQuery, type ShipSale } from "./sales.schemas";
 import { resolveHistoryEventType, SaleTransitionError, transitionSale, type SaleState, type SaleTransitionOptions } from "./sales.state-machine";
 
@@ -196,19 +196,6 @@ function convertedSaleRecord(source: SalesOrderRecord): CreateSaleRecord {
   return { confirmedAt: new Date(), currency: source.currency, customerDni: source.customerDni ?? undefined, customerEmail: source.customerEmail, customerFirstName: source.customerFirstName, ...(source.customerId ? { customerId: source.customerId } : {}), customerLastName: source.customerLastName, customerPhone: source.customerPhone ?? undefined, customerSnapshot: jsonInput(source.customerSnapshot), deliverySnapshot: jsonInput(source.deliverySnapshot), deliveryType: source.deliveryType, discountAmount: decimal(source.discountAmount), discountSnapshot: jsonInput(source.discountSnapshot), ...(source.internalNotes ? { internalNotes: source.internalNotes } : {}), items: source.items.map((item) => ({ attributes: jsonInput(item.attributes), ...(item.compareAtPrice === null ? {} : { compareAtPrice: decimal(item.compareAtPrice) }), lineSubtotal: decimal(item.lineSubtotal), productId: item.productId, productName: item.productName, quantity: item.quantity, sku: item.sku, snapshot: jsonInput(item.snapshot), unitPrice: decimal(item.unitPrice), ...(item.variantId ? { variantId: item.variantId } : {}), ...(item.variantName ? { variantName: item.variantName } : {}), ...(item.weightGrams === null ? {} : { weightGrams: item.weightGrams }) })), number: manualNumber(), paymentMethodId: source.payment?.paymentMethodId ?? "manual", paymentMethodSnapshot: jsonInput(source.payment?.paymentMethodSnapshot ?? {}), ...(source.payment?.paymentOptionId ? { paymentOptionId: source.payment.paymentOptionId } : {}), paymentStatus: source.payment?.status ?? PaymentStatus.PENDING, ...(source.shippingAddressSnapshot == null ? {} : { shippingAddressSnapshot: jsonInput(source.shippingAddressSnapshot) }), shippingCost: decimal(source.shippingCost), shippingStatus: OrderShippingStatus.TO_PACK, sourceOrderId: source.id, status: OrderStatus.CONFIRMED, subtotal: decimal(source.subtotal), total: decimal(source.total), ...(source.userId ? { userId: source.userId } : {}) };
 }
 
-function calculateManualSale(input: CreateManualSale): ManualSaleCalculatedValues {
-  const items = input.items.map((item) => ({ lineSubtotal: multiplyMoney(item.unitPrice, item.quantity) }));
-  const subtotal = items.reduce((sum, item) => addMoney(sum, item.lineSubtotal), normalizeMoney(0));
-  const discountAmount = normalizeMoney(input.discountAmount);
-  const shippingCost = input.deliveryType === OrderDeliveryType.PICKUP ? normalizeMoney(0) : normalizeMoney(input.shippingCost);
-
-  if (discountAmount.greaterThan(subtotal)) {
-    throw new BadRequestException({ code: ERROR_CODE.VALIDATION_ERROR, message: "Manual sale discount cannot exceed its subtotal.", ok: false });
-  }
-
-  const total = addMoney(subtractMoney(subtotal, discountAmount), shippingCost);
-  return { discountAmount, items, shippingCost, subtotal, total };
-}
 function jsonInput(value: unknown): Prisma.InputJsonValue { return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue; }
 function decimal(value: { toString(): string } | number): number { return Number(value); }
 function manualNumber(): string { return `MANUAL-${randomUUID()}`; }

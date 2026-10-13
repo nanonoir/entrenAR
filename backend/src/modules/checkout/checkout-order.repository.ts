@@ -114,7 +114,7 @@ export class CheckoutOrderRepository {
       number: input.number,
       ...(input.shippingAddressSnapshot === undefined
         ? {}
-        : { shippingAddressSnapshot: input.shippingAddressSnapshot === null ? Prisma.JsonNull : input.shippingAddressSnapshot }),
+        : { shippingAddressSnapshot: input.shippingAddressSnapshot === null ? Prisma.DbNull : input.shippingAddressSnapshot }),
       shippingCost: input.shippingCost,
       status: input.status,
       subtotal: input.subtotal,
@@ -146,7 +146,7 @@ export class CheckoutOrderRepository {
         amount: input.payment.amount,
         ...(input.payment.bankTransferSnapshot === undefined
           ? {}
-          : { bankTransferSnapshot: input.payment.bankTransferSnapshot === null ? Prisma.JsonNull : input.payment.bankTransferSnapshot }),
+          : { bankTransferSnapshot: input.payment.bankTransferSnapshot === null ? Prisma.DbNull : input.payment.bankTransferSnapshot }),
         currency: input.payment.currency,
         orderId: order.id,
         paymentMethodId: input.payment.paymentMethodId,

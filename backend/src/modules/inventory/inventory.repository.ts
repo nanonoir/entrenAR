@@ -26,6 +26,8 @@ export interface InventoryTarget extends InventoryState {
 }
 
 export interface CreateInventoryHistoryInput extends InventoryState {
+  id?: string;
+  createdAt?: Date;
   actorId?: string;
   delta?: number;
   operation: InventoryOperation;
@@ -47,13 +49,23 @@ export interface InventoryStockItem {
   variantId?: string | null;
 }
 
-export interface InventoryIncrementOptions {
+export interface InventoryHistoricalContext {
+  createdAt?: Date;
+  movementId?: (productId: string, variantId: string | undefined, compensatesMovementId?: string) => string;
+}
+
+export interface InventoryIncrementOptions extends InventoryHistoricalContext {
   actorId?: string;
   origin: string;
   reason?: string;
+  inventoryEffectId?: string;
+  movementKind?: InventoryMovementKind;
+  operationId?: string;
+  referenceId?: string;
+  referenceType?: InventoryReferenceType;
 }
 
-export interface InventoryLedgerContext {
+export interface InventoryLedgerContext extends InventoryHistoricalContext {
   inventoryEffectId: string;
   movementKind: InventoryMovementKind;
   operationId: string;
@@ -248,6 +260,8 @@ export class InventoryRepository {
       if (!updated) throw new Error("Inventory target disappeared after deduction.");
 
       const movement = await this.createHistory(transaction, {
+        id: context.movementId?.(updated.productId, updated.variantId),
+        createdAt: context.createdAt,
         actorId: context.actorId,
         delta: -item.quantity,
         inventoryEffectId: context.inventoryEffectId,
@@ -310,6 +324,8 @@ export class InventoryRepository {
       if (!next) throw new Error("Inventory target disappeared after restoration.");
 
       const restoration = await this.createHistory(transaction, {
+        id: context.movementId?.(next.productId, next.variantId, deduction.id),
+        createdAt: context.createdAt,
         actorId: context.actorId,
         compensatesMovementId: deduction.id,
         delta: quantity,
@@ -418,6 +434,13 @@ export class InventoryRepository {
 
       await this.createHistory(transaction, {
         actorId: options.actorId,
+        id: options.movementId?.(next.productId, next.variantId),
+        createdAt: options.createdAt,
+        inventoryEffectId: options.inventoryEffectId,
+        movementKind: options.movementKind,
+        operationId: options.operationId,
+        referenceId: options.referenceId,
+        referenceType: options.referenceType,
         delta: item.quantity,
         operation: InventoryOperation.ADD,
         origin: options.origin,
@@ -451,6 +474,8 @@ export class InventoryRepository {
   ): Promise<{ id: string }> {
     return transaction.inventoryHistory.create({
       data: {
+        id: input.id,
+        createdAt: input.createdAt,
         actorId: input.actorId,
         compensatesMovementId: input.compensatesMovementId,
         delta: input.delta,

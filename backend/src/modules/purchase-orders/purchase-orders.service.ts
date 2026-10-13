@@ -2,13 +2,13 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { randomUUID } from "node:crypto";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { addMoney, multiplyMoney, normalizeMoney, type MoneyInput } from "../../common/money/money.utils";
-import { PurchaseOrderStatus } from "../../generated/prisma/enums";
+import { calculatePurchaseOrder as recalculate } from "./purchase-order.calculation";
+import { InventoryMovementKind, InventoryReferenceType, PurchaseOrderStatus } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { InventoryRepository } from "../inventory/inventory.repository";
 import { toSupplierResponse } from "../suppliers/suppliers.service";
 import { PURCHASE_ORDER_COMMAND, type CreatePurchaseOrderDto, type PurchaseOrderFilterQueryDto, type PurchaseOrderListResponseDto, type PurchaseOrderResponseDto, type UpdatePurchaseOrderDto } from "./purchase-orders.schemas";
-import { PurchaseOrdersRepository, type PurchaseOrderMoneyItem, type PurchaseOrderRecord, type PurchaseOrderUpdateRecord, type TransactionClient } from "./purchase-orders.repository";
+import { PurchaseOrdersRepository, type PurchaseOrderRecord, type PurchaseOrderUpdateRecord, type TransactionClient } from "./purchase-orders.repository";
 import { assertPurchaseOrderEditable, transitionPurchaseOrder } from "./purchase-orders.state-machine";
 
 export interface PurchaseOrderActor { id?: string; }
@@ -42,7 +42,7 @@ export class PurchaseOrdersService {
       const current = await this.currentOrThrow(transaction, id);
       const next = this.transitionOrConflict(current, PURCHASE_ORDER_COMMAND.RECEIVE);
       if (!await this.purchaseOrdersRepository.updateStatusIfCurrent(transaction, id, PurchaseOrderStatus.ORDERED, next.status, next.receivedAt)) throw this.conflict("Purchase order changed before receipt could be completed.");
-      await this.inventoryRepository.incrementStockForItems(transaction, current.items.map((item) => ({ productId: item.productId, quantity: item.quantity, variantId: item.variantId })), { actorId: actor?.id, origin: INVENTORY_ORIGIN.PURCHASE_ORDER, reason: `Purchase order ${current.orderNumber} receipt` });
+      await this.inventoryRepository.incrementStockForItems(transaction, current.items.map((item) => ({ productId: item.productId, quantity: item.quantity, variantId: item.variantId })), { actorId: actor?.id, origin: INVENTORY_ORIGIN.PURCHASE_ORDER, reason: `Purchase order ${current.orderNumber} receipt`, movementKind: InventoryMovementKind.PURCHASE_ORDER_RECEIPT, referenceType: InventoryReferenceType.PURCHASE_ORDER, referenceId: current.id, operationId: randomUUID() });
       return toPurchaseOrderResponse(await this.currentOrThrow(transaction, id));
     });
   }
@@ -84,12 +84,4 @@ function mergeDraft(current: PurchaseOrderRecord, changes: UpdatePurchaseOrderDt
     supplierId: changes.supplierId ?? current.supplierId,
     tax: changes.tax ?? current.tax,
   });
-}
-
-function recalculate(input: { expectedDate: Date | null; items: readonly { productId: string; quantity: number; sku: string; title: string; unitCost: MoneyInput; variantId?: string | null }[]; notes: string | null; orderNumber: string; shippingCost: MoneyInput; supplierId: string; tax: MoneyInput }): PurchaseOrderUpdateRecord {
-  const items: PurchaseOrderMoneyItem[] = input.items.map((item) => ({ ...item, totalCost: multiplyMoney(item.unitCost, item.quantity), unitCost: normalizeMoney(item.unitCost), variantId: item.variantId ?? null }));
-  const subtotal = items.reduce((sum, item) => addMoney(sum, item.totalCost), normalizeMoney(0));
-  const shippingCost = normalizeMoney(input.shippingCost);
-  const tax = normalizeMoney(input.tax);
-  return { expectedDate: input.expectedDate, items, notes: input.notes, orderNumber: input.orderNumber, shippingCost, subtotal, supplierId: input.supplierId, tax, total: addMoney(addMoney(subtotal, tax), shippingCost) };
 }
