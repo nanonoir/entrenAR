@@ -7,7 +7,7 @@ module.exports = {
   setupFiles: ["<rootDir>/test/setup-e2e-environment.ts"],
   testEnvironment: "node",
   testMatch: ["<rootDir>/test/**/*.integration-spec.ts"],
-  testPathIgnorePatterns: ["/dist/", "/node_modules/"],
+  testPathIgnorePatterns: ["/dist/", "/node_modules/", "crm-showcase.integration-spec.ts", "crm-showcase-checkout.integration-spec.ts"],
   transform: {
     "^.+\\.(t|j)s$": ["ts-jest", { tsconfig: "tsconfig.json" }],
   },

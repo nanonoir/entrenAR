@@ -27,3 +27,10 @@ Concrete unresolved technical debt items tracked across the EntrenAR repository.
 - **Context**: The hourly showcase data reset mechanism for public demo environments is specified but remains pending full implementation and cron scheduling.
 - **Impact**: Showcase demo modifications accumulate until manual database re-seeding occurs.
 - **Reference**: `docs/design-docs/2026-09-24-showcase-crm-data-reset-hourly.md`.
+
+## Resolved Items
+
+### 6. CRM Showcase Runtime Verification (Resolved: 2026-10-09)
+- **Context**: The initial isolated runtime verification was blocked due to pre-existing administrative authentication rows and unconfigured commerce prerequisites.
+- **Resolution**: Trusted owner explicitly authorized local execution on `127.0.0.1:5432/entrenar`. Verified with private backup (40 tables restored and validated on isolated port 55439), manual demo commerce options configured, real checkout (2/2) and persistence test suites (9/9) passed on isolated copies. Single-shot generation succeeded (80 orders, 20 customers, 3 suppliers, 4 purchases, 6 coupons, 8 abandoned carts) and rerun proved idempotent (`already-generated` with identical full-state digest). Preserved 42 ADMIN users and 127 refresh tokens. 21 real HTTP endpoints passed with 200 OK. Independent review concluded with PASS WITH FINDINGS (code and runtime accepted).
+- **Reference**: `docs/exec-plans/completed/crm-showcase-simulator.md`, `docs/exec-plans/completed/crm-showcase-simulator/local-owner-evidence.md`, `docs/exec-plans/completed/crm-showcase-simulator/backend-operator-guide.md`.
