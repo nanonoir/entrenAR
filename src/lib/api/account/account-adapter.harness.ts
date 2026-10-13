@@ -33,9 +33,30 @@ async function run(): Promise<void> {
     return;
   }
   await runRepositoryScenario();
+  await runReceiverSensitiveTransportScenario();
   await runMockRollbackScenario();
   await runApiStoreScenarioInChild();
   console.log("account adapter harness: mock/API DTO mapping, server authority, rollback, loading, empty, error, and legacy reconciliation passed");
+}
+
+async function runReceiverSensitiveTransportScenario(): Promise<void> {
+  const { FetchAccountApiClient, AccountApiError } = await import("./client");
+  const calls: string[] = [];
+  const client = new FetchAccountApiClient(async function (this: unknown, input) {
+    if (this !== undefined) throw new TypeError("Illegal invocation");
+    const path = new URL(String(input)).pathname;
+    calls.push(path);
+    return new Response(JSON.stringify({ code: "VALIDATION_ERROR", message: "Invalid input" }), { status: 400 });
+  }, "https://account.test/api/v1");
+  for (const path of ["/auth/register", "/auth/refresh"]) {
+    try {
+      await client.post(path, {}, { includeAuthorization: false });
+      throw new Error("Expected validation failure");
+    } catch (error) {
+      if (!(error instanceof AccountApiError) || error.status !== 400) throw error;
+    }
+  }
+  if (calls.length !== 2) throw new Error("Account transport did not reach the API");
 }
 
 async function runRepositoryScenario(): Promise<void> {

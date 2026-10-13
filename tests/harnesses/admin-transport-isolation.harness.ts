@@ -32,6 +32,23 @@ async function run(): Promise<void> {
   }
   assert(refreshCalls === 0, "403 incorrectly triggered admin refresh.");
   clearAdminAccessToken();
+  let protectedCalls = 0;
+  let nativeRefreshCalls = 0;
+  async function nativeLikeFetch(this: unknown, input: RequestInfo | URL): Promise<Response> {
+    assert(this === undefined || this === globalThis, "Native browser fetch received an illegal object receiver.");
+    if (String(input) === "/api/admin-session/refresh") {
+      nativeRefreshCalls += 1;
+      return new Response(JSON.stringify({ accessToken: "receiver-harness-token" }), { status: 200 });
+    }
+    protectedCalls += 1;
+    return protectedCalls === 1
+      ? new Response(JSON.stringify({ code: "UNAUTHORIZED" }), { status: 401 })
+      : new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }
+  const nativeClient = new AdminApiClient(nativeLikeFetch, "https://admin.test/api/v1");
+  const result = await nativeClient.get<{ ok: boolean }>("/admin/protected");
+  assert(result.ok && protectedCalls === 2 && nativeRefreshCalls === 1, "Native fetch receiver or single-refresh replay failed.");
+  clearAdminAccessToken();
   console.log("admin transport isolation harness: six transports, admin-token-only boundary, controlled 403 and no refresh passed");
 }
 
