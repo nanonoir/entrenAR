@@ -76,6 +76,43 @@ describe("InventoryRepository stock increments", () => {
 });
 
 describe("InventoryRepository referenced ledger movements", () => {
+  it("inserts historical deduction IDs/times per variant, retaining operation and effect ownership", async () => {
+    const harness = createHarness();
+    const createdAt = new Date("2026-09-01T12:00:00Z");
+    harness.transaction.productVariant.findFirst
+      .mockResolvedValueOnce({ id: "v1", productId: "p1", quantity: 5, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "v1", productId: "p1", quantity: 4, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "v2", productId: "p2", quantity: 3, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "v2", productId: "p2", quantity: 2, stockMode: StockMode.TRACKED });
+    harness.transaction.productVariant.updateMany.mockResolvedValue({ count: 1 });
+    harness.transaction.inventoryHistory.create.mockImplementation(async ({ data }) => ({ id: data.id }));
+    await harness.repository.deductStockForItems(harness.transaction, [{ productId: "p1", variantId: "v1", quantity: 1 }, { productId: "p2", variantId: "v2", quantity: 1 }], ledgerContext({ createdAt, movementId: (product, variant) => `historical:${product}:${variant}` }));
+    expect(harness.transaction.inventoryHistory.create.mock.calls.map(([input]) => input.data.id)).toEqual(["historical:p1:v1", "historical:p2:v2"]);
+    expect(harness.transaction.inventoryHistory.create).toHaveBeenCalledWith({ data: expect.objectContaining({ createdAt, inventoryEffectId: "effect-1", referenceType: "ORDER", referenceId: "order-1" }) });
+  });
+
+  it("inserts receipt references and historical context without a post-insert backdate", async () => {
+    const harness = createHarness();
+    const createdAt = new Date("2026-09-01T12:00:00Z");
+    harness.transaction.productVariant.findFirst
+      .mockResolvedValueOnce({ id: "v1", productId: "p1", quantity: 2, stockMode: StockMode.TRACKED })
+      .mockResolvedValueOnce({ id: "v1", productId: "p1", quantity: 12, stockMode: StockMode.TRACKED });
+    harness.transaction.productVariant.updateMany.mockResolvedValue({ count: 1 });
+    await harness.repository.incrementStockForItems(harness.transaction, [{ productId: "p1", variantId: "v1", quantity: 10 }], { origin: INVENTORY_ORIGIN.PURCHASE_ORDER, referenceType: InventoryReferenceType.PURCHASE_ORDER, referenceId: "purchase-1", movementKind: InventoryMovementKind.PURCHASE_ORDER_RECEIPT, operationId: "receipt-1", createdAt, movementId: () => "receipt:v1" });
+    expect(harness.transaction.inventoryHistory.create).toHaveBeenCalledWith({ data: expect.objectContaining({ id: "receipt:v1", createdAt, referenceId: "purchase-1", referenceType: "PURCHASE_ORDER", operationId: "receipt-1", delta: 10, resultingQuantity: 12 }) });
+  });
+
+  it("gives each historical compensation its own ID and original deduction pointer", async () => {
+    const harness = createHarness();
+    const createdAt = new Date("2026-09-02T12:00:00Z");
+    harness.transaction.inventoryHistory.findMany.mockResolvedValue([{ delta: -1, id: "deduction:v1", productId: "p1", variantId: "v1" }]);
+    harness.transaction.productVariant.findFirst.mockResolvedValue({ id: "v1", productId: "p1", quantity: 3, stockMode: StockMode.TRACKED });
+    harness.transaction.productVariant.updateMany.mockResolvedValue({ count: 1 });
+    harness.transaction.inventoryHistory.create.mockResolvedValue({ id: "restore:v1" });
+    await harness.repository.restoreUncompensatedDeductions(harness.transaction, ledgerContext({ createdAt, movementKind: InventoryMovementKind.SALE_CANCELLATION_RESTORATION, movementId: (_product, variant, deduction) => `restore:${variant}:${deduction}` }));
+    expect(harness.transaction.inventoryHistory.create).toHaveBeenCalledWith({ data: expect.objectContaining({ id: "restore:v1:deduction:v1", createdAt, compensatesMovementId: "deduction:v1", delta: 1 }) });
+    expect(harness.transaction.inventoryHistory.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ compensatedBy: null }) }));
+  });
   it("deducts a tracked product and variant under one ledger effect", async () => {
     const harness = createHarness();
     harness.transaction.productVariant.findFirst
