@@ -1,6 +1,7 @@
 import type { ProductDetail, ProductSummary } from "@/types/product";
 import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { productBelongsToCategory } from "@/lib/category-membership";
+import { selectRelatedProducts } from "@/lib/product-discovery";
 
 type ProductRoute = {
   type: "product";
@@ -89,7 +90,7 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
   if (section === "productos" && firstSlug && !secondSlug) {
     const [productResult, productsResult] = await Promise.all([
       catalog.getPublicProductBySlug(firstSlug),
-      catalog.getPublicListing({ limit: 4, page: 1, sort: "featured" }),
+      catalog.getPublicProducts(),
     ]);
     if (productResult.status === "error") return { type: "catalog-error", message: productResult.error.message };
     if (productResult.status === "loading") return { type: "catalog-error", message: "El producto todavía se está cargando." };
@@ -100,12 +101,13 @@ export async function resolveShopRoute(segments: string[]): Promise<ShopRouteRes
     }
 
     if (productsResult.status === "loading") return { type: "catalog-error", message: "El catálogo todavía se está cargando." };
-    const products = productsResult.status === "success" || productsResult.status === "empty" ? productsResult.data.items : [];
+    if (productsResult.status === "error") return { type: "catalog-error", message: productsResult.error.message };
+    const products = productsResult.data;
 
     return {
       type: "product",
       product,
-      related: products.filter((item) => item.isFeatured && item.id !== product.id).slice(0, 4),
+      related: selectRelatedProducts(product, products),
     };
   }
 

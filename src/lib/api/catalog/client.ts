@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { catalogApiConfig } from "@/lib/api/config";
 import { AdminApiClient, AdminApiError } from "@/lib/api/admin/client";
 
@@ -48,7 +49,9 @@ export class FetchCatalogApiClient implements CatalogApiClient {
         headers,
         cache: "no-store",
       });
-    } catch {
+    } catch (error) {
+      // Uncached fetch can signal request-time rendering rather than a network failure.
+      unstable_rethrow(error);
       throw new CatalogApiError({
         code: "CATALOG_API_UNAVAILABLE",
         message: "The catalog API is unavailable.",

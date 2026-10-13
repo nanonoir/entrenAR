@@ -138,6 +138,21 @@ async function run(): Promise<void> {
   });
   const apiProducts = await api.getPublicProducts();
 
+  const truthfulApi = new CatalogApiRepository({
+    get: async <T>(): Promise<T> => ({
+      items: [{ id: "truthful", name: "Truthful", slug: "whey-protein-isolate-900g", price: 1,
+        stock: 1, isBestSeller: false, isFeatured: false, categories: [],
+        variants: [{ id: "truthful-v", label: "Default", price: 1, stock: 1 }] }],
+      limit: 100, page: 1, total: 1, totalPages: 1,
+    } as T),
+  });
+  const truthful = await truthfulApi.getPublicProducts();
+  if (truthful.status !== "success" || truthful.data[0]?.isBestSeller !== false
+    || truthful.data[0]?.isFeatured !== false || truthful.data[0]?.brand !== ""
+    || truthful.data[0]?.categories?.length !== 0) {
+    throw new Error("API explicit false flags, absent brand or empty canonical membership were overwritten by fixtures.");
+  }
+
   if (
     apiProducts.status !== "success" ||
     apiProducts.data[0]?.slug !== "public-api-product" ||
@@ -153,7 +168,9 @@ async function run(): Promise<void> {
     price: 10,
     slug: `paged-${index}`,
     stock: 1,
-    variants: [],
+    brand: "Page Brand",
+    categories: [{ id: index === 100 ? "matching" : "other", name: "Category", slug: "category" }],
+    variants: [{ id: `paged-variant-${index}`, label: "Default", price: 10, stock: 1 }],
   });
   const pagedCalls: string[] = [];
   const pagedApi = new CatalogApiRepository({
@@ -173,6 +190,12 @@ async function run(): Promise<void> {
   if (allPublicProducts.status !== "success" || allPublicProducts.data.length !== 101
     || pagedCalls.length !== 2 || !pagedCalls[1]?.includes("page=2")) {
     throw new Error("Catalog adapter did not validate and traverse every bounded result page.");
+  }
+  const { selectRelatedProducts } = await import("@/lib/product-discovery");
+  const current = { ...allPublicProducts.data[0]!, id: "outside", brand: "Different Brand",
+    categories: [{ id: "matching", name: "Category", slug: "category" }] };
+  if (selectRelatedProducts(current, allPublicProducts.data)[0]?.id !== "paged-100") {
+    throw new Error("Related discovery did not find direct category affinity beyond page one.");
   }
 
   const duplicateApi = new CatalogApiRepository({
