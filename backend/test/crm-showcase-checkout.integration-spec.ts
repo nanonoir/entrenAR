@@ -1,0 +1,63 @@
+import "reflect-metadata";
+import { readFile } from "node:fs/promises";
+import { PrismaService } from "../src/common/prisma/prisma.service";
+import { authorizeTarget } from "../src/modules/crm-showcase/target-policy";
+import { readBaseline } from "../src/modules/crm-showcase/crm-showcase.service";
+import { digest } from "../src/modules/crm-showcase/scenario";
+import { InventoryRepository } from "../src/modules/inventory/inventory.repository";
+import { CheckoutRepository } from "../src/modules/checkout/checkout.repository";
+import { CatalogRepository } from "../src/modules/catalog/catalog.repository";
+import { CommerceRepository } from "../src/modules/commerce/commerce.repository";
+import { CheckoutService } from "../src/modules/checkout/checkout.service";
+import { checkoutQuoteRequestSchema, checkoutCompleteRequestSchema } from "../src/modules/checkout/checkout.schemas";
+
+describe("real checkout on preserved imported catalog copy", () => {
+  let prisma: PrismaService;
+  let checkout: CheckoutService;
+  let authDigest: string;
+  const prior = process.env.DATABASE_URL;
+  beforeAll(async () => {
+    const url = process.env.CRM_SHOWCASE_CHECKOUT_DATABASE_URL;
+    const path = process.env.CRM_SHOWCASE_CHECKOUT_AUTHORIZATION;
+    if (!url || !path) throw new Error("Explicit disposable checkout copy authorization required.");
+    const target = authorizeTarget(url, JSON.parse(await readFile(path, "utf8")), "test");
+    if (target.identity.database === "entrenar" || process.env.CRM_SHOWCASE_CHECKOUT_DISPOSABLE !== target.identity.fingerprint) throw new Error("Checkout cannot mutate the local owner database.");
+    process.env.DATABASE_URL = url;
+    prisma = new PrismaService();
+    const baseline = await prisma.$transaction((tx) => readBaseline(tx));
+    expect(digest(baseline)).toBe(target.authorization.baselineDigest);
+    authDigest = digest([baseline.User, baseline.RefreshToken, baseline.PasswordResetToken]);
+    checkout = new CheckoutService(new CheckoutRepository(prisma, new InventoryRepository(prisma)), new CatalogRepository(prisma), new CommerceRepository(prisma));
+  });
+  afterAll(async () => {
+    await prisma?.$disconnect();
+    if (prior === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = prior;
+  });
+  it.each(["shipping", "pickup"])("quotes, completes and replays %s without duplicate deductions or auth changes", async (deliveryType) => {
+    const categories = await new CatalogRepository(prisma).publicCheckoutCategoryIds(prisma);
+    const variants = await prisma.productVariant.findMany({ include: { product: { include: { categories: true } } }, where: { stockMode: "TRACKED", quantity: { gt: 2 }, product: { visibility: "VISIBLE", weightGrams: { not: null } } }, orderBy: { id: "asc" } });
+    const variant = variants.find((candidate) => candidate.product.categories.some((link) => categories.has(link.categoryId)));
+    if (!variant) throw new Error("Imported public tracked checkout variant required.");
+    const items = [{ productId: variant.productId, variantId: variant.id, quantity: 1 }];
+    const customer = { firstName: "Persona", lastName: "Ficticia DEMO", email: `checkout-${deliveryType}@example.invalid` };
+    const address = { city: "Ciudad Demo", province: "Buenos Aires", postalCode: "1000", street: "Calle Ficticia DEMO 100" };
+    const discovery = await checkout.quote(checkoutQuoteRequestSchema.parse({ items, address }));
+    const method = discovery.paymentMethods.find((option) => option.id === "bank-transfer");
+    expect(method).toBeDefined();
+    const selection = deliveryType === "shipping" ? { shippingMethodId: discovery.shippingOptions[0]?.id } : { pickupPointId: discovery.pickupPoints[0]?.id };
+    const quote = await checkout.quote(checkoutQuoteRequestSchema.parse({ items, address, deliveryType, ...selection, sessionToken: discovery.sessionToken }));
+    const input = checkoutCompleteRequestSchema.parse({ items, customer, address, deliveryType, ...selection, sessionToken: quote.sessionToken, quoteId: quote.quoteId, paymentMethodId: "bank-transfer", paymentOptionId: "direct-transfer", idempotencyKey: `real-demo-checkout-${deliveryType}` });
+    const result = await checkout.complete(input);
+    expect(result.status).toBe("pending");
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: result.orderId }, include: { payment: true, checkoutSession: { include: { cart: { include: { items: true } } } } } });
+    expect(order.payment?.status).toBe("PENDING");
+    expect(order.checkoutSession?.status).toBe("COMPLETED");
+    expect(order.checkoutSession?.cart.items).toHaveLength(0);
+    expect((await prisma.productVariant.findUniqueOrThrow({ where: { id: variant.id } })).quantity).toBe(variant.quantity! - 1);
+    const before = digest(await prisma.$transaction((tx) => readBaseline(tx)));
+    expect(await checkout.complete(input)).toEqual(result);
+    expect(digest(await prisma.$transaction((tx) => readBaseline(tx)))).toBe(before);
+    const baseline = await prisma.$transaction((tx) => readBaseline(tx));
+    expect(digest([baseline.User, baseline.RefreshToken, baseline.PasswordResetToken])).toBe(authDigest);
+  });
+});

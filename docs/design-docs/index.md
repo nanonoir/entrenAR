@@ -39,4 +39,5 @@ Catalog of durable technical architecture and design decisions for EntrenAR.
 - [`2026-09-29-prd3-local-catalog-import-safety.md`](./2026-09-29-prd3-local-catalog-import-safety.md): Design: Run-Bound Catalog Import Safety
 - [`2026-10-02-prd3-local-real-catalog-cutover.md`](./2026-10-02-prd3-local-real-catalog-cutover.md): Design: Local Real Catalog Cutover
 - [`2026-10-04-catalog-listing-taxonomy-alignment.md`](./2026-10-04-catalog-listing-taxonomy-alignment.md): Design: Catalog Listing and Taxonomy Alignment
+- [`2026-10-09-crm-showcase-simulator.md`](./2026-10-09-crm-showcase-simulator.md): Design: Isolated CRM Showcase Simulator — historical persistence, destination safety, inventory integrity and stock-aware discovery.
 
