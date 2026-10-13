@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev --config ./prisma.config.ts --schema ./prisma/schema.prisma",
     "seed": "prisma db seed",
+    "seed:crm-showcase": "node dist/src/modules/crm-showcase/crm-showcase.main.js",
     "showcase:reset": "node dist/src/modules/showcase-reset/showcase-reset.command.js",
     "catalog:import": "node dist/src/modules/catalog-import/catalog-import.main.js",
     "catalog:reconcile-import": "node dist/src/modules/catalog-import/reconcile-import.main.js",
@@ -26,6 +27,7 @@
     "catalog:benchmark": "node dist/src/modules/catalog-scraper/production-benchmark.js",
     "test:unit": "jest --config ./jest.config.js --runInBand",
     "test:integration": "jest --config ./jest.integration.config.js --runInBand",
+    "test:crm-showcase": "jest --config ./jest.crm-showcase.config.js --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
