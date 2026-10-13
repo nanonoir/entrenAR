@@ -110,7 +110,8 @@ export class AdminApiClient {
     else options.signal?.addEventListener("abort", abort, { once: true });
     pendingControllers.add(controller);
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, {
+      const fetchImplementation = this.fetchImplementation;
+      return await fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, {
         ...options,
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         cache: "no-store",
@@ -138,7 +139,8 @@ export class AdminApiClient {
   private async performRefresh(): Promise<string> {
     let response: Response;
     try {
-      response = await this.fetchImplementation("/api/admin-session/refresh", { cache: "no-store", credentials: "include", method: "POST" });
+      const fetchImplementation = this.fetchImplementation;
+      response = await fetchImplementation("/api/admin-session/refresh", { cache: "no-store", credentials: "include", method: "POST" });
     } catch {
       clearAdminAccessToken();
       throw new AdminApiError(503, "ADMIN_AUTH_UNAVAILABLE", "The administrator session is unavailable.");

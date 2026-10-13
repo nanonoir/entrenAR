@@ -154,7 +154,8 @@ export class FetchAccountApiClient implements AccountApiClient {
     }
 
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, requestInit);
+      const fetchImplementation = this.fetchImplementation;
+      return await fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, requestInit);
     } catch {
       throw new AccountApiError({
         code: "ACCOUNT_API_UNAVAILABLE",
@@ -192,7 +193,8 @@ export class FetchAccountApiClient implements AccountApiClient {
     let response: Response;
 
     try {
-      response = await this.fetchImplementation(`${this.baseUrl}/auth/refresh`, {
+      const fetchImplementation = this.fetchImplementation;
+      response = await fetchImplementation(`${this.baseUrl}/auth/refresh`, {
         cache: "no-store",
         credentials: "include",
         headers: new Headers({ Accept: "application/json" }),
