@@ -31,6 +31,7 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
     primaryImageId,
     quantity,
     selectedVariant,
+    selectOption,
     selectVariant,
     setQuantity,
   } = useProductVariantSelection(product);
@@ -48,14 +49,15 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
 
   return (
     <>
-      <section className="grid gap-8 xl:grid-cols-[auto_1fr]">
+      <section className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <ProductImageGallery
           brand={product.brand}
           images={product.images}
           activeImageId={primaryImageId}
+          activeVariantId={selectedVariant?.id}
           productName={product.name}
         />
-        <div className="grid content-start gap-6">
+        <div className="grid min-w-0 content-start gap-6">
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -113,7 +115,11 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
                 }`}
                 disabled={item.stock <= 0}
                 key={item.id}
-                onClick={() => selectVariant(item.id)}
+                onClick={() => {
+                  selectVariant(item.id);
+                  // Structured variants are selected by their option values in the existing hook.
+                  for (const [optionId, valueId] of Object.entries(item.optionValues ?? {})) selectOption(optionId, valueId);
+                }}
                 type="button"
               >
                 {item.label}
@@ -133,11 +139,14 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
             Agregar al carrito
           </Button>
         </div>
-        <div className="grid gap-3 rounded-card border border-border bg-surface p-4">
-          <h2 className="font-subtitle text-lg font-semibold uppercase">Descripción</h2>
-          <div className="text-sm leading-6 text-text-muted" dangerouslySetInnerHTML={{ __html: product.description }} />
         </div>
-        </div>
+      </section>
+      <section aria-labelledby="product-description-heading" className="mt-8 grid min-w-0 gap-3 rounded-card border border-border bg-surface p-4 sm:p-6">
+        <h2 id="product-description-heading" className="font-subtitle text-lg font-semibold uppercase">Descripción</h2>
+        <div
+          className="min-w-0 overflow-x-auto text-sm leading-6 text-text-muted [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full [&_p]:max-w-[80ch] [&_table]:max-w-full [&_ul]:max-w-[80ch] [&_ol]:max-w-[80ch] [&_pre]:whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: product.description }}
+        />
       </section>
       <FavoriteAuthModal onClose={closeFavoriteAuthModal} open={favoriteAuthModalOpen} />
     </>
