@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ProductCreateFormPage } from "./ProductCreateFormPage";
+import { ProductListClient } from "./ProductListClient";
 import { CategoriesManagementPage } from "./categories/CategoriesManagementPage";
 import { CategoryEditPage } from "./categories/CategoryEditPage";
 import { InventoryPage } from "./inventory/InventoryPage";
@@ -9,7 +10,7 @@ import { InventoryHistoryPage } from "./inventory/InventoryHistoryPage";
 import { getCatalogRepository, type CatalogReadResult } from "@/lib/api/catalog/catalog.repository";
 import type { AdminProduct, AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 
-const READ_MODE = { CATEGORIES: "categories", CATEGORY: "category", CREATE: "create", INVENTORY: "inventory", HISTORY: "history", EDIT: "edit" } as const;
+const READ_MODE = { LIST: "list", CATEGORIES: "categories", CATEGORY: "category", CREATE: "create", INVENTORY: "inventory", HISTORY: "history", EDIT: "edit" } as const;
 type ReadMode = (typeof READ_MODE)[keyof typeof READ_MODE];
 
 export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: string }) {
@@ -19,9 +20,9 @@ export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: st
     let active = true;
     const catalog = getCatalogRepository();
     void Promise.all([
-      mode === READ_MODE.INVENTORY ? catalog.getAdminProducts() : Promise.resolve(null),
+      mode === READ_MODE.LIST || mode === READ_MODE.INVENTORY ? catalog.getAdminProducts() : Promise.resolve(null),
       mode === READ_MODE.HISTORY || mode === READ_MODE.EDIT ? catalog.getAdminProductById(id ?? "") : Promise.resolve(null),
-      mode === READ_MODE.CREATE || mode === READ_MODE.CATEGORIES || mode === READ_MODE.CATEGORY || mode === READ_MODE.EDIT ? catalog.getAdminCategories() : Promise.resolve(null),
+      mode === READ_MODE.LIST || mode === READ_MODE.CREATE || mode === READ_MODE.CATEGORIES || mode === READ_MODE.CATEGORY || mode === READ_MODE.EDIT ? catalog.getAdminCategories() : Promise.resolve(null),
     ]).then(([productsResult, productResult, categoriesResult]) => {
       if (!active) return;
       setState({
@@ -35,6 +36,7 @@ export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: st
   }, [id, mode]);
 
   if (state.loading) return <div className="min-h-64" aria-busy="true" />;
+  if (mode === READ_MODE.LIST) return <ProductListClient categories={state.categories} products={state.products} />;
   if (mode === READ_MODE.CATEGORIES) return <CategoriesManagementPage categories={state.categories} />;
   if (mode === READ_MODE.CATEGORY) {
     const category = state.categories.find((item) => item.id === id);

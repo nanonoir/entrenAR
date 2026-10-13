@@ -1,5 +1,5 @@
-import { ProductPlaceholderPage } from "@/components/admin/products-flow/ProductPlaceholderPage";
+import { AdminCatalogReadBoundary } from "@/components/admin/products-flow/AdminCatalogReadBoundary";
 
 export default function ProductsPage() {
-  return <ProductPlaceholderPage title="Productos" description="La información protegida estará disponible después de validar tu sesión administrativa." />;
+  return <AdminCatalogReadBoundary mode="list" />;
 }

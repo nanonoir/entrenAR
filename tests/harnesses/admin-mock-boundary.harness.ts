@@ -137,6 +137,20 @@ function scanFile(filePath: string, source: string): ImportViolation[] {
 }
 
 async function run(): Promise<void> {
+  const productsPage = await readFile(resolve(PROJECT_ROOT, "src/app/(admin)/admin/productos/page.tsx"), "utf8");
+  if (!productsPage.includes('<AdminCatalogReadBoundary mode="list" />') || productsPage.includes("ProductPlaceholderPage")) {
+    throw new Error("Canonical products route must render the authenticated catalog list, not a placeholder.");
+  }
+  const listAlias = await readFile(resolve(PROJECT_ROOT, "src/app/(admin)/admin/productos/listado/page.tsx"), "utf8");
+  if (!listAlias.includes('redirect("/admin/productos")') || !listAlias.includes('from "next/navigation"')) {
+    throw new Error("Static listado alias must redirect to the canonical products route.");
+  }
+  const catalogBoundary = await readFile(resolve(PROJECT_ROOT, "src/components/admin/products-flow/AdminCatalogReadBoundary.tsx"), "utf8");
+  if (!catalogBoundary.includes('LIST: "list"') || !catalogBoundary.includes('if (mode === READ_MODE.LIST) return <ProductListClient categories={state.categories} products={state.products} />;')
+    || !catalogBoundary.includes("mode === READ_MODE.LIST || mode === READ_MODE.INVENTORY ? catalog.getAdminProducts()")
+    || !catalogBoundary.includes("mode === READ_MODE.LIST || mode === READ_MODE.CREATE")) {
+    throw new Error("List mode must load products and categories and render the existing list client.");
+  }
   const rootFiles = await Promise.all(ADMIN_UI_ROOTS.map((root) => collectSourceFiles(resolve(PROJECT_ROOT, root))));
   const supportFiles = ADMIN_BOUNDARY_SUPPORT_FILES.map((filePath) => resolve(PROJECT_ROOT, filePath));
   const files = [...new Set([...rootFiles.flat(), ...supportFiles])].sort();
