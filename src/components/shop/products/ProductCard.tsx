@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ProductBuyButton } from "@/components/shop/products/ProductBuyButton";
 import { ProductVisual } from "@/components/shop/products/ProductVisual";
 import { hasFreeShipping } from "@/lib/free-shipping";
+import { isProductAvailable } from "@/lib/product-discovery";
 import { formatCurrency, getDiscountPercentage } from "@/lib/pricing";
 import { getProductHref } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import type { ProductSummary } from "@/types/product";
+import type { ProductDetail, ProductSummary } from "@/types/product";
 
 type ProductCardProps = {
-  product: ProductSummary;
+  product: ProductSummary & Partial<Pick<ProductDetail, "images" | "variants">>;
   density?: "standard" | "compactMobile";
 };
 
@@ -32,9 +33,11 @@ export function ProductCard({ product, density = "standard" }: ProductCardProps)
   const hasDiscount = discountPercentage !== null && compareAtPrice !== undefined;
   const qualifiesForFreeShipping = hasFreeShipping(product.price);
   const isCompactMobile = density === "compactMobile";
+  const depleted = !isProductAvailable(product);
+  const image = product.images?.find((image) => image.url);
 
   return (
-    <article className="group grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-card border border-border bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+    <article className={cn("group grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-card border border-border shadow-card transition duration-200", depleted ? "bg-gray-50" : "bg-white hover:-translate-y-0.5 hover:shadow-lg")}>
       <div className="relative bg-white">
         {qualifiesForFreeShipping ? (
           <span
@@ -51,12 +54,21 @@ export function ProductCard({ product, density = "standard" }: ProductCardProps)
           className="block overflow-hidden"
           href={getProductHref(product.slug)}
         >
-          <ProductVisual
+          {image ? (
+            // Match the detail gallery's persisted-media rendering; placeholders remain a fallback.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={image.alt || product.name}
+              className={cn("aspect-[4/3] w-full bg-white object-contain p-4 transition duration-300", depleted ? "opacity-80" : "group-hover:scale-[1.02]")}
+              loading="lazy"
+              src={image.url}
+            />
+          ) : <ProductVisual
             brand={product.brand}
-            className="aspect-[4/3] rounded-none bg-white transition duration-300 group-hover:scale-[1.02]"
+            className={cn("aspect-[4/3] rounded-none bg-white transition duration-300", depleted ? "opacity-80" : "group-hover:scale-[1.02]")}
             name={product.name}
             tone={product.imageTone}
-          />
+          />}
         </Link>
       </div>
 
@@ -123,6 +135,7 @@ export function ProductCard({ product, density = "standard" }: ProductCardProps)
         </div>
 
         <ProductBuyButton
+          disabled={depleted}
           className={cn("mt-auto", isCompactMobile && compactMobile.buyButton)}
           productId={product.id}
           productSlug={product.slug}

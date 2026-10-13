@@ -6,18 +6,20 @@ type ProductBuyButtonProps = {
   productId: string;
   productSlug: string;
   className?: string;
+  disabled?: boolean;
 };
 
-export function ProductBuyButton({ productId, productSlug, className }: ProductBuyButtonProps) {
+export function ProductBuyButton({ productId, productSlug, className, disabled = false }: ProductBuyButtonProps) {
   return (
     <Button
-      className={cn("h-11 w-full gap-2 text-base", className)}
-      data-quick-buy-product-id={productId}
-      data-quick-buy-product-slug={productSlug}
+      className={cn("h-11 w-full gap-2 text-base", disabled && "disabled:bg-gray-200 disabled:text-gray-700 disabled:hover:bg-gray-200 disabled:opacity-100", className)}
+      disabled={disabled}
+      data-quick-buy-product-id={disabled ? undefined : productId}
+      data-quick-buy-product-slug={disabled ? undefined : productSlug}
       type="button"
     >
-      <span>Comprar</span>
-      <ShoppingCart aria-hidden size={20} />
+      <span>{disabled ? "Sin stock" : "Comprar"}</span>
+      {disabled ? null : <ShoppingCart aria-hidden size={20} />}
     </Button>
   );
 }

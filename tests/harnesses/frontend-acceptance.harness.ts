@@ -18,6 +18,8 @@ const DATA_SOURCE_ENVIRONMENT_KEYS = [
 ] as const;
 
 const HARNESS_PATHS = [
+  "tests/harnesses/product-discovery.harness.ts",
+  "tests/harnesses/product-card.harness.tsx",
   "tests/harnesses/admin-mock-boundary.harness.ts",
   "tests/harnesses/shop-mock-boundary.harness.ts",
   "tests/harnesses/prd2-catalog-routes.harness.ts",

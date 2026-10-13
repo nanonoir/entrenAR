@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { CatalogApiError, FetchCatalogApiClient, type CatalogApiClient } from "@/lib/api/catalog/client";
 import type {
   CatalogInventoryHistoryEntry,
@@ -205,6 +206,7 @@ export class CatalogApiRepository implements CatalogRepository {
         status: page.total === 0 ? "empty" : "success",
       };
     } catch (error) {
+      unstable_rethrow(error);
       return {
         error: {
           code: error instanceof CatalogApiError ? error.code : "CATALOG_ADAPTER_ERROR",
@@ -220,6 +222,7 @@ export class CatalogApiRepository implements CatalogRepository {
       const data = await this.client.get<CatalogListingFacet[]>("/brands");
       return { data, status: data.length > 0 ? "success" : "empty" };
     } catch (error) {
+      unstable_rethrow(error);
       return {
         error: {
           code: error instanceof CatalogApiError ? error.code : "CATALOG_ADAPTER_ERROR",
@@ -267,6 +270,7 @@ export class CatalogApiRepository implements CatalogRepository {
   }
 
   private failureOrEmpty<T>(error: unknown, empty: T): CatalogReadResult<T> {
+    unstable_rethrow(error);
     if (error instanceof CatalogApiError && error.status === 404) {
       return { data: empty, status: "empty" };
     }
@@ -299,7 +303,7 @@ function mapPublicProduct(product: PublicCatalogProductDto): ProductDetail {
   }));
 
   return {
-    brand: product.brand ?? fallback?.brand ?? "EntrenAR",
+    brand: product.brand ?? "",
     categoryName,
     categorySlug,
     ...(product.categorySlugs ? { categorySlugs: product.categorySlugs } : {}),
@@ -311,8 +315,8 @@ function mapPublicProduct(product: PublicCatalogProductDto): ProductDetail {
     id: product.id,
     imageTone,
     images: persistedImages ?? fallback?.images ?? createCompatibilityImages(product.id, product.name, imageTone),
-    isBestSeller: product.isBestSeller || fallback?.isBestSeller,
-    isFeatured: product.isFeatured || fallback?.isFeatured,
+    isBestSeller: product.isBestSeller ?? fallback?.isBestSeller,
+    isFeatured: product.isFeatured ?? fallback?.isFeatured,
     name: product.name,
     price,
     rating: fallback?.rating ?? 0,

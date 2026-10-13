@@ -1,6 +1,7 @@
 import { PUBLIC_INFINITE_STOCK } from "../inventory/inventory.mapper";
 import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
 import {
+  isCatalogProductAvailable,
   toAdminCatalogProduct,
   toPublicCatalogProduct,
   toPublicCategories,
@@ -8,6 +9,22 @@ import {
 } from "./catalog.mapper";
 
 describe("catalog mappers", () => {
+  it("ignores OUT_OF_STOCK numeric quantities and uses any vendible variant", () => {
+    const product = fixtureProduct();
+    product.variants[0]!.stockMode = StockMode.OUT_OF_STOCK;
+    product.variants[0]!.quantity = 999;
+    expect(isCatalogProductAvailable(product)).toBe(false);
+    expect(toPublicCatalogProduct(product)).toMatchObject({ stock: 0, variants: [{ stock: 0 }] });
+    product.variants.push({ ...product.variants[0]!, id: "second", stockMode: StockMode.TRACKED, quantity: 1 });
+    expect(isCatalogProductAvailable(product)).toBe(true);
+    expect(toPublicCatalogProduct(product).stock).toBe(1);
+    product.variants[1]!.stockMode = StockMode.INFINITE;
+    product.variants[1]!.quantity = null;
+    expect(isCatalogProductAvailable(product)).toBe(true);
+    expect(toPublicCatalogProduct(product).stock).toBe(PUBLIC_INFINITE_STOCK);
+    product.variants = [];
+    expect(isCatalogProductAvailable(product)).toBe(false);
+  });
   it("maps Decimal-compatible prices to finite numbers and keeps slug namespaces separate", () => {
     const product = fixtureProduct();
     const admin = toAdminCatalogProduct(product);

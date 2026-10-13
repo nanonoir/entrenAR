@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { ERROR_CODE } from "../../common/errors/api-error.response";
 import { CatalogVisibility } from "../../generated/prisma/enums";
 import {
+  isCatalogProductAvailable,
   toAdminCatalogProduct,
   toAdminCategoryTree,
   toPublicCatalogProduct,
@@ -103,6 +104,8 @@ export class CatalogQueryService {
     right: CatalogProduct,
     sort: PublicProductListQuery["sort"],
   ): number {
+    const availability = Number(isCatalogProductAvailable(right)) - Number(isCatalogProductAvailable(left));
+    if (availability !== 0) return availability;
     const leftPrice = Number(left.price);
     const rightPrice = Number(right.price);
     if (sort === CATALOG_PUBLIC_PRODUCT_SORT.PRICE_ASC) return leftPrice - rightPrice || left.id.localeCompare(right.id);

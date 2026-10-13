@@ -1,5 +1,6 @@
 import { NotFoundException } from "@nestjs/common";
-import { CatalogVisibility } from "../../generated/prisma/enums";
+import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
+import { CATALOG_PUBLIC_PRODUCT_SORT } from "./catalog.constants";
 import type { CatalogProduct } from "./catalog.mapper";
 import { CatalogQueryService } from "./catalog-query.service";
 import { publicProductListQuerySchema } from "./catalog.schemas";
@@ -52,6 +53,48 @@ function service(products: CatalogProduct[] = Array.from({ length: 21 }, (_, ind
 }
 
 describe("public catalog queries", () => {
+  it("keeps canonical ID ties within both availability groups across pages", async () => {
+    const products = [record(3), record(2), record(1), record(0)];
+    for (const product of products) {
+      product.price = record(0).price;
+      product.variants = [{ stockMode: StockMode.TRACKED, quantity: Number(["product-1", "product-3"].includes(product.id)) } as CatalogProduct["variants"][number]];
+    }
+    const pages = await Promise.all([1, 2].map((page) => service(products).publicProducts(publicProductListQuerySchema.parse({ sort: "price-asc", page, limit: 2 }))));
+    expect(pages.flatMap(({ items }) => items.map(({ id }) => id))).toEqual(["product-1", "product-3", "product-0", "product-2"]);
+  });
+
+  it.each(Object.values(CATALOG_PUBLIC_PRODUCT_SORT))("orders availability before page boundaries while preserving %s within groups", async (sort) => {
+    const products = Array.from({ length: 8 }, (_, index) => record(index));
+    // Existing ranking is independent of stock; use it as the secondary-order oracle.
+    const original = await service(products).publicProducts(publicProductListQuerySchema.parse({ sort, limit: 20 }));
+    const availableIds = new Set(["product-3", "product-5", "product-6"]);
+    for (const product of products) {
+      product.variants = [{ stockMode: StockMode.OUT_OF_STOCK, quantity: 100 } as CatalogProduct["variants"][number]];
+      if (availableIds.has(product.id)) product.variants.push({ stockMode: product.id === "product-5" ? StockMode.INFINITE : StockMode.TRACKED, quantity: product.id === "product-5" ? null : 1 } as CatalogProduct["variants"][number]);
+    }
+    const expected = [true, false].flatMap((available) => original.items.filter(({ id }) => availableIds.has(id) === available).map(({ id }) => id));
+    const pages = await Promise.all([1, 2, 3, 4].map((page) => service(products).publicProducts(publicProductListQuerySchema.parse({ sort, limit: 2, page }))));
+    expect(pages.flatMap(({ items }) => items.map(({ id }) => id))).toEqual(expected);
+    expect(pages.every(({ total, totalPages }) => total === 8 && totalPages === 4)).toBe(true);
+    expect(pages[0]!.facets).toEqual(original.facets);
+    expect(pages.flatMap(({ items }) => items).filter(({ id }) => !availableIds.has(id)).every(({ stock }) => stock === 0)).toBe(true);
+  });
+
+  it.each([
+    { search: "Product 2" }, { brandSlug: "ena" }, { categorySlug: "creatina" },
+    { offersOnly: "true" }, { categorySlugs: "creatina", minPrice: 12, maxPrice: 60 },
+  ])("keeps matching filters without adding available unrelated products: %j", async (filter) => {
+    const products = [record(0), record(1), record(2), record(3)];
+    const query = publicProductListQuerySchema.parse({ ...filter, limit: 20 });
+    const before = await service(products).publicProducts(query);
+    products[3]!.variants = [{ stockMode: StockMode.INFINITE, quantity: null } as CatalogProduct["variants"][number]];
+    const after = await service(products).publicProducts(query);
+    expect(after.items.map(({ id }) => id).sort()).toEqual(before.items.map(({ id }) => id).sort());
+    expect(after.total).toBe(before.total);
+    expect(after.facets).toEqual(before.facets);
+    expect(after.priceBounds).toEqual(before.priceBounds);
+  });
+
   it("paginates beyond page one while keeping full unique totals and facets", async () => {
     const result = await service().publicProducts(publicProductListQuerySchema.parse({ page: 2, limit: 20 }));
 

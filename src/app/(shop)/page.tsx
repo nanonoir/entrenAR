@@ -7,12 +7,14 @@ import { ProductCard } from "@/components/shop/products/ProductCard";
 import { QuickBuyController } from "@/components/shop/quick-buy/QuickBuyController";
 import { catalogData, getCatalogRepository } from "@/lib/api/catalog/catalog.repository";
 import { getHeroBanners, getHomeCategoryCards } from "@/lib/data/home";
+import { selectBestSellers } from "@/lib/product-discovery";
 
 export default async function HomePage() {
   const homeCategoryCards = getHomeCategoryCards();
-  const bestSellerProducts = catalogData(await getCatalogRepository().getPublicProducts(), []).filter(
-    (product) => product.isBestSeller,
-  );
+  const productsResult = await getCatalogRepository().getPublicProducts();
+  if (productsResult.status === "error") throw new Error(productsResult.error.message);
+  if (productsResult.status === "loading") throw new Error("El catálogo todavía se está cargando.");
+  const bestSellerProducts = selectBestSellers(catalogData(productsResult, []));
   const heroBanners = getHeroBanners();
 
   return (

@@ -27,12 +27,20 @@ The system MUST provide unauthenticated, read-only product listing and detail en
 #### Scenario: Compatible filtered page
 - GIVEN public products in multiple categories
 - WHEN a client requests a category-filtered sorted page
-- THEN it MUST return only matching public summaries with compatible numeric price and stock fields
+ - THEN it MUST return only matching public summaries with compatible numeric price and stock fields
 
 #### Scenario: Detail URL and missing product
 - GIVEN a product whose internal `publicSlug` differs from its admin slug
 - WHEN its public URL slug is requested, then an unknown slug is requested
 - THEN the detail MUST resolve first and the second MUST return `NOT_FOUND`
+
+### Requirement: Availability-first discovery
+
+Every public listing (including search, category, brand and offers) MUST order available matching products before depleted matching products before pagination, regardless of requested sort. Within each availability group the existing sort/relevance and stable ID tie order MUST remain unchanged. Filters, totals and facets MUST retain their existing semantics; availability MUST NOT introduce unrelated results.
+
+A product is available when any variant is INFINITE or TRACKED with positive quantity. OUT_OF_STOCK variants MUST project zero availability regardless of a stored quantity. Summaries use the numeric server projection and details use existential variant availability.
+
+Product cards MUST retain their image detail link and discount/free-shipping badges. Depleted cards MUST replace Comprar with one native disabled gray button labeled `Sin stock`, with readable contrast, no quick-buy trigger and no hover elevation. Only the image/background may be subtly attenuated; text MUST remain readable. No separate depleted badge or disabled link is displayed.
 
 ### Requirement: Public Stock and Mapping Safety
 

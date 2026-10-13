@@ -357,9 +357,13 @@ function assetUrl(storageKey: string): string {
   return baseUrl ? `${baseUrl}/${storageKey}` : storageKey;
 }
 
+export function isCatalogProductAvailable(product: Pick<CatalogProduct, "variants">): boolean {
+  return product.variants.some((variant) => toPublicStockNumber(variant) > 0);
+}
+
 function aggregateVariantStock(variants: CatalogProduct["variants"]): number {
   if (variants.some((variant) => variant.stockMode === StockMode.INFINITE)) return PUBLIC_INFINITE_STOCK;
-  return variants.reduce((total, variant) => total + (variant.quantity ?? 0), 0);
+  return variants.reduce((total, variant) => total + toPublicStockNumber(variant), 0);
 }
 
 function aggregateAdminProductStock(variants: CatalogProduct["variants"]): { quantity: number } | { type: "infinite" } {
