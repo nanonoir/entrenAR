@@ -14,10 +14,11 @@ const READ_MODE = { LIST: "list", CATEGORIES: "categories", CATEGORY: "category"
 type ReadMode = (typeof READ_MODE)[keyof typeof READ_MODE];
 
 export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: string }) {
-  const [state, setState] = useState<{ categories: AdminProductCategory[]; product: AdminProduct | null; products: AdminProduct[]; loading: boolean }>({ categories: [], product: null, products: [], loading: true });
+  const [state, setState] = useState<{ categories: AdminProductCategory[]; product: AdminProduct | null; products: AdminProduct[]; loading: boolean; fetchedAt: number }>({ categories: [], product: null, products: [], loading: true, fetchedAt: 0 });
 
   useEffect(() => {
     let active = true;
+    const requestedAt = Date.now();
     const catalog = getCatalogRepository();
     void Promise.all([
       mode === READ_MODE.LIST || mode === READ_MODE.INVENTORY ? catalog.getAdminProducts() : Promise.resolve(null),
@@ -30,6 +31,7 @@ export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: st
         product: readResult(productResult, null),
         products: readResult(productsResult, []),
         loading: false,
+        fetchedAt: requestedAt,
       });
     }).catch(() => { if (active) setState((current) => ({ ...current, loading: false })); });
     return () => { active = false; };
@@ -37,10 +39,10 @@ export function AdminCatalogReadBoundary({ mode, id }: { mode: ReadMode; id?: st
 
   if (state.loading) return <div className="min-h-64" aria-busy="true" />;
   if (mode === READ_MODE.LIST) return <ProductListClient categories={state.categories} products={state.products} />;
-  if (mode === READ_MODE.CATEGORIES) return <CategoriesManagementPage categories={state.categories} />;
+  if (mode === READ_MODE.CATEGORIES) return <CategoriesManagementPage categories={state.categories} fetchedAt={state.fetchedAt} />;
   if (mode === READ_MODE.CATEGORY) {
     const category = state.categories.find((item) => item.id === id);
-    return category ? <CategoryEditPage categories={state.categories} category={category} /> : <MissingCatalogRecord />;
+    return category ? <CategoryEditPage categories={state.categories} category={category} fetchedAt={state.fetchedAt} /> : <MissingCatalogRecord />;
   }
   if (mode === READ_MODE.CREATE) return <ProductCreateFormPage categories={state.categories} />;
   if (mode === READ_MODE.INVENTORY) return <InventoryPage products={state.products} />;

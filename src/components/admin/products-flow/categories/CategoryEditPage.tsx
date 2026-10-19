@@ -7,12 +7,12 @@ import { CategoryForm } from "@/components/admin/products-flow/categories/Catego
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminCategoriesStore } from "@/stores/admin-categories-store";
 
-export function CategoryEditPage({ categories, category }: { categories: AdminProductCategory[]; category: AdminProductCategory }) {
+export function CategoryEditPage({ categories, category, fetchedAt }: { categories: AdminProductCategory[]; category: AdminProductCategory; fetchedAt?: number }) {
   const initializeCategories = useAdminCategoriesStore((state) => state.initializeCategories);
 
   useEffect(() => {
-    initializeCategories(categories);
-  }, [categories, initializeCategories]);
+    initializeCategories(categories, fetchedAt);
+  }, [categories, fetchedAt, initializeCategories]);
 
   return (
     <div className="mx-auto grid w-full max-w-4xl min-w-0 gap-5">

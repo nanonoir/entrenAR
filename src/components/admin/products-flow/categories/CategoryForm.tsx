@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormActions } from "@/components/admin/form-actions/FormActions";
 import { ImageDropZone } from "@/components/admin/products-flow/product-form/ImageDropZone";
+import { toCategoryUpdateInput } from "@/lib/api/admin/categories";
 import type { AdminProductCategory } from "@/lib/data/admin/sales-flow/mock-products";
 import { categoryFormSchema, type CategoryFormInput, type CategoryFormValues } from "@/schemas/admin/product-schemas";
-import { useAdminCategoriesStore } from "@/stores/admin-categories-store";
+import { AdminCategoryActionError, useAdminCategoriesStore } from "@/stores/admin-categories-store";
 import { cn } from "@/lib/utils";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
@@ -56,6 +57,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
   const router = useRouter();
   const createCategory = useAdminCategoriesStore((state) => state.createCategory);
   const updateCategory = useAdminCategoriesStore((state) => state.updateCategory);
+  const isBusy = useAdminCategoriesStore((state) => state.pendingAction !== null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
     setSubmitError(null);
     try {
       if (category) {
-        await updateCategory(category.id, data);
+        await updateCategory(category.id, toCategoryUpdateInput(data));
         setMessage("Categoría actualizada.");
       } else {
         await createCategory(data);
@@ -83,8 +85,9 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
       }
       onDone?.();
       if (category) router.push("/admin/productos/categorias");
-    } catch {
-      setSubmitError(category ? "No se pudieron guardar los cambios. Intentá nuevamente." : "No se pudo crear la categoría. Intentá nuevamente.");
+    } catch (error) {
+      const fallback = category ? "No se pudieron guardar los cambios. Intentá nuevamente." : "No se pudo crear la categoría. Intentá nuevamente.";
+      setSubmitError(error instanceof AdminCategoryActionError ? `${fallback} ${error.message}` : fallback);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +130,7 @@ export function CategoryForm({ categories, category, onDone, parentId }: Categor
       </div>
       <FormActions className="pb-0">
         <Button type="button" variant="secondary" onClick={handleCancel}>Cancelar</Button>
-        <Button type="submit" disabled={isSubmitting} className={cn(isSubmitting && "opacity-70")}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : category ? "Guardar cambios" : "Crear categoría"}</Button>
+        <Button type="submit" disabled={isSubmitting || isBusy} className={cn(isSubmitting && "opacity-70")}>{isSubmitting ? <><Loader2 aria-hidden className="animate-spin" size={16} />Guardando…</> : category ? "Guardar cambios" : "Crear categoría"}</Button>
       </FormActions>
       {discardModal}
     </form>
