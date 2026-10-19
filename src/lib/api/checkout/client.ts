@@ -41,17 +41,19 @@ export class CheckoutApiError extends Error implements CheckoutOperationError {
   readonly status: number;
 
   constructor({
+    cause,
     code,
     issues = [],
     message,
     status,
   }: {
+    cause?: unknown;
     code: string;
     issues?: readonly CheckoutApiIssue[];
     message: string;
     status: number;
   }) {
-    super(message);
+    super(message, cause === undefined ? undefined : { cause });
     this.code = code;
     this.issues = issues;
     this.name = "CheckoutApiError";
@@ -149,9 +151,10 @@ export class FetchCheckoutApiClient implements CheckoutApiClient {
     if (hasBody) requestInit.body = JSON.stringify(options.body);
 
     try {
-      return await this.fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, requestInit);
-    } catch {
-      throw unavailableError();
+      const fetchImplementation = this.fetchImplementation;
+      return await fetchImplementation(`${this.baseUrl}${normalizePath(path)}`, requestInit);
+    } catch (error) {
+      throw unavailableError(error);
     }
   }
 
@@ -180,15 +183,16 @@ export class FetchCheckoutApiClient implements CheckoutApiClient {
     let response: Response;
 
     try {
-      response = await this.fetchImplementation(`${this.baseUrl}/auth/refresh`, {
+      const fetchImplementation = this.fetchImplementation;
+      response = await fetchImplementation(`${this.baseUrl}/auth/refresh`, {
         cache: "no-store",
         credentials: "include",
         headers: new Headers({ Accept: "application/json" }),
         method: CHECKOUT_API_HTTP_METHOD.POST,
       });
-    } catch {
+    } catch (error) {
       clearAccountAccessToken();
-      throw unavailableError();
+      throw unavailableError(error);
     }
 
     const payload = await readJson(response);
@@ -272,8 +276,9 @@ function readIssues(value: unknown, field: unknown): CheckoutApiIssue[] {
   return [{ code: "INVALID_FIELD", field: field.trim(), message: "Invalid value." }];
 }
 
-function unavailableError(): CheckoutApiError {
+function unavailableError(cause?: unknown): CheckoutApiError {
   return new CheckoutApiError({
+    cause,
     code: "CHECKOUT_API_UNAVAILABLE",
     message: "The checkout API is unavailable.",
     status: 503,
