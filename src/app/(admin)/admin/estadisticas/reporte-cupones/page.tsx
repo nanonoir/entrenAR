@@ -7,7 +7,7 @@ import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { Button } from "@/components/ui/Button";
 import type { StatisticsCoupon, StatisticsCouponsData } from "@/lib/api/admin/statistics/types";
-import { couponComparison, topCoupons, type CouponComparison, type CouponUsage } from "@/lib/data/admin/statistics/coupons";
+import type { CouponComparison, CouponUsage } from "@/lib/data/admin/statistics/coupons";
 import { useAdminStatisticsStore } from "@/stores/admin-statistics-store";
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -22,8 +22,9 @@ export default function CouponsReportPage() {
     void fetchCoupons();
   }, [customRange, fetchCoupons, period]);
 
-  const couponRows = coupons.data?.topCoupons ? toCouponRows(coupons.data.topCoupons) : topCoupons;
-  const comparisonRows = coupons.data?.comparison ? toCouponComparisonRows(coupons.data.comparison) : couponComparison;
+  const couponRows = coupons.data?.topCoupons ? toCouponRows(coupons.data.topCoupons) : [];
+  const comparisonRows = coupons.data?.comparison ? toCouponComparisonRows(coupons.data.comparison) : [];
+  const emptyMessage = coupons.isLoading ? "Cargando datos…" : coupons.error ? "No se pudieron cargar los datos." : "Todavía no hay cupones usados en el período.";
   const totalOrders = comparisonRows.reduce((sum, item) => sum + item.pedidos, 0);
 
   return (
@@ -39,8 +40,8 @@ export default function CouponsReportPage() {
       ) : null}
       {coupons.isLoading ? <p className="text-sm text-zinc-500" role="status" aria-live="polite">Actualizando estadísticas...</p> : null}
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <AdminCard><AdminCardHeader title="Cupones más usados" description="Top códigos por cantidad de usos." /><AdminBarChart data={couponRows} xKey="code" layout="vertical" bars={[{ dataKey: "usos", name: "Usos", color: "#39b000" }]} /></AdminCard>
-        <AdminCard><AdminCardHeader title="Ventas con/sin cupón" description="Comparación de pedidos y facturación." /><div className="grid gap-4">{comparisonRows.map((item) => { const percentage = totalOrders > 0 ? (item.pedidos / totalOrders) * 100 : 0; return <div key={item.label}><div className="mb-2 flex justify-between text-sm font-semibold"><span>{item.label}</span><span>{item.pedidos} pedidos</span></div><div className="h-3 rounded-full bg-zinc-100" role="progressbar" aria-label={item.label} aria-valuemax={totalOrders} aria-valuemin={0} aria-valuenow={item.pedidos}><div className={`h-3 rounded-full ${item.tone}`} style={{ width: `${percentage}%` }} /></div><p className="mt-2 text-sm text-zinc-500">{currencyFormatter.format(item.facturacion)}</p></div>; })}</div></AdminCard>
+        <AdminCard><AdminCardHeader title="Cupones más usados" description="Top códigos por cantidad de usos." />{couponRows.length === 0 ? <p className="py-8 text-center text-sm text-zinc-500">{emptyMessage}</p> : <AdminBarChart data={couponRows} xKey="code" layout="vertical" bars={[{ dataKey: "usos", name: "Usos", color: "#39b000" }]} />}</AdminCard>
+        <AdminCard><AdminCardHeader title="Ventas con/sin cupón" description="Comparación de pedidos y facturación." /><div className="grid gap-4">{comparisonRows.length === 0 ? <p className="py-8 text-center text-sm text-zinc-500">{emptyMessage}</p> : null}{comparisonRows.map((item) => { const percentage = totalOrders > 0 ? (item.pedidos / totalOrders) * 100 : 0; return <div key={item.label}><div className="mb-2 flex justify-between text-sm font-semibold"><span>{item.label}</span><span>{item.pedidos} pedidos</span></div><div className="h-3 rounded-full bg-zinc-100" role="progressbar" aria-label={item.label} aria-valuemax={totalOrders} aria-valuemin={0} aria-valuenow={item.pedidos}><div className={`h-3 rounded-full ${item.tone}`} style={{ width: `${percentage}%` }} /></div><p className="mt-2 text-sm text-zinc-500">{currencyFormatter.format(item.facturacion)}</p></div>; })}</div></AdminCard>
       </div>
     </div>
   );

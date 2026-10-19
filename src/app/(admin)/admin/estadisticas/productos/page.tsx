@@ -11,15 +11,15 @@ import type {
   StatisticsProduct,
   StatisticsProductSeriesPoint,
 } from "@/lib/api/admin/statistics/types";
-import {
-  inventoryAlerts,
-  productSalesSeries,
-  topProducts,
-  type InventoryAlertGroup,
-  type ProductSalesPoint,
-  type TopProductRow,
+import type {
+  InventoryAlertGroup,
+  ProductSalesPoint,
+  TopProductRow,
 } from "@/lib/data/admin/statistics/products";
 import { useAdminStatisticsStore } from "@/stores/admin-statistics-store";
+
+const MAX_ALERT_ITEMS = 10;
+const EMPTY_VALUE = "—";
 
 const formatter = new Intl.NumberFormat("es-AR");
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -41,20 +41,16 @@ export default function ProductStatsPage() {
     void fetchProducts();
   }, [customRange, fetchProducts, period]);
 
-  const productRows = products.data?.topProducts ? toProductRows(products.data.topProducts) : topProducts;
-  const fallbackMetrics = {
-    grossSales: topProducts.reduce((sum, product) => sum + product.ventasBrutas, 0),
-    reservedStock: topProducts.reduce((sum, product) => sum + product.stockReservado, 0),
-    unitsSold: topProducts.reduce((sum, product) => sum + product.unidadesVendidas, 0),
-  };
+  const productRows = products.data?.topProducts ? toProductRows(products.data.topProducts) : [];
   const metrics = {
-    grossSales: products.data?.metrics.revenue?.current ?? fallbackMetrics.grossSales,
-    reservedStock: products.data?.metrics.stockReserved?.current ?? fallbackMetrics.reservedStock,
-    unitsSold: products.data?.metrics.unitsSold?.current ?? fallbackMetrics.unitsSold,
+    grossSales: products.data?.metrics.revenue?.current,
+    reservedStock: products.data?.metrics.stockReserved?.current,
+    unitsSold: products.data?.metrics.unitsSold?.current,
   };
   const maxUnits = Math.max(...productRows.map((product) => product.unidadesVendidas), 0);
-  const salesSeries = products.data?.series ? toProductSalesSeries(products.data.series) : productSalesSeries;
-  const alertGroups = products.data?.inventoryAlerts ? toInventoryAlertRows(products.data.inventoryAlerts) : inventoryAlerts;
+  const salesSeries = products.data?.series ? toProductSalesSeries(products.data.series) : [];
+  const alertGroups = products.data?.inventoryAlerts ? toInventoryAlertRows(products.data.inventoryAlerts) : [];
+  const emptyMessage = products.isLoading ? "Cargando datos…" : products.error ? "No se pudieron cargar los datos." : "Sin ventas de productos en el período seleccionado.";
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6" aria-busy={products.isLoading}>
@@ -75,9 +71,9 @@ export default function ProductStatsPage() {
       {products.isLoading ? <p className="text-sm text-zinc-500" role="status" aria-live="polite">Actualizando estadísticas...</p> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <AdminCard><Metric label="Unidades vendidas" value={formatter.format(metrics.unitsSold)} /></AdminCard>
-        <AdminCard><Metric label="Ventas brutas por producto" value={currencyFormatter.format(metrics.grossSales)} /></AdminCard>
-        <AdminCard><Metric label="Stock reservado" value={formatter.format(metrics.reservedStock)} /></AdminCard>
+        <AdminCard><Metric label="Unidades vendidas" value={formatMetric(metrics.unitsSold, formatter)} /></AdminCard>
+        <AdminCard><Metric label="Ventas brutas por producto" value={formatMetric(metrics.grossSales, currencyFormatter)} /></AdminCard>
+        <AdminCard><Metric label="Stock reservado" value={formatMetric(metrics.reservedStock, formatter)} /></AdminCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -89,7 +85,9 @@ export default function ProductStatsPage() {
                 <tr><th scope="col" className="py-3">Producto</th><th scope="col">Categoría</th><th scope="col">Unidades</th><th scope="col">Ventas brutas</th><th scope="col">Stock</th><th scope="col">Reservado</th></tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {productRows.map((product) => (
+                {productRows.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-zinc-500">{emptyMessage}</td></tr>
+                ) : productRows.map((product) => (
                   <tr key={product.id} className="text-zinc-700"><td className="py-3 font-semibold text-zinc-950">{product.producto}</td><td>{product.categoria}</td><td>{product.unidadesVendidas}</td><td>{currencyFormatter.format(product.ventasBrutas)}</td><td>{product.stockActual}</td><td>{product.stockReservado}</td></tr>
                 ))}
               </tbody>
@@ -113,14 +111,25 @@ export default function ProductStatsPage() {
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <AdminCard>
           <AdminCardHeader title="Unidades y facturación" description="Línea semanal de referencia para productos." />
-          <AdminLineChart data={salesSeries} lines={[{ dataKey: "unidades", name: "Unidades", color: "#39b000" }, { dataKey: "facturacion", name: "Facturación", color: "#18181b" }]} />
+          {salesSeries.length === 0 ? (
+            <p className="py-8 text-center text-sm text-zinc-500">{emptyMessage}</p>
+          ) : (
+            <AdminLineChart data={salesSeries} lines={[{ dataKey: "unidades", name: "Unidades", color: "#39b000" }, { dataKey: "facturacion", name: "Facturación", color: "#18181b" }]} />
+          )}
         </AdminCard>
 
         <AdminCard>
           <AdminCardHeader title="Alertas de inventario" description="Categorías accionables para reposición." />
           <div className="grid gap-4 sm:grid-cols-2">
+            {alertGroups.length === 0 ? <p className="text-sm text-zinc-500 sm:col-span-2">{products.isLoading ? "Cargando datos…" : products.error ? "No se pudieron cargar los datos." : "Sin alertas de inventario."}</p> : null}
             {alertGroups.map((group) => (
-              <div key={group.id} className="rounded-2xl bg-zinc-50 p-4"><h3 className="font-semibold text-zinc-950">{group.label}</h3><ul className="mt-3 grid gap-2 text-sm text-zinc-600">{group.items.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+              <div key={group.id} className="rounded-2xl bg-zinc-50 p-4">
+                <h3 className="font-semibold text-zinc-950">{group.label} <span className="font-normal text-zinc-500">({formatter.format(group.total)})</span></h3>
+                <ul className="mt-3 grid gap-2 text-sm text-zinc-600">
+                  {group.items.map((item) => <li key={item.id} className="truncate" title={item.name}>• {item.name}</li>)}
+                </ul>
+                {group.total > group.items.length ? <p className="mt-3 text-xs font-medium text-zinc-500">+{formatter.format(group.total - group.items.length)} más. Revisalos en Inventario.</p> : null}
+              </div>
             ))}
           </div>
         </AdminCard>
@@ -160,9 +169,14 @@ function toProductSalesSeries(items: StatisticsProductSeriesPoint[]): ProductSal
 function toInventoryAlertRows(groups: StatisticsInventoryAlertGroup[]): InventoryAlertGroup[] {
   return groups.map((group, index) => ({
     id: `${group.type}-${index}`,
-    items: group.items.map((item) => item.name),
+    items: group.items.slice(0, MAX_ALERT_ITEMS).map((item) => ({ id: item.id, name: item.name })),
     label: inventoryAlertLabels[group.type] ?? group.type,
+    total: group.items.length,
   }));
+}
+
+function formatMetric(value: number | undefined, format: Intl.NumberFormat): string {
+  return value === undefined ? EMPTY_VALUE : format.format(value);
 }
 
 function formatSeriesLabel(bucket: string): string {

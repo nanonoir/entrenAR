@@ -47,3 +47,13 @@ The admin overview, sales/customers, products, and coupon-report views MUST rend
 - GIVEN the visits analytics page is opened
 - WHEN statistics integration is active
 - THEN the page continues to use its existing mock telemetry data
+
+### Requirement: Real Sources Only
+
+Statistics and dashboard views SHALL NOT fall back to fixture data. While loading, on error, or with no data they SHALL show loading, error with retry, or empty states. Metrics without a data source (visits, unique visitors, session duration, devices) SHALL be shown as unavailable. Inventory alert groups SHALL show at most 10 items with the real total and a `+N más` indicator, keyed by item id. Top products, customers and coupons tables SHALL render an empty row when there is no data.
+
+#### Scenario: Statistics request fails
+
+- GIVEN the statistics API returns an error
+- WHEN the products report renders
+- THEN no fixture numbers appear, metrics show `—`, and a retry action is available

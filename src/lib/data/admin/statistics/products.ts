@@ -8,7 +8,7 @@ export type TopProductRow = {
   stockActual: number;
   stockReservado: number;
 };
-export type InventoryAlertGroup = { id: string; label: string; items: string[] };
+export type InventoryAlertGroup = { id: string; label: string; items: { id: string; name: string }[]; total: number };
 
 export const productSalesSeries: ProductSalesPoint[] = [
   { label: "Lun", unidades: 72, facturacion: 4620000 },
@@ -34,8 +34,12 @@ export const topProducts: TopProductRow[] = [
 ];
 
 export const inventoryAlerts: InventoryAlertGroup[] = [
-  { id: "no-stock", label: "Sin stock", items: ["Omega 3 Ultra Concentrado"] },
-  { id: "low-stock", label: "Bajo stock", items: ["Creatina Star Nutrition", "Pre Workout Energy", "Cinturón Powerlifting"] },
-  { id: "best-seller-low-stock", label: "Muy vendidos con bajo stock", items: ["Creatina Star Nutrition", "Pre Workout Energy"] },
-  { id: "high-reserved", label: "Stock reservado alto", items: ["Shaker EntrenAR 700ml", "Remera Boxy Fit DROP #0"] },
-];
+  { id: "no-stock", label: "Sin stock", items: alertItems(["Omega 3 Ultra Concentrado"]) },
+  { id: "low-stock", label: "Bajo stock", items: alertItems(["Creatina Star Nutrition", "Pre Workout Energy", "Cinturón Powerlifting"]) },
+  { id: "best-seller-low-stock", label: "Muy vendidos con bajo stock", items: alertItems(["Creatina Star Nutrition", "Pre Workout Energy"]) },
+  { id: "high-reserved", label: "Stock reservado alto", items: alertItems(["Shaker EntrenAR 700ml", "Remera Boxy Fit DROP #0"]) },
+].map((group) => ({ ...group, total: group.items.length }));
+
+function alertItems(names: string[]) {
+  return names.map((name) => ({ id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), name }));
+}
