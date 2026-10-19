@@ -1,26 +1,26 @@
-import Image from "next/image";
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 
-const contactLinks = [
+const helpLinks = [
   {
-    label: "Portfolio",
-    href: "https://noirnahuel.vercel.app/",
-    iconSrc: "/logoNR.svg",
+    label: "Gestión de pedidos",
+    description: "Consultá el estado de tu pedido con tu código de seguimiento.",
+    href: "/gestion-de-pedidos",
   },
   {
-    label: "WhatsApp",
-    href: "https://api.whatsapp.com/send/?phone=543794657335&text=Hola%2C+Nahuel%2C+me+pongo+en+contacto+a+traves+de+EntrenAR.&type=phone_number&app_absent=0",
-    iconSrc: "/whatsapp.svg",
+    label: "Política de envíos",
+    description: "Cobertura, costos, plazos y recepción de tu pedido.",
+    href: "/politicas/envios",
   },
   {
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/nahuelnicolasnoir/",
-    iconSrc: "/linkedin.svg",
+    label: "Política de devoluciones",
+    description: "Condiciones y pasos para cambios y devoluciones.",
+    href: "/politicas/devoluciones",
   },
   {
-    label: "GitHub",
-    href: "https://github.com/nanonoir",
-    iconSrc: "/github.svg",
+    label: "Términos y condiciones",
+    description: "Reglas generales de uso del sitio y de las compras.",
+    href: "/terminos-y-condiciones",
   },
 ];
 
@@ -31,28 +31,22 @@ export default function ContactPage() {
         <div className="mx-auto grid max-w-3xl gap-8 text-text">
           <div className="grid gap-4">
             <h1 className="font-heading text-5xl leading-none">Contacto</h1>
-            <div className="grid gap-1">
-              <p className="font-subtitle text-2xl font-semibold uppercase">Nahuel Nicolas Noir</p>
-              <p className="text-base leading-7">Full Stack Developer</p>
-            </div>
             <p className="text-base leading-7">
-              Gracias por visitar EntrenAR. Si querés conversar sobre un proyecto ecommerce similar,
-              podés contactarme por estos canales.
+              Para consultas sobre tu compra, empezá por estas secciones: reúnen el seguimiento de
+              pedidos y la información de envíos, cambios y devoluciones.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {contactLinks.map((link) => (
-              <a
-                className="inline-flex min-h-12 items-center gap-3 rounded-button border border-border bg-text px-5 py-3 font-subtitle text-sm font-semibold uppercase text-surface transition hover:bg-accent"
+            {helpLinks.map((link) => (
+              <Link
+                className="grid gap-1 rounded-card border border-border bg-surface p-5 transition hover:border-accent"
                 href={link.href}
-                key={link.label}
-                rel="noopener noreferrer"
-                target="_blank"
+                key={link.href}
               >
-                <Image alt="" aria-hidden height={24} src={link.iconSrc} width={24} />
-                {link.label}
-              </a>
+                <span className="font-subtitle text-lg font-semibold uppercase">{link.label}</span>
+                <span className="text-sm leading-6">{link.description}</span>
+              </Link>
             ))}
           </div>
         </div>

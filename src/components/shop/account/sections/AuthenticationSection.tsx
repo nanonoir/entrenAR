@@ -17,12 +17,12 @@ export function AuthenticationSection({ email }: AuthenticationSectionProps) {
           <p className="font-subtitle text-sm font-semibold uppercase text-text-muted">Email</p>
           <p className="mt-1 font-medium">{email}</p>
           <Button className="mt-3" disabled variant="secondary">
-            Cambio de email próximamente
+            Cambio de email no disponible
           </Button>
         </div>
         <div className="rounded-card border border-border bg-white p-4">
           <p className="font-subtitle text-sm font-semibold uppercase text-text-muted">Contraseña</p>
-          <p className="mt-1 text-sm text-text-muted">Última actualización no disponible en esta vista mock.</p>
+          <p className="mt-1 text-sm text-text-muted">Podés cambiar tu contraseña cuando lo necesites.</p>
           <LinkButton className="mt-3" href={accountRoutes.passwordReset} variant="secondary">
             Cambiar Contraseña
           </LinkButton>
@@ -36,7 +36,7 @@ export function AuthenticationSection({ email }: AuthenticationSectionProps) {
               <p className="font-subtitle text-sm font-semibold uppercase text-text-muted">
                 Autenticación de doble factor
               </p>
-              <Button className="mt-3" disabled>Añadir Autenticación de doble factor</Button>
+              <Button className="mt-3" disabled>Autenticación de doble factor no disponible</Button>
             </div>
           </div>
         </div>
