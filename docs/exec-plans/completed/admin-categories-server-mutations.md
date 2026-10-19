@@ -9,7 +9,7 @@ Make the admin category screens (create, edit, delete, show/hide) persist throug
 - Baseline: `backend/src/modules/showcase-reset/fixtures/catalog-commerce-baseline.ts` and `src/lib/data/admin/sales-flow/mock-products.ts` declared `cat-accessories` as hidden; the approved taxonomy (`docs/references/reports/prd2-category-reconciliation.md`) requires visible.
 
 ## Scope & Non-Goals
-In scope: new `src/lib/api/admin/categories` adapter (interface, API, mock, factory), store rewrite (server-confirmed, non-optimistic), UI wiring (pending/error/disabled states), backend `CategoryService.update` clearing omitted optional fields, fixture visibility fixes, harness + backend unit test, doc updates, enabling `cat-accessories` through the existing authenticated operation when a session is available.
+In scope: new `src/lib/api/admin/categories` adapter (interface, API, mock, factory), store rewrite (server-confirmed, non-optimistic), UI wiring (pending/error/disabled states), backend `CategoryService.update` preserving omitted optional fields and clearing on explicit null, fixture visibility fixes, harness + backend unit test, doc updates, enabling `cat-accessories` through the existing authenticated operation when a session is available.
 Non-goals: DB seed/reset, container restarts, Docker rebuilds, category ordering UI, product-delete-on-category-delete behaviour, commit/push, archiving the plan before review.
 
 ## Execution Plan
