@@ -7,11 +7,14 @@ export const config = {
 };
 
 export function proxy(request: NextRequest): NextResponse {
-  const pathname = request.nextUrl.pathname;
+  const pathname = request.nextUrl.pathname.replace(/\/+$/, "") || "/";
   const state = inspectAdminGate(request.cookies.get(ADMIN_GATE_COOKIE)?.value);
 
   if (pathname === "/admin/login") {
-    if (state === "active") return NextResponse.redirect(new URL("/admin", request.url));
+    // `expired=true` only unlocks the public login page (breaks the stale-gate loop); it never authorizes internal routes.
+    if (state === "active" && request.nextUrl.searchParams.get("expired") !== "true") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
     return NextResponse.next();
   }
 

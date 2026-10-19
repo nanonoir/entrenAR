@@ -33,7 +33,12 @@ export async function forwardAdminSession(request: NextRequest, endpoint: string
       method: "POST",
     });
     const payload = await readPayload(upstream);
-    if (!upstream.ok) return safeError(upstream.status, payload);
+    if (!upstream.ok) {
+      const rejected = safeError(upstream.status, payload);
+      // Only a rejected renewal proves the stored credentials are dead; 5xx/network failures keep them.
+      if (endpoint === "/auth/admin/refresh" && (upstream.status === 401 || upstream.status === 403)) clearAdminCookies(rejected, request);
+      return rejected;
+    }
     const session = payload as AdminSessionResponse;
     if (typeof session.accessToken !== "string" || typeof session.refreshToken !== "string") {
       return safeError(502, { code: "ADMIN_AUTH_INVALID_RESPONSE", message: "The administrator session response was invalid." });
@@ -52,6 +57,11 @@ export async function forwardAdminSession(request: NextRequest, endpoint: string
   } catch {
     return safeError(503, { code: "ADMIN_AUTH_UNAVAILABLE", message: "The administrator session is unavailable." });
   }
+}
+
+function clearAdminCookies(response: NextResponse, request: NextRequest): void {
+  response.cookies.set(ADMIN_REFRESH_COOKIE, "", { httpOnly: true, maxAge: 0, path: ADMIN_REFRESH_PATH, sameSite: "lax", secure: isSecure(request) });
+  response.cookies.set(ADMIN_GATE_COOKIE, "", adminGateCookieOptions(request, 0));
 }
 
 function publicSession(session: AdminSessionResponse): Omit<AdminSessionResponse, "refreshToken"> {
