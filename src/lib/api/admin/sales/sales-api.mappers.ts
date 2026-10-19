@@ -190,6 +190,7 @@ function mapParsedSaleSummary(parsed: AdminSaleSummaryResponseDto): AdminSale {
     number: parsed.number,
     createdAt: parsed.createdAt,
     ...(parsed.sourceOrderId ? { sourceOrderId: parsed.sourceOrderId } : {}),
+    ...(parsed.customerId ? { customerId: parsed.customerId } : {}),
     customer: mapCustomer(parsed.customer),
     itemCount: parsed.itemCount,
     products: [],

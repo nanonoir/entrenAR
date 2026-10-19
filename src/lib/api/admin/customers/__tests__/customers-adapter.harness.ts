@@ -4,10 +4,15 @@ import { MockCustomersRepository } from "../mock-customers.repository";
 import type { CreateCustomerInput } from "../types";
 import { clearAdminAccessToken, setAdminAccessToken } from "@/lib/api/admin/auth/admin-access-token";
 import { customerIdSchema } from "../contracts";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 
 async function run(): Promise<void> {
   assert(customerIdSchema.safeParse(`crm-showcase:${"a".repeat(64)}`).success, "Reserved deterministic showcase customer ID rejected.");
   assert(!customerIdSchema.safeParse("other:identifier").success && !customerIdSchema.safeParse("crm-showcase:partial").success, "Showcase exception broadened arbitrary customer IDs.");
+  const showcaseId = `crm-showcase:${"a".repeat(64)}`;
+  assert(decodeRouteParam(encodeURIComponent(showcaseId)) === showcaseId && customerIdSchema.safeParse(decodeRouteParam(encodeURIComponent(showcaseId))).success, "Encoded showcase route id was not decoded once.");
+  assert(!customerIdSchema.safeParse(encodeURIComponent(showcaseId)).success, "Encoded showcase id must not pass the schema without decoding.");
+  assert(decodeRouteParam(showcaseId) === showcaseId && decodeRouteParam("%E0%A4%A") === "%E0%A4%A", "Route id decoding is not idempotent-safe or throws on malformed input.");
   await runMockScenario();
   await runApiScenario();
   await runFallbackAndErrorScenarios();

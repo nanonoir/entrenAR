@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Eye, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CopyReference } from "@/components/admin/ui/CopyReference";
 import { LinkButton } from "@/components/ui/LinkButton";
 import type { Customer, CustomerSalesSummary } from "@/lib/data/admin/customers/types";
 import { buildWhatsAppUrl, formatAdminDate, getCustomerDisplayName } from "@/lib/formatting/customer";
@@ -14,7 +15,7 @@ export function CustomerListCard({ customer, onEmail, summary }: { customer: Cus
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="min-w-0">
         <Link href={`/admin/clientes/${customer.id}`} className="block truncate font-semibold text-accent hover:underline">{getCustomerDisplayName(customer)}</Link>
-        <p className="mt-1 truncate text-xs text-zinc-500">{customer.isAnonymized ? customer.id : customer.email}</p>
+        {customer.isAnonymized ? <CopyReference id={customer.id} className="mt-1" /> : <p className="mt-1 truncate text-xs text-zinc-500">{customer.email}</p>}
       </div>
       <dl className="mt-4 grid gap-3 text-sm min-[380px]:grid-cols-2">
         <div><dt className="text-xs font-semibold uppercase text-zinc-400">Última compra</dt><dd className="mt-1 font-medium text-zinc-800">{summary.lastOrder ? <Link href={`/admin/ventas/${summary.lastOrder.id}`} className="hover:text-accent">{summary.lastOrder.number} {formatAdminDate(summary.lastOrder.date)}</Link> : "Sin compras"}</dd></div>

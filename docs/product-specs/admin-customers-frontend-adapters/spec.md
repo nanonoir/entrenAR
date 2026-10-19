@@ -65,3 +65,13 @@ Customer administration state, selections, errors, mutable mocks, and pending op
 - GIVEN administrator termination occurs while a customer shop session exists
 - WHEN customer administration state resets
 - THEN customer credentials and stores MUST remain unchanged
+
+### Requirement: Route Identifier Decoding And List Summary
+
+Customer route params SHALL be decoded exactly once (malformed input kept raw) and adapters SHALL encode exactly once, so ids such as `crm-showcase:<hash>` never double encode. The customer list API SHALL return `summary` (paid, non-cancelled orders) per item; the UI SHALL NOT recompute it from the sales store when present. Opaque ids SHALL display as a short reference with a control to copy the full id.
+
+#### Scenario: Showcase id route
+
+- GIVEN a customer id `crm-showcase:<64 hex>` in the route as `crm-showcase%3A<hash>`
+- WHEN the page resolves the id
+- THEN the customer loads once-decoded and a customer with paid orders shows a non-zero order count

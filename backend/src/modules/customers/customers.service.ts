@@ -18,6 +18,7 @@ import {
 import {
   toCustomerDetailResponseDto,
   toCustomerResponseDto,
+  toCustomerSalesSummary,
   type CustomerDetailResponseDto,
   type CustomerResponseDto,
 } from "./customers.mapper";
@@ -72,7 +73,10 @@ export class CustomersService {
     const page = await this.customersRepository.findMany(parsed);
 
     return {
-      items: page.items.map((customer) => toCustomerResponseDto(customer)),
+      items: page.items.map((customer) => ({
+        ...toCustomerResponseDto(customer),
+        summary: toCustomerSalesSummary(customer),
+      })),
       limit: parsed.limit,
       page: parsed.page,
       total: page.total,

@@ -35,6 +35,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { cn } from "@/lib/utils";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 import type { SaleAddress } from "@/lib/data/admin/sales-flow/types";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
 
@@ -80,7 +81,8 @@ function getArchivedFinalStatus(sale: AdminSale) {
 }
 
 export default function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+  const { id: rawId } = use(params);
+  const id = decodeRouteParam(rawId);
   const sale = useAdminSalesStore((s) => s.sales.find((sale) => sale.id === id));
   const { cancelSale, reopenSale, archiveSale, confirmSale, packSale, unpackSale, shipSale, updateShippingAddress } = useAdminSalesStore();
   const fetchSale = useAdminSalesStore((s) => s.fetchSale);

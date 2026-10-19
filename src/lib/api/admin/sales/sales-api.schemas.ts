@@ -53,6 +53,7 @@ const saleSummaryResponseSchema = z.object({
   createdAt: dateTimeSchema,
   currency: requiredText(8),
   customer: saleCustomerResponseSchema,
+  customerId: identifierSchema.optional(),
   deliveryType: z.enum(API_DELIVERY_TYPE),
   id: identifierSchema,
   isArchived: z.boolean(),

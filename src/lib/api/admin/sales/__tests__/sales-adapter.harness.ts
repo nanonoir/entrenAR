@@ -115,8 +115,24 @@ async function runApiScenario(): Promise<void> {
 }
 
 async function runSchemaScenario(): Promise<void> {
+  // Contract strictness stays: unknown keys must still be rejected after widening customerId.
+  try {
+    mapAdminSaleDetail({ ...rawSaleDetail(), unexpectedField: true });
+    throw new Error("Expected unknown sale field to fail.");
+  } catch (error) {
+    assert(error instanceof SalesApiError && error.code === "SALES_API_INVALID_RESPONSE", "Sale schema strictness was relaxed.");
+  }
+
   const detail = mapAdminSaleDetail({ ok: true, data: rawSaleDetail() });
   assert(detail.customerSnapshot.email === "api@example.com", "Envelope response unwrapping failed.");
+
+  const linked = mapAdminSaleDetail({
+    ...rawSaleDetail(),
+    customerId: "crm-showcase-customer",
+    items: [{ attributes: {}, lineSubtotal: 100, productId: "product-api", productName: "API Product", quantity: 1, sku: "API-001", snapshot: {}, unitPrice: 100, variantId: "variant-api", variantName: "Talle M / Negro", weightGrams: 450 }],
+  });
+  assert(linked.customerId === "crm-showcase-customer", "Sale customerId from the backend summary was rejected or dropped.");
+  assert((await new ApiSalesRepository(createClient([], () => ({ items: [rawSaleSummary({ customerId: "cus-1" })], limit: 5, page: 1, total: 1 }))).getSales({ limit: 5 })).items[0]?.customerId === "cus-1", "Sale list customerId was not mapped.");
 
   try {
     mapAdminSaleDetail({ id: "malformed" });

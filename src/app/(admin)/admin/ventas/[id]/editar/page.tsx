@@ -5,9 +5,11 @@ import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { isSaleEditable } from "@/lib/data/admin/sales-flow/helpers";
 import { OrderFormPage } from "@/components/admin/sales-flow/OrderFormPage";
 import Link from "next/link";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 
 export default function EditSalePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+  const { id: rawId } = use(params);
+  const id = decodeRouteParam(rawId);
   const sale = useAdminSalesStore((s) => s.sales.find((s) => s.id === id));
   const fetchSale = useAdminSalesStore((s) => s.fetchSale);
   const isInitializing = useAdminSalesStore((s) => s.isInitializing);
