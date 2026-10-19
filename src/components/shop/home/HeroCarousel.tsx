@@ -15,7 +15,7 @@ type HeroCarouselProps = {
 const AUTOPLAY_MS = 10000;
 
 export function HeroCarousel({ banners }: HeroCarouselProps) {
-  const mobileBanners = banners.filter((banner) => banner.mobileImageSrc);
+  const mobileBanners = banners.filter((banner) => banner.mobileImage);
 
   if (banners.length === 0) {
     return null;
@@ -55,27 +55,30 @@ function CarouselTrack({ banners, mode }: CarouselTrackProps) {
         {...touchHandlers}
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
-        {banners.map((banner, index) => (
-          <Link
-            aria-label={banner.alt}
-            className={cn(
-              "group relative block min-w-full overflow-hidden bg-zinc-900",
-              isMobile ? "h-[320px] sm:h-[360px]" : "h-[430px] 2xl:h-[500px]",
-            )}
-            href={banner.href}
-            key={banner.id}
-            tabIndex={activeIndex === index ? 0 : -1}
-          >
-            <Image
-              alt={banner.alt}
-              className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              fill
-              priority={index === 0}
-              sizes="100vw"
-              src={isMobile ? banner.mobileImageSrc ?? banner.imageSrc : banner.imageSrc}
-            />
-          </Link>
-        ))}
+        {banners.map((banner, index) => {
+          const image = isMobile ? banner.mobileImage ?? banner.image : banner.image;
+
+          return (
+            <Link
+              aria-label={banner.alt}
+              className="group relative flex min-w-full items-center overflow-hidden bg-zinc-950"
+              href={banner.href}
+              key={banner.id}
+              style={{ aspectRatio: `${image.width} / ${image.height}` }}
+              tabIndex={activeIndex === index ? 0 : -1}
+            >
+              <Image
+                alt={banner.alt}
+                className="h-full w-full object-contain"
+                height={image.height}
+                priority={index === 0}
+                sizes="100vw"
+                src={image.src}
+                width={image.width}
+              />
+            </Link>
+          );
+        })}
       </div>
       {banners.length > 1 && !isMobile ? (
         <>
