@@ -13,6 +13,7 @@ import { CustomerEmailModal } from "@/components/admin/customers/CustomerEmailMo
 import { CustomerNotesCard } from "@/components/admin/customers/CustomerNotesCard";
 import { CustomerNotesModal } from "@/components/admin/customers/CustomerNotesModal";
 import { CustomerSalesCard } from "@/components/admin/customers/CustomerSalesCard";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 import { buildCustomerDetailCsv } from "@/lib/data/admin/customers/csv";
 import { buildCustomerSalesSummary, formatLongAdminDate, getCustomerDisplayName } from "@/lib/formatting/customer";
 import { useAdminCustomersStore } from "@/stores/admin-customers-store";
@@ -21,7 +22,8 @@ import { useAdminToastStore } from "@/stores/admin-toast-store";
 import { customerExportFilename, downloadCsv } from "@/components/admin/customers/customer-ui";
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ clienteId: string }> }) {
-  const { clienteId } = use(params);
+  const { clienteId: rawClienteId } = use(params);
+  const clienteId = decodeRouteParam(rawClienteId);
   const customer = useAdminCustomersStore((state) => state.customers.find((item) => item.id === clienteId));
   const dataSource = useAdminCustomersStore((state) => state.dataSource);
   const error = useAdminCustomersStore((state) => state.error);

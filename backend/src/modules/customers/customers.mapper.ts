@@ -61,6 +61,7 @@ export interface CustomerResponseDto {
   isAnonymized: boolean;
   notes?: string;
   phone?: string;
+  summary?: CustomerSalesSummary;
   tags: string[];
   updatedAt: string;
 }

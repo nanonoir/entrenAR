@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowDownUp, Eye, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CopyReference } from "@/components/admin/ui/CopyReference";
 import { LinkButton } from "@/components/ui/LinkButton";
 import type { Customer, CustomerSalesSummary } from "@/lib/data/admin/customers/types";
 import { buildWhatsAppUrl, formatAdminDate, getCustomerDisplayName } from "@/lib/formatting/customer";
@@ -44,7 +45,7 @@ function CustomerRow({ customer, onEmail, summary }: { customer: Customer; onEma
   const whatsappUrl = buildWhatsAppUrl(customer);
   return (
     <tr className="transition hover:bg-zinc-50/80">
-      <td className="min-w-0 px-4 py-4"><Link href={`/admin/clientes/${customer.id}`} className="block truncate font-semibold text-accent hover:underline">{getCustomerDisplayName(customer)}</Link><p className="mt-1 truncate text-xs text-zinc-500">{customer.isAnonymized ? customer.id : customer.email}</p></td>
+      <td className="min-w-0 px-4 py-4"><Link href={`/admin/clientes/${customer.id}`} className="block truncate font-semibold text-accent hover:underline">{getCustomerDisplayName(customer)}</Link>{customer.isAnonymized ? <CopyReference id={customer.id} className="mt-1" /> : <p className="mt-1 truncate text-xs text-zinc-500">{customer.email}</p>}</td>
       <td className="px-4 py-4">{summary.lastOrder ? <Link href={`/admin/ventas/${summary.lastOrder.id}`} className="font-medium text-zinc-800 hover:text-accent">{summary.lastOrder.number} {formatAdminDate(summary.lastOrder.date)}</Link> : <span className="text-zinc-500">Sin compras</span>}</td>
       <td className="px-4 py-4 font-semibold text-zinc-900">{formatARS(summary.totalSpent)}</td>
       <td className="px-4 py-4"><div className="flex gap-2"><LinkButton href={`/admin/clientes/${customer.id}`} size="icon" variant="secondary" aria-label={`Ver detalle de ${getCustomerDisplayName(customer)}`}><Eye aria-hidden size={16} /></LinkButton><Button size="icon" variant="secondary" aria-label={`Enviar email a ${getCustomerDisplayName(customer)}`} disabled={customer.isAnonymized || !customer.email} onClick={() => onEmail(customer)}><Mail aria-hidden size={16} /></Button><Button size="icon" variant="secondary" aria-label={`Contactar por WhatsApp a ${getCustomerDisplayName(customer)}`} disabled={!whatsappUrl} onClick={() => window.open(whatsappUrl, "_blank", "noopener,noreferrer")}><MessageCircle aria-hidden size={16} /></Button></div></td>

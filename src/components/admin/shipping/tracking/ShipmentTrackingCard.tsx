@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { shortReference } from "@/lib/formatting/short-reference";
 import { formatARS, formatShortDate, getShippingStatusLabel, getShippingStatusTone } from "@/lib/data/admin/sales-flow/helpers";
 import type { ShipmentTrackingRecord } from "@/lib/data/admin/shipping/tracking";
 
@@ -12,7 +13,7 @@ export function ShipmentTrackingCard({ record }: { record: ShipmentTrackingRecor
     <article className="w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-border bg-white p-4 shadow-sm">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/admin/envios/detalle/${record.id}`} className="font-mono text-sm font-semibold text-accent hover:underline">{record.saleNumber ?? `#${record.id}`}</Link>
+          <Link href={`/admin/envios/detalle/${record.id}`} className="font-mono text-sm font-semibold text-accent hover:underline">{record.saleNumber ?? `#${shortReference(record.id)}`}</Link>
           <h2 className="mt-1 truncate text-base font-semibold text-text">{record.recipientName}</h2>
           <p className="truncate text-sm text-text-muted">{record.logisticsSummary}</p>
         </div>

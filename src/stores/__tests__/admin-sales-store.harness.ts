@@ -1,9 +1,19 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 import { MockSalesRepository } from "@/lib/api/admin/sales/mock-sales.repository";
 import { SalesApiError } from "@/lib/api/admin/sales/client";
 import type { SalesRepository } from "@/lib/api/admin/sales/sales.repository";
 import { createAdminSalesStore } from "@/stores/admin-sales-store";
 
 async function run(): Promise<void> {
+  const encodedSaleId = encodeURIComponent("crm-showcase:" + "b".repeat(64));
+  assert(decodeRouteParam(encodedSaleId) === "crm-showcase:" + "b".repeat(64), "Encoded sale route id was not decoded once.");
+  for (const route of ["ventas/[id]/page.tsx", "ventas/[id]/editar/page.tsx"]) {
+    const source = readFileSync(resolve(process.cwd(), "src/app/(admin)/admin", route), "utf8");
+    assert(/decodeRouteParam\(rawId\)/.test(source) && !/const \{ id \} = use\(params\)/.test(source), `Sale route ${route} must decode its raw id param once.`);
+  }
+
   const calls: string[] = [];
   const backingRepository = new MockSalesRepository();
   const repository = asApiRepository(backingRepository, calls);

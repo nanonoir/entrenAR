@@ -1,8 +1,9 @@
+import { shortReference } from "@/lib/formatting/short-reference";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
 import type { Customer, CustomerAddress, CustomerSalesSummary } from "@/lib/data/admin/customers/types";
 
 export function getCustomerDisplayName(customer: Pick<Customer, "id" | "fullName" | "isAnonymized">) {
-  return customer.isAnonymized ? `Cliente eliminado (${customer.id})` : customer.fullName;
+  return customer.isAnonymized ? `Cliente eliminado (${shortReference(customer.id)})` : customer.fullName;
 }
 
 export function normalizePhoneForWhatsApp(phone?: string) {

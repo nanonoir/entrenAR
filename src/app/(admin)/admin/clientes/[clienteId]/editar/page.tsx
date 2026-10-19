@@ -3,10 +3,12 @@
 import { use, useEffect } from "react";
 import Link from "next/link";
 import { CustomerEditPageClient } from "@/app/(admin)/admin/clientes/[clienteId]/editar/CustomerEditPageClient";
+import { decodeRouteParam } from "@/lib/admin-route-params";
 import { useAdminCustomersStore } from "@/stores/admin-customers-store";
 
 export default function CustomerEditPage({ params }: { params: Promise<{ clienteId: string }> }) {
-  const { clienteId } = use(params);
+  const { clienteId: rawClienteId } = use(params);
+  const clienteId = decodeRouteParam(rawClienteId);
   const customer = useAdminCustomersStore((state) => state.customers.find((item) => item.id === clienteId));
   const dataSource = useAdminCustomersStore((state) => state.dataSource);
   const error = useAdminCustomersStore((state) => state.error);

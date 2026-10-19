@@ -58,3 +58,23 @@ Sales, Customers, Statistics, Abandoned Carts, Commerce, and Catalog transports 
 - GIVEN an admin transport exhausts refresh
 - WHEN its admin context terminates
 - THEN customer credentials and stores MUST remain unchanged
+
+### Requirement: Strict Summary Contract With Customer Link
+
+The sales list response schema SHALL remain strict and SHALL accept an optional `customerId` on each summary. Unknown fields SHALL still be rejected. Detail items SHALL accept `variantName` and `weightGrams`.
+
+#### Scenario: Summary carries customerId
+
+- GIVEN the API returns a summary with `customerId`
+- WHEN the adapter validates it
+- THEN the sale maps with its `customerId`, and a summary with an unknown field is rejected
+
+### Requirement: Shipping Tracking Reads Post-Bootstrap
+
+The shipping tracking list and detail pages SHALL load sales through the client admin sales store and SHALL NOT call the sales repository from a server component.
+
+#### Scenario: Envíos without server session
+
+- GIVEN the admin opens `/admin/envios`
+- WHEN the page renders on the server
+- THEN no protected read runs on the server and the client store loads data after bootstrap

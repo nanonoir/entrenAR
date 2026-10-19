@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { shortReference } from "@/lib/formatting/short-reference";
 import { formatARS, formatShortDate, getShippingStatusLabel, getShippingStatusTone } from "@/lib/data/admin/sales-flow/helpers";
 import type { ShipmentTrackingRecord } from "@/lib/data/admin/shipping/tracking";
 
 export function ShipmentTrackingRow({ record }: { record: ShipmentTrackingRecord }) {
   return (
     <tr className="border-b border-border last:border-0">
-      <td className="px-4 py-4"><Link href={`/admin/envios/detalle/${record.id}`} className="font-mono text-sm font-semibold text-accent hover:underline">{record.saleNumber ?? `#${record.id}`}</Link></td>
+      <td className="px-4 py-4"><Link href={`/admin/envios/detalle/${record.id}`} className="font-mono text-sm font-semibold text-accent hover:underline">{record.saleNumber ?? `#${shortReference(record.id)}`}</Link></td>
       <td className="px-4 py-4">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-text">{record.recipientName}</p>

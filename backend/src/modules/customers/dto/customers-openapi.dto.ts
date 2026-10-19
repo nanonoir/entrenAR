@@ -37,12 +37,13 @@ export class CustomerResponseDto {
   @ApiProperty() isAnonymized!: boolean;
   @ApiPropertyOptional() notes?: string;
   @ApiPropertyOptional() phone?: string;
+  @ApiPropertyOptional({ type: CustomerSalesSummaryDto }) summary?: CustomerSalesSummaryDto;
   @ApiProperty({ type: [String] }) tags!: string[];
   @ApiProperty({ format: "date-time" }) updatedAt!: string;
 }
 
 export class CustomerDetailResponseDto extends CustomerResponseDto {
-  @ApiProperty({ type: CustomerSalesSummaryDto }) summary!: CustomerSalesSummaryDto;
+  @ApiProperty({ type: CustomerSalesSummaryDto }) override summary: CustomerSalesSummaryDto = new CustomerSalesSummaryDto();
 }
 
 export class CustomerListResponseDto {
