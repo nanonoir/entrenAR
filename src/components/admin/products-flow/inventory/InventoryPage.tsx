@@ -1,22 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { History, PackageOpen } from "lucide-react";
-import { Fragment, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, History, PackageOpen, Search } from "lucide-react";
+import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { InlineStockCell } from "@/components/admin/products-flow/inventory/InlineStockCell";
+import {
+  INVENTORY_STOCK_FILTER,
+  defaultInventoryViewState,
+  filterInventoryProducts,
+  paginateInventory,
+  parseInventoryViewState,
+  serializeInventoryViewState,
+  type InventoryStockFilter,
+  type InventoryViewState,
+} from "@/lib/data/admin/inventory-view";
 import type { AdminProduct } from "@/lib/data/admin/sales-flow/mock-products";
 import { useAdminProductsStore } from "@/stores/admin-products-store";
 
 type InventoryPageProps = { products: AdminProduct[] };
 
-export function InventoryPage({ products: initialProducts }: InventoryPageProps) {
+const STOCK_FILTER_LABELS: Record<InventoryStockFilter, string> = {
+  all: "Todo el stock",
+  available: "Con stock",
+  infinite: "Stock infinito",
+  out: "Agotados",
+};
+
+export function InventoryPage(props: InventoryPageProps) {
+  return <Suspense fallback={<div className="min-h-64" aria-busy="true" />}><InventoryPageContent {...props} /></Suspense>;
+}
+
+function InventoryPageContent({ products: initialProducts }: InventoryPageProps) {
   const products = useAdminProductsStore((state) => state.products);
   const initializeProducts = useAdminProductsStore((state) => state.initializeProducts);
+  const searchParams = useSearchParams();
+  // Search, filters and page live in the URL so returning from a history page restores the same view.
+  const [view, setView] = useState<InventoryViewState>(() => parseInventoryViewState(searchParams));
 
   useEffect(() => { initializeProducts(initialProducts); }, [initialProducts, initializeProducts]);
 
-  const sourceProducts = (products.length > 0 ? products : initialProducts).toSorted((a, b) => a.name.localeCompare(b.name));
+  function updateView(patch: Partial<InventoryViewState>, resetPage = true) {
+    const next = { ...view, ...patch, ...(resetPage ? { page: 1 } : {}) };
+    setView(next);
+    const query = serializeInventoryViewState(next);
+    window.history.replaceState(window.history.state, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
+  }
+
+  const allProducts = useMemo(() => (products.length > 0 ? products : initialProducts).toSorted((a, b) => a.name.localeCompare(b.name)), [initialProducts, products]);
+  const categories = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const product of allProducts) if (product.categoryId && product.categoryName) byId.set(product.categoryId, product.categoryName);
+    return [...byId].map(([id, name]) => ({ id, name })).toSorted((a, b) => a.name.localeCompare(b.name));
+  }, [allProducts]);
+  const filtered = useMemo(() => filterInventoryProducts(allProducts, view), [allProducts, view]);
+  const pageData = paginateInventory(filtered, view.page);
+  const sourceProducts = pageData.items;
+  const hasFilters = view.query.trim() !== "" || view.stock !== INVENTORY_STOCK_FILTER.ALL || view.categoryId !== "";
 
   return (
     <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-5">
@@ -25,7 +67,31 @@ export function InventoryPage({ products: initialProducts }: InventoryPageProps)
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950">Inventario</h1>
         <p className="mt-1 text-sm text-zinc-500">Gestioná stock por producto y variante con historial en memoria.</p>
       </header>
-      <section className="grid w-full min-w-0 max-w-full gap-3 overflow-hidden" aria-label="Inventario de productos">
+      <div className="grid w-full min-w-0 gap-3 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_200px_220px] lg:items-center">
+        <label className="flex h-11 min-w-0 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-zinc-600 shadow-sm transition focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+          <Search aria-hidden size={16} className="shrink-0 text-zinc-400" />
+          <span className="sr-only">Buscar en inventario</span>
+          <input type="search" value={view.query} onChange={(event) => updateView({ query: event.target.value })} placeholder="Buscar por nombre o SKU..." aria-label="Buscar en inventario" className="w-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-zinc-400 md:text-sm" />
+        </label>
+        <select aria-label="Filtrar por stock" value={view.stock} onChange={(event) => updateView({ stock: event.target.value as InventoryStockFilter })} className="h-11 rounded-2xl border border-zinc-200 bg-white px-3 text-base text-zinc-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm">
+          {Object.values(INVENTORY_STOCK_FILTER).map((value) => <option key={value} value={value}>{STOCK_FILTER_LABELS[value]}</option>)}
+        </select>
+        <select aria-label="Filtrar por categoría" value={view.categoryId} onChange={(event) => updateView({ categoryId: event.target.value })} className="h-11 rounded-2xl border border-zinc-200 bg-white px-3 text-base text-zinc-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 md:text-sm">
+          <option value="">Todas las categorías</option>
+          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+        </select>
+      </div>
+      <p className="text-sm text-zinc-500" role="status">
+        <span className="font-semibold text-zinc-800">{pageData.total}</span> {hasFilters ? `de ${allProducts.length} ` : ""}{pageData.total === 1 ? "producto" : "productos"}
+        {hasFilters ? <button type="button" className="ml-3 font-semibold text-accent hover:underline" onClick={() => updateView(defaultInventoryViewState)}>Limpiar filtros</button> : null}
+      </p>
+      {pageData.total === 0 ? (
+        <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-lg font-semibold text-zinc-800">{hasFilters ? "No encontramos productos con esos criterios." : "Todavía no hay productos en el inventario."}</p>
+          {hasFilters ? <p className="mt-1 text-sm text-zinc-500">Probá con otra búsqueda o limpiá los filtros.</p> : null}
+        </div>
+      ) : null}
+      <section className="grid w-full min-w-0 max-w-full gap-3 overflow-hidden" aria-label="Inventario de productos" hidden={pageData.total === 0}>
         <div className="hidden overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm lg:block">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left text-sm">
@@ -73,6 +139,13 @@ export function InventoryPage({ products: initialProducts }: InventoryPageProps)
           ))}
         </div>
       </section>
+      {pageData.totalPages > 1 ? (
+        <nav className="flex items-center justify-between gap-3" aria-label="Paginación de inventario">
+          <Button type="button" variant="secondary" size="sm" disabled={pageData.page <= 1} onClick={() => updateView({ page: pageData.page - 1 }, false)}><ChevronLeft aria-hidden size={16} />Anterior</Button>
+          <p className="text-sm text-zinc-500">Página <span className="font-semibold text-zinc-800">{pageData.page}</span> de {pageData.totalPages}</p>
+          <Button type="button" variant="secondary" size="sm" disabled={pageData.page >= pageData.totalPages} onClick={() => updateView({ page: pageData.page + 1 }, false)}>Siguiente<ChevronRight aria-hidden size={16} /></Button>
+        </nav>
+      ) : null}
     </div>
   );
 }

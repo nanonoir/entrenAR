@@ -25,6 +25,7 @@ import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { calculateTotals } from "@/lib/data/admin/sales-flow/helpers";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { hasFormChanges } from "@/lib/admin-form-dirty";
 
 type OrderFormPageProps = {
   mode: "create" | "edit";
@@ -39,6 +40,7 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingOpen, setShippingOpen] = useState(Boolean(existingSale?.shippingAddress));
+  const [initialValues] = useState(() => buildDefaultValues(existingSale));
 
   const {
     register,
@@ -49,7 +51,7 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
     setFocus,
   } = useForm<OrderFormInput, unknown, OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
-    defaultValues: buildDefaultValues(existingSale),
+    defaultValues: initialValues,
     mode: "onBlur",
   });
 
@@ -72,7 +74,9 @@ export function OrderFormPage({ mode, existingSale }: OrderFormPageProps) {
     safeFormNumber(watchedShippingCost),
   );
 
-  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty });
+  const watchedForm = useWatch({ control });
+  const hasUnsavedChanges = isDirty && hasFormChanges(initialValues, watchedForm);
+  const { discardModal, interceptNavigation } = useUnsavedChangesGuard({ isDirty: hasUnsavedChanges });
   const handleCancel = useCallback(() => interceptNavigation(() => router.back()), [interceptNavigation, router]);
 
   const onSubmit = useCallback(

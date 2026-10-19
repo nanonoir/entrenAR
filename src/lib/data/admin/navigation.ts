@@ -112,7 +112,6 @@ export const mobilePrimaryNav: AdminNavItem[] = [
 ];
 
 export const adminFooterActions: AdminNavItem[] = [
-  { label: "Configuración", href: "#configuracion", icon: Settings },
   { label: "Cerrar sesión", href: "#cerrar-sesion", icon: LogOut },
 ];
 

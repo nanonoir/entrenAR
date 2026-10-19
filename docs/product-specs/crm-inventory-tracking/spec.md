@@ -93,3 +93,13 @@ The inventory capability MUST be delivered in PR 7. The PR MUST pass lint, typec
 - GIVEN PR 7 is ready
 - WHEN validation completes
 - THEN command outputs and manual inventory smoke notes are recorded
+
+### Requirement: Admin Inventory Search, Filters And Pagination
+
+The admin inventory screen SHALL provide search by name or SKU, stock-state and category filters, and pagination (25 rows per page) with the state kept in the URL so returning to the list restores it. It SHALL show an empty state with a clear-filters action. Pagination is client-side over the loaded catalog; server pagination is a documented limitation.
+
+#### Scenario: Filter and return
+
+- GIVEN the admin searches `whey` and opens page 2
+- WHEN the admin navigates back to inventory
+- THEN the search and page are restored

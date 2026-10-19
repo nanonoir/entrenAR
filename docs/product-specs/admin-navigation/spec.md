@@ -90,3 +90,12 @@ The system SHALL keep the existing coupon report navigation/static report unchan
 - GIVEN the admin opens the existing coupon report area
 - WHEN DiscountCRM is present
 - THEN the report remains unchanged and is not fed by operational coupon state
+
+### Requirement: No dead destinations
+
+The admin navigation SHALL NOT list entries without a destination. `Configuración` is not exposed until a settings module exists.
+
+#### Scenario: Footer actions
+
+- GIVEN the sidebar or drawer renders its footer
+- THEN only `Cerrar sesión` is listed and no link points to `#configuracion`
