@@ -31,6 +31,7 @@ async function run(): Promise<void> {
   await runMockScenario();
   await runApiRepositoryScenario();
   await runFetchClientScenario();
+  await runReceiverSensitiveTransportScenario();
   await runApiSourceScenarioInChild();
   console.log("checkout adapter harness: API default/mock repository parity, DTO authority, guest/auth reconciliation, controlled errors, retry, idempotency, and mock fallback passed");
 }
@@ -240,6 +241,73 @@ async function runFetchClientScenario(): Promise<void> {
     if (!(error instanceof CheckoutApiError) || error.code !== "PRICE_CHANGED" || error.status !== 409 || error.issues[0]?.field !== "quoteId") {
       throw error;
     }
+  }
+
+  clearAccountAccessToken();
+}
+
+async function runReceiverSensitiveTransportScenario(): Promise<void> {
+  const { CheckoutApiError, FetchCheckoutApiClient } = await import("./client");
+  const { clearAccountAccessToken, getAccountAccessToken, setAccountAccessToken } = await import("@/lib/api/account/client");
+  const paths: string[] = [];
+  let protectedAttempts = 0;
+
+  // Strict non-arrow function: rejects the client as receiver, accepts a detached call.
+  const receiverSensitiveFetch = async function (this: unknown, input: RequestInfo | URL): Promise<Response> {
+    if (this === client) throw new TypeError("Illegal invocation");
+    const path = new URL(String(input)).pathname.replace(/^\/api\/v1/, "");
+    paths.push(path);
+    if (path === "/checkout/protected" && protectedAttempts++ === 0) return jsonResponse({ code: "UNAUTHORIZED", message: "Expired" }, 401);
+    if (path === "/auth/refresh") return jsonResponse({ accessToken: "receiver-fresh-token" });
+    return jsonResponse({ ok: true });
+  };
+  const client: InstanceType<typeof FetchCheckoutApiClient> = new FetchCheckoutApiClient(
+    receiverSensitiveFetch,
+    "https://checkout.test/api/v1",
+  );
+
+  setAccountAccessToken("receiver-stale-token");
+  await client.post("/checkout/quote", {});
+  const response = await client.get<{ ok: boolean }>("/checkout/protected");
+  if (
+    !response.ok
+    || paths.join(",") !== "/checkout/quote,/checkout/protected,/auth/refresh,/checkout/protected"
+    || getAccountAccessToken() !== "receiver-fresh-token"
+  ) {
+    throw new Error("Checkout transport must reach the API for execute and refresh without the client receiver.");
+  }
+
+  const rejected = new TypeError("network down");
+  const failing = new FetchCheckoutApiClient(async () => { throw rejected; }, "https://checkout.test/api/v1");
+  try {
+    await failing.get("/checkout/quote", { includeAuthorization: false });
+    throw new Error("Expected unavailable error.");
+  } catch (error) {
+    if (
+      !(error instanceof CheckoutApiError)
+      || error.code !== "CHECKOUT_API_UNAVAILABLE"
+      || error.message !== "The checkout API is unavailable."
+      || error.status !== 503
+      || error.cause !== rejected
+    ) {
+      throw error;
+    }
+  }
+
+  setAccountAccessToken("receiver-stale-token");
+  let refreshFailure: unknown;
+  const refreshFailing = new FetchCheckoutApiClient(async (input) => {
+    if (new URL(String(input)).pathname.endsWith("/auth/refresh")) {
+      refreshFailure = new TypeError("refresh down");
+      throw refreshFailure;
+    }
+    return jsonResponse({ code: "UNAUTHORIZED", message: "Expired" }, 401);
+  }, "https://checkout.test/api/v1");
+  try {
+    await refreshFailing.get("/checkout/protected");
+    throw new Error("Expected refresh unavailable error.");
+  } catch (error) {
+    if (!(error instanceof CheckoutApiError) || error.code !== "CHECKOUT_API_UNAVAILABLE" || error.cause !== refreshFailure) throw error;
   }
 
   clearAccountAccessToken();
