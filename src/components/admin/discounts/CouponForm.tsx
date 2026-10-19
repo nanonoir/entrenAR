@@ -3,7 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FormProvider, useForm, type FieldPath } from "react-hook-form";
+import { FormProvider, useForm, useWatch, type FieldPath } from "react-hook-form";
+import { hasFormChanges } from "@/lib/admin-form-dirty";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -61,9 +62,12 @@ export function CouponForm({ categoryOptions, coupon, interceptNavigation, mode,
   const apiError = useAdminDiscountsStore((state) => state.error);
   const addToast = useAdminToastStore((state) => state.addToast);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [initialValues] = useState(() => couponDefaults(coupon));
   const schema = createCouponSchema(coupons.map((item) => item.code), coupon?.code);
-  const form = useForm<CouponFormInput, unknown, CouponFormValues>({ resolver: zodResolver(schema), defaultValues: couponDefaults(coupon), mode: "onBlur" });
-  const { formState: { errors, isDirty, isSubmitting }, handleSubmit, register, reset, setError, setFocus, setValue } = form;
+  const form = useForm<CouponFormInput, unknown, CouponFormValues>({ resolver: zodResolver(schema), defaultValues: initialValues, mode: "onBlur" });
+  const { control, formState: { errors, isDirty: rhfDirty, isSubmitting }, handleSubmit, register, reset, setError, setFocus, setValue } = form;
+  const watchedForm = useWatch({ control });
+  const isDirty = rhfDirty && hasFormChanges(initialValues, watchedForm);
   const cancelHref = mode === "edit" && coupon ? `/admin/descuentos/cupones/${coupon.id}` : "/admin/descuentos/cupones";
 
   useEffect(() => {

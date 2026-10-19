@@ -64,3 +64,13 @@ Dirty-state standardization MUST apply only to admin forms in this change and MU
 - GIVEN a public shop or auth form is edited
 - WHEN admin dirty-state guard behavior is introduced
 - THEN the public form keeps its existing exit behavior
+
+### Requirement: Dirty Detection Ignores Empty-Equivalent Values
+
+Forms SHALL compare current values with their initial baseline treating empty string, null, undefined and NaN as equal, so untouched forms (new sale, new coupon) never arm the browser-exit warning.
+
+#### Scenario: Untouched new coupon
+
+- GIVEN the admin opens `/admin/descuentos/cupones/nuevo` and edits nothing
+- WHEN the tab is closed or reloaded
+- THEN no `beforeunload` prompt appears
