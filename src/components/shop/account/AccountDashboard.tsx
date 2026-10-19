@@ -4,11 +4,11 @@ import {
   AccountDashboardFallback,
 } from "@/components/shop/account/AccountDashboardClient";
 import type { AccountOrder } from "@/types/account";
-import type { ProductSummary } from "@/types/product";
+import type { WishlistProduct } from "@/types/account";
 
 type AccountDashboardProps = {
   orders: AccountOrder[];
-  products: ProductSummary[];
+  products: WishlistProduct[];
 };
 
 export function AccountDashboard({ orders, products }: AccountDashboardProps) {

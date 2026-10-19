@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { ProductVisual } from "@/components/shop/products/ProductVisual";
+import { getProductImage } from "@/lib/cart-items";
 import { getDiscountPercentage } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { QuickBuyProduct } from "@/types/product";
@@ -26,6 +27,7 @@ export function OfferProductCard({
   density = "default",
 }: OfferProductCardProps) {
   const variant = product.variants[0];
+  const image = getProductImage(product.images, variant);
   const discountPercentage = getDiscountPercentage(product.price, product.compareAtPrice);
 
   if (!variant) {
@@ -40,12 +42,22 @@ export function OfferProductCard({
       )}
     >
       <div className={cn("relative border-b border-border", density === "compact" ? "h-28" : "h-44")}>
-        <ProductVisual
-          brand={product.brand}
-          className={cn("h-full rounded-none", density === "compact" ? "p-2" : "p-3")}
-          name={product.name}
-          tone={product.imageTone}
-        />
+        {image?.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={image.alt || product.name}
+            className={cn("h-full w-full bg-white object-contain", density === "compact" ? "p-2" : "p-3")}
+            loading="lazy"
+            src={image.url}
+          />
+        ) : (
+          <ProductVisual
+            brand={product.brand}
+            className={cn("h-full rounded-none", density === "compact" ? "p-2" : "p-3")}
+            name={product.name}
+            tone={product.imageTone}
+          />
+        )}
         <div className="absolute bottom-3 right-3">
           {quantity > 0 ? (
             <div className="grid h-10 grid-cols-[36px_42px_36px] overflow-hidden rounded-full border border-accent bg-white text-accent shadow-sm">

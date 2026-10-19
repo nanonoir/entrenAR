@@ -51,12 +51,21 @@ export function ProductAddedModal({ open, item, onClose }: ProductAddedModalProp
     <Modal className="max-w-5xl" onClose={onClose} open={open} title={"Producto a\u00f1adido al carrito"}>
       <div className="px-4 pb-5 pt-5 sm:px-8 sm:pt-8 lg:px-10 lg:py-8">
         <div className="grid grid-cols-[120px_1fr] gap-4 rounded-card border border-border p-3 sm:grid-cols-[180px_1fr] sm:items-center sm:p-4">
-          <ProductVisual
-            brand={item.brand}
-            className="h-36 rounded-card p-2 sm:h-44 sm:p-3"
-            name={item.name}
-            tone={item.imageTone}
-          />
+          {item.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={item.imageAlt || item.name}
+              className="h-36 w-full rounded-card bg-white object-contain p-2 sm:h-44 sm:p-3"
+              src={item.imageUrl}
+            />
+          ) : (
+            <ProductVisual
+              brand={item.brand}
+              className="h-36 rounded-card p-2 sm:h-44 sm:p-3"
+              name={item.name}
+              tone={item.imageTone}
+            />
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <CheckCircle2 aria-hidden className="shrink-0 text-accent" size={24} />
