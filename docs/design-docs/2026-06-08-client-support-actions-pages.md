@@ -76,3 +76,7 @@ No migration required. The old `/ayuda/cambios-devoluciones` route is removed an
 
 ## Open Questions
 - None.
+
+## Addendum 2026-10-15: Deprecación de formularios simulados y aviso de indisponibilidad
+
+En el marco del plan de limpieza de identidad de cara al cliente (`docs/exec-plans/completed/customer-facing-copy-cleanup.md`), se eliminó `SupportActionForm` y los modales de éxito simulados ("Solicitud recibida") de `/boton-de-arrepentimiento` y `/cambios-y-devoluciones`. Al no contar con persistencia ni canal de recepción en backend, las páginas presentan ahora el componente `SupportRequestUnavailable` informando con transparencia que la solicitud online no está disponible y derivando al usuario a `/gestion-de-pedidos` y `/mi-cuenta`.

@@ -69,7 +69,7 @@ export function OrderTrackingForm() {
         <form className="grid gap-4 rounded-card border border-border bg-white p-5 shadow-card sm:p-6" onSubmit={handleSubmit}>
           <Input
             errorText={errorText}
-            helperText="Ingresá el código tal como figura en tu comprobante. No validamos formato en esta etapa."
+            helperText="Ingresá el código tal como figura en tu comprobante."
             id="tracking-code"
             label="Código de seguimiento*"
             onChange={(event) => {
