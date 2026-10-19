@@ -2,29 +2,25 @@
 
 import { useEffect } from "react";
 
-import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
-import { AdminLineChart } from "@/components/admin/charts";
+import { AdminCard } from "@/components/admin/ui/AdminCard";
 import { KpiGrid } from "@/components/admin/stats/KpiGrid";
 import { PeriodFilter } from "@/components/admin/stats/PeriodFilter";
 import { Button } from "@/components/ui/Button";
-import { overviewKpis, visitorBehaviorBlocks } from "@/lib/data/admin/statistics/dashboard";
-import { visitSeries } from "@/lib/data/admin/statistics/visits";
+import { AdminEmptyState } from "@/components/admin/ui/States";
 import type { AdminKpiMetric } from "@/lib/data/admin/statistics/dashboard";
 import type { StatisticsMetrics } from "@/lib/api/admin/statistics/types";
 import { useAdminStatisticsStore } from "@/stores/admin-statistics-store";
 
-const overviewMetricKeys: Record<string, keyof StatisticsMetrics> = {
-  sales: "orders",
-  billing: "revenue",
-  "average-ticket": "averageTicket",
-  "cart-conversion": "conversionRate",
-};
+const overviewMetricDefinitions: { id: string; key: keyof StatisticsMetrics; label: string }[] = [
+  { id: "sales", key: "orders", label: "Ventas" },
+  { id: "billing", key: "revenue", label: "Facturación" },
+  { id: "average-ticket", key: "averageTicket", label: "Ticket promedio" },
+  { id: "cart-conversion", key: "conversionRate", label: "Conversión del carrito" },
+];
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const integerFormatter = new Intl.NumberFormat("es-AR");
 const percentageFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
-
-type OverviewMetricSource = AdminKpiMetric[] | StatisticsMetrics;
 
 export default function AdminPage() {
   const period = useAdminStatisticsStore((state) => state.period);
@@ -36,12 +32,12 @@ export default function AdminPage() {
     void fetchOverview();
   }, [customRange, fetchOverview, period]);
 
-  const overviewMetrics = overview.data?.metrics ?? overviewKpis;
+  const overviewMetrics = overview.data?.metrics ? toKpiMetrics(overview.data.metrics) : [];
   const liveBehavior = overview.data?.behavior;
-  const behaviorBlocks = visitorBehaviorBlocks.map((block) => {
-    const liveValue = block.id === "paid-orders" ? liveBehavior?.paidOrders : block.id === "created-carts" ? liveBehavior?.createdCarts : undefined;
-    return liveValue === undefined ? block : { ...block, value: formatBehaviorValue(liveValue) };
-  });
+  const behaviorBlocks = [
+    { id: "paid-orders", title: "Pedidos pagos", value: liveBehavior?.paidOrders, description: "Pedidos con pago aprobado en el período." },
+    { id: "created-carts", title: "Carritos creados", value: liveBehavior?.createdCarts, description: "Carritos iniciados en el período." },
+  ];
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6">
@@ -61,47 +57,37 @@ export default function AdminPage() {
         </div>
       ) : null}
 
-      <KpiGrid metrics={toKpiMetrics(overviewMetrics)} isLoading={overview.isLoading} />
+      <KpiGrid metrics={overviewMetrics} isLoading={overview.isLoading} />
+      {!overview.isLoading && overviewMetrics.length === 0 ? <AdminEmptyState title="Sin métricas" description={overview.error ? "No se pudieron cargar las métricas del período." : "Todavía no hay métricas para el período seleccionado."} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         {behaviorBlocks.map((block) => (
           <AdminCard key={block.id}>
             <p className="text-sm font-medium text-zinc-500">{block.title}</p>
-            <p className="mt-3 text-3xl font-bold text-zinc-950">{block.value}</p>
+            <p className="mt-3 text-3xl font-bold text-zinc-950">{block.value === undefined ? "—" : formatBehaviorValue(block.value)}</p>
             <p className="mt-2 text-sm leading-6 text-zinc-500">{block.description}</p>
           </AdminCard>
         ))}
       </div>
 
-      <AdminCard>
-        <AdminCardHeader title="Visitas a pedidos pagos y carritos" description="Tendencia semanal estática para validar la visualización del dashboard." />
-        <AdminLineChart
-          data={visitSeries}
-          lines={[
-            { dataKey: "visitas", name: "Visitas", color: "#39b000" },
-            { dataKey: "visitantes", name: "Visitantes únicos", color: "#18181b" },
-          ]}
-        />
-      </AdminCard>
+      <AdminEmptyState title="Visitas no disponibles" description="Todavía no registramos el tráfico de la tienda, por eso no se muestran visitas, visitantes únicos ni duración de sesión." />
     </div>
   );
 }
 
-function toKpiMetrics(source: OverviewMetricSource): AdminKpiMetric[] {
-  if (Array.isArray(source)) return source;
+function toKpiMetrics(source: StatisticsMetrics): AdminKpiMetric[] {
+  return overviewMetricDefinitions.flatMap((definition) => {
+    const liveMetric = source[definition.key];
+    if (!liveMetric) return [];
 
-  return overviewKpis.map((metric) => {
-    const liveKey = overviewMetricKeys[metric.id];
-    const liveMetric = liveKey ? source[liveKey] : undefined;
-    if (!liveMetric) return metric;
-
-    return {
-      ...metric,
-      value: formatKpiValue(metric.id, liveMetric.current),
-      previousValue: formatKpiValue(metric.id, liveMetric.previous),
+    return [{
+      id: definition.id,
+      label: definition.label,
+      value: formatKpiValue(definition.id, liveMetric.current),
+      previousValue: formatKpiValue(definition.id, liveMetric.previous),
       variationPct: liveMetric.variationPct,
       trend: liveMetric.trend,
-    };
+    }];
   });
 }
 

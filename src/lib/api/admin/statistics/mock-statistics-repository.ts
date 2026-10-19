@@ -89,7 +89,7 @@ export class MockStatisticsRepository implements StatisticsRepository {
       ok: true,
       data: {
         inventoryAlerts: inventoryAlerts.map((group) => ({
-          items: group.items.map((name) => inventoryItem(name)),
+          items: group.items.map((item) => inventoryItem(item.name)),
           type: alertType(group.id),
         })),
         metadata: context.metadata,

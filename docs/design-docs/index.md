@@ -41,3 +41,4 @@ Catalog of durable technical architecture and design decisions for EntrenAR.
 - [`2026-10-04-catalog-listing-taxonomy-alignment.md`](./2026-10-04-catalog-listing-taxonomy-alignment.md): Design: Catalog Listing and Taxonomy Alignment
 - [`2026-10-09-crm-showcase-simulator.md`](./2026-10-09-crm-showcase-simulator.md): Design: Isolated CRM Showcase Simulator — historical persistence, destination safety, inventory integrity and stock-aware discovery.
 
+- [`2026-10-15-admin-correction-flow.md`](./2026-10-15-admin-correction-flow.md): Design: Admin Correction Flow — envíos auth, pagination contracts and statistics sources.
