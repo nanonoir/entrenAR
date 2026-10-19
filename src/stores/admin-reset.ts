@@ -27,7 +27,7 @@ export function resetAdminState(): void {
   resetAdminShippingState();
   useAdminDiscountsStore.setState({ coupons: [], couponsEmpty: true, shippingDiscounts: [], shippingDiscountsEmpty: true, error: null, hasLoaded: false, isEmpty: true, source: "api", status: "idle" });
   useAdminProductsStore.setState({ products: [], stockHistory: [], selectedProductIds: [], isInitializing: false, error: null });
-  useAdminCategoriesStore.setState({ categories: [] });
+  useAdminCategoriesStore.getState().reset();
   useAdminCatalogOrganizationStore.setState({ categoryOrder: [] });
   useAdminToastStore.setState({ toasts: [] });
 }

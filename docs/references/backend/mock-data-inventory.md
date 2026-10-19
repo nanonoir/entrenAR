@@ -12,7 +12,7 @@ This document inventories every authoritative mock source and Zustand store in t
 | `wishlist-store` | Products | Mock persistence plus API async state | Product Cards, Account Wishlist | Wishlist API adapter | Server-side wishlist implemented | Phase 3 — Customer Account |
 | `admin-sales-store` | CRM Sales | In-memory | Admin Sales, Orders | Sales API | `/api/v1/admin/sales` migration complete | Phase 6 — Sales CRM |
 | `admin-products-store` | CRM Products | In-memory | Admin Products, Inventory | Catalog API | `/api/v1/admin/products` migration complete | Phase 2 — Catalog |
-| `admin-categories-store` | CRM Categories | In-memory | Admin Categories | Catalog API | `/api/v1/admin/categories` migration complete | Phase 2 — Catalog |
+| `admin-categories-store` | CRM Categories | Server-confirmed (non-optimistic) state over `AdminCategoriesRepository`; explicit in-memory mock only when `NEXT_PUBLIC_DATA_SOURCE=mock` | Admin Categories | `src/lib/api/admin/categories` → `/api/v1/admin/categories` | Mock repository retained as explicit offline option | Phase 2 — Catalog |
 | `admin-customers-store` | CRM Customers | In-memory | Admin Customers | Customers API | `/api/v1/admin/customers` migration complete | Phase 7 — Customers CRM |
 | `admin-discounts-store` | CRM Discounts | In-memory | Admin Coupons & Shipping Discounts | Commerce configuration API | `/api/v1/admin/discounts` migration complete | Phase 4 — Commerce Configuration |
 | `admin-payment-methods-store`| CRM Payments | In-memory | Admin Payments | Commerce configuration API | `/api/v1/admin/payment-methods` migration complete | Phase 4 — Commerce Configuration |
