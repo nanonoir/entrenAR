@@ -36,14 +36,20 @@ export class CategoryService {
       const categories = await this.catalogRepository.allCategories(transaction);
       const categoryById = new Map(categories.map((category) => [category.id, category]));
       if (input.parentId && !categoryById.has(input.parentId)) throw this.notFound();
-      if (this.wouldCreateCycle(input.id, input.parentId, categoryById)) throw this.categoryCycle();
+      if (this.wouldCreateCycle(input.id, input.parentId ?? undefined, categoryById)) throw this.categoryCycle();
       const slug = input.slug === undefined || input.slug === current.slug
         ? input.slug ?? current.slug
         : await this.assertAvailableSlug(transaction, input.slug, input.id);
 
+      // `undefined` preserves the stored value (Prisma ignores it); `null` clears it.
       const updated = await this.catalogRepository.updateCategory(transaction, input.id, {
-        ...input,
+        description: input.description,
+        googleShoppingCategory: input.googleShoppingCategory,
+        imageUrl: input.imageUrl,
+        name: input.name,
         parentId: input.parentId,
+        seoDescription: input.seoDescription,
+        seoTitle: input.seoTitle,
         slug,
         visibility: this.visibility(input.visibility),
       });

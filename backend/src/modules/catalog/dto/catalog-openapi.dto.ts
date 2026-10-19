@@ -52,6 +52,54 @@ export class CatalogCategoryRequestDto {
 
   @ApiPropertyOptional()
   parentId?: string;
+
+  @ApiPropertyOptional()
+  slug?: string;
+
+  @ApiPropertyOptional()
+  description?: string;
+
+  @ApiPropertyOptional()
+  imageUrl?: string;
+
+  @ApiPropertyOptional()
+  googleShoppingCategory?: string;
+
+  @ApiPropertyOptional()
+  seoTitle?: string;
+
+  @ApiPropertyOptional()
+  seoDescription?: string;
+}
+
+/** PUT body: omitted optional fields are preserved; `null` clears them (`parentId: null` moves to the root). */
+export class CatalogCategoryUpdateRequestDto {
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ enum: ["visible", "hidden"] })
+  visibility!: string;
+
+  @ApiPropertyOptional()
+  slug?: string;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  parentId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  description?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  imageUrl?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  googleShoppingCategory?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  seoDescription?: string | null;
 }
 
 export class CatalogCategoryVisibilityRequestDto {

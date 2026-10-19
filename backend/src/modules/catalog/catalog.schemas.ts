@@ -125,7 +125,17 @@ export const categoryCreateSchema = z.object({
   visibility: z.enum(catalogVisibilityValues),
 }).strict();
 
-export const categoryUpdateSchema = categoryCreateSchema.extend({ id: identifierSchema }).strict();
+/** PUT body: an omitted optional field is preserved; an explicit `null` clears it (`parentId: null` moves the category to the root). */
+export const categoryUpdateBodySchema = categoryCreateSchema.extend({
+  description: categoryCreateSchema.shape.description.nullable(),
+  googleShoppingCategory: categoryCreateSchema.shape.googleShoppingCategory.nullable(),
+  imageUrl: categoryCreateSchema.shape.imageUrl.nullable(),
+  parentId: categoryCreateSchema.shape.parentId.nullable(),
+  seoDescription: categoryCreateSchema.shape.seoDescription.nullable(),
+  seoTitle: categoryCreateSchema.shape.seoTitle.nullable(),
+}).strict();
+
+export const categoryUpdateSchema = categoryUpdateBodySchema.extend({ id: identifierSchema }).strict();
 
 const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -192,6 +202,7 @@ export const productPriceUpdateSchema = z.object({
 });
 
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
+export type CategoryUpdateBodyInput = z.infer<typeof categoryUpdateBodySchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
 export type AdminProductListQuery = z.infer<typeof adminProductListQuerySchema>;
 export type CatalogSettingsUpdateInput = z.infer<typeof catalogSettingsUpdateSchema>;

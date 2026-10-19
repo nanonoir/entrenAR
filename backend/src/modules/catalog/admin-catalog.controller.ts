@@ -25,6 +25,7 @@ import {
   CatalogSettingsUpdateInput,
   CategoryCreateInput,
   CategoryOrderInput,
+  CategoryUpdateBodyInput,
   CategoryUpdateInput,
   CategoryVisibilityInput,
   ProductCreateInput,
@@ -34,6 +35,7 @@ import {
   catalogSettingsUpdateSchema,
   categoryCreateSchema,
   categoryOrderSchema,
+  categoryUpdateBodySchema,
   categoryUpdateSchema,
   categoryVisibilitySchema,
   identifierSchema,
@@ -44,6 +46,7 @@ import {
 import {
   CatalogCategoryOrderRequestDto,
   CatalogCategoryRequestDto,
+  CatalogCategoryUpdateRequestDto,
   CatalogCategoryVisibilityRequestDto,
   CatalogPageDto,
   CatalogProductPriceRequestDto,
@@ -166,12 +169,12 @@ export class AdminCatalogController {
   }
 
   @Put("categories/:id")
-  @ApiOperation({ summary: "Update a catalog category" })
-  @ApiBody({ type: CatalogCategoryRequestDto })
+  @ApiOperation({ summary: "Update a catalog category; omitted optional fields are preserved, null clears them" })
+  @ApiBody({ type: CatalogCategoryUpdateRequestDto })
   @ApiOkResponse({ description: "Updated category." })
   async updateCategory(
     @Param("id", new ZodValidationPipe(identifierSchema)) id: string,
-    @Body(new ZodValidationPipe(categoryCreateSchema)) input: CategoryCreateInput,
+    @Body(new ZodValidationPipe(categoryUpdateBodySchema)) input: CategoryUpdateBodyInput,
   ) {
     return toAdminCatalogCategory(await this.categoryService.update(categoryUpdateSchema.parse({ ...input, id }) as CategoryUpdateInput));
   }
