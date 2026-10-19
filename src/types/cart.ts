@@ -12,6 +12,8 @@ export type CartPreviewItem = {
   compareAtPrice?: number;
   stock: number;
   imageTone: ProductImageTone;
+  imageUrl?: string;
+  imageAlt?: string;
 };
 
 export type AddedCartItemPreview = CartPreviewItem;

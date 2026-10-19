@@ -69,6 +69,7 @@ export type QuickBuyProduct = Pick<
   | "price"
   | "compareAtPrice"
   | "stock"
+  | "images"
   | "variantOptions"
   | "variants"
 >;

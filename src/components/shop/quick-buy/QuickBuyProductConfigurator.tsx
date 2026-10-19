@@ -3,9 +3,10 @@
 import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
+import { ProductVariantSelector } from "@/components/shop/products/ProductVariantSelector";
 import { ProductVisual } from "@/components/shop/products/ProductVisual";
 import { useProductVariantSelection } from "@/hooks/useProductVariantSelection";
-import { toCartPreviewItem } from "@/lib/cart-items";
+import { getProductImage, toCartPreviewItem } from "@/lib/cart-items";
 import { formatCurrency } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { CartPreviewItem } from "@/types/cart";
@@ -25,6 +26,7 @@ export function QuickBuyProductConfigurator({
   imageClassName,
 }: QuickBuyProductConfiguratorProps) {
   const {
+    attributes,
     compareAtPrice,
     hasStructuredOptions,
     hasVariantSelector,
@@ -32,22 +34,31 @@ export function QuickBuyProductConfigurator({
     outOfStock,
     price,
     quantity,
-    selectedOptions,
     selectedVariant,
     selectOption,
     selectVariant,
     setQuantity,
   } = useProductVariantSelection(product);
+  const image = getProductImage(product.images, selectedVariant);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[0.95fr_1fr] lg:gap-8">
       <div className="-mx-5 flex items-center justify-center sm:mx-0">
-        <ProductVisual
-          brand={product.brand}
-          className={cn("min-h-[200px] w-full rounded-none bg-white sm:min-h-[420px] sm:max-w-md sm:rounded-card", imageClassName)}
-          name={product.name}
-          tone={product.imageTone}
-        />
+        {image?.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={image.alt || product.name}
+            className={cn("min-h-[200px] w-full rounded-none bg-white object-contain sm:min-h-[420px] sm:max-w-md sm:rounded-card", imageClassName)}
+            src={image.url}
+          />
+        ) : (
+          <ProductVisual
+            brand={product.brand}
+            className={cn("min-h-[200px] w-full rounded-none bg-white sm:min-h-[420px] sm:max-w-md sm:rounded-card", imageClassName)}
+            name={product.name}
+            tone={product.imageTone}
+          />
+        )}
       </div>
 
       <div className="grid content-center gap-4 sm:gap-6">
@@ -68,102 +79,15 @@ export function QuickBuyProductConfigurator({
           </div>
         </div>
 
-        {hasStructuredOptions ? (
-          <div className="grid gap-5">
-            {product.variantOptions?.map((option) => {
-              const selectedValue = selectedOptions[option.id];
-              const selectedLabel =
-                option.values.find((value) => value.id === selectedValue)?.label ?? option.values[0]?.label;
-
-              return (
-                <div className="grid gap-3" key={option.id}>
-                  <p className="text-base font-medium text-text">
-                    {option.label}: <span className="font-bold">{selectedLabel}</span>
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-                    {option.values.map((value) => {
-                      const nextSelection = { ...selectedOptions, [option.id]: value.id };
-                      const matchingVariants = product.variants.filter((variant) =>
-                        product.variantOptions?.every((group) => {
-                          const selectedOptionValue =
-                            group.id === option.id ? value.id : nextSelection[group.id];
-
-                          return (
-                            !selectedOptionValue ||
-                            variant.optionValues?.[group.id] === selectedOptionValue
-                          );
-                        }),
-                      );
-                      const disabled =
-                        matchingVariants.length > 0 &&
-                        matchingVariants.every((variant) => variant.stock <= 0);
-                      const selected = selectedValue === value.id;
-
-                      return (
-                        <button
-                          aria-pressed={selected}
-                          className={cn(
-                            "flex min-h-10 items-center justify-center gap-2 rounded-button border px-3 py-2 font-subtitle text-sm font-bold uppercase transition sm:min-h-12 sm:px-4 sm:py-3",
-                            selected
-                              ? "border-accent bg-accent-soft text-accent-hover"
-                              : "border-border bg-white text-text hover:border-accent",
-                            disabled && "cursor-not-allowed opacity-45",
-                          )}
-                          disabled={disabled}
-                          key={value.id}
-                          onClick={() => selectOption(option.id, value.id)}
-                          type="button"
-                        >
-                          {value.swatch ? (
-                            <span
-                              aria-hidden
-                              className="h-5 w-5 rounded-sm border border-border"
-                              style={{ backgroundColor: value.swatch }}
-                            />
-                          ) : null}
-                          {value.label}
-                          {disabled ? <span className="text-sale">Sin stock</span> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : hasVariantSelector ? (
-          <div className="grid gap-3">
-            <p className="text-base font-medium text-text">
-              Variante: <span className="font-bold">{selectedVariant?.label}</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {product.variants.map((variant) => {
-                const selected = variant.id === selectedVariant?.id;
-                const disabled = variant.stock <= 0;
-
-                return (
-                  <button
-                    aria-pressed={selected}
-                    className={cn(
-                      "min-h-10 rounded-button border px-3 py-2 text-left font-subtitle text-sm font-bold uppercase transition sm:min-h-12 sm:px-4 sm:py-3",
-                      selected
-                        ? "border-accent bg-accent-soft text-accent-hover"
-                        : "border-border bg-white text-text hover:border-accent",
-                      disabled && "cursor-not-allowed opacity-45",
-                    )}
-                    disabled={disabled}
-                    key={variant.id}
-                    onClick={() => selectVariant(variant.id)}
-                    type="button"
-                  >
-                    {variant.label}
-                    {disabled ? <span className="ml-2 text-sale">Sin stock</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
+        <ProductVariantSelector
+          attributes={attributes}
+          hasStructuredOptions={hasStructuredOptions}
+          hasVariantSelector={hasVariantSelector}
+          onSelectOption={selectOption}
+          onSelectVariant={selectVariant}
+          selectedVariant={selectedVariant}
+          variants={product.variants}
+        />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <QuantitySelector

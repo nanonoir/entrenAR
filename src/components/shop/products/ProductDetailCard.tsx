@@ -4,6 +4,7 @@ import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { FavoriteAuthModal } from "@/components/shop/account/FavoriteAuthModal";
+import { ProductVariantSelector } from "@/components/shop/products/ProductVariantSelector";
 import { ProductImageGallery } from "@/components/shop/products/ProductImageGallery";
 import { useFavoriteProduct } from "@/hooks/useFavoriteProduct";
 import { useProductVariantSelection } from "@/hooks/useProductVariantSelection";
@@ -24,7 +25,10 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
   const { closeFavoriteAuthModal, favoriteAuthModalOpen, favoriteFeedbackKey, isFavorite, toggleFavorite } =
     useFavoriteProduct(product.id);
   const {
+    attributes,
     compareAtPrice,
+    hasStructuredOptions,
+    hasVariantSelector,
     maxQuantity,
     outOfStock,
     price,
@@ -103,31 +107,15 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
             </>
           ) : null}
         </div>
-        {product.variants.length > 1 && product.variantOptions?.length ? <div className="grid gap-3">
-          <p className="text-sm font-medium">Variante</p>
-          <div className="flex flex-wrap gap-2">
-            {product.variants.map((item) => (
-              <button
-                className={`rounded-button border px-3 py-2 text-sm font-semibold transition ${
-                  item.id === selectedVariant?.id
-                    ? "border-accent bg-accent-soft text-accent-hover"
-                    : "border-border bg-surface hover:border-text"
-                }`}
-                disabled={item.stock <= 0}
-                key={item.id}
-                onClick={() => {
-                  selectVariant(item.id);
-                  // Structured variants are selected by their option values in the existing hook.
-                  for (const [optionId, valueId] of Object.entries(item.optionValues ?? {})) selectOption(optionId, valueId);
-                }}
-                type="button"
-              >
-                {item.label}
-                {item.stock <= 0 ? <span className="ml-2 text-sale">Sin stock</span> : null}
-              </button>
-            ))}
-          </div>
-        </div> : null}
+        <ProductVariantSelector
+          attributes={attributes}
+          hasStructuredOptions={hasStructuredOptions}
+          hasVariantSelector={hasVariantSelector}
+          onSelectOption={selectOption}
+          onSelectVariant={selectVariant}
+          selectedVariant={selectedVariant}
+          variants={product.variants}
+        />
         <div className="flex flex-wrap items-end gap-4">
           <QuantitySelector
             max={maxQuantity}
