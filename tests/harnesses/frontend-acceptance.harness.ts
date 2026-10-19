@@ -23,6 +23,7 @@ const HARNESS_PATHS = [
   "tests/harnesses/admin-mock-boundary.harness.ts",
   "tests/harnesses/shop-mock-boundary.harness.ts",
   "tests/harnesses/prd2-catalog-routes.harness.ts",
+  "tests/harnesses/variant-selection.harness.ts",
   "src/lib/api/catalog/catalog-adapter.harness.ts",
   "src/lib/api/account/account-adapter.harness.ts",
   "src/lib/api/checkout/checkout-adapter.harness.ts",
