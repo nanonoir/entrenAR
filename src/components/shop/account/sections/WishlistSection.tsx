@@ -6,10 +6,10 @@ import { WishlistProductCard } from "@/components/shop/account/cards/WishlistPro
 import { SectionHeader } from "@/components/shop/account/dashboard/SectionHeader";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { ACCOUNT_ASYNC_STATUS } from "@/types/account";
-import type { ProductSummary } from "@/types/product";
+import type { WishlistProduct } from "@/types/account";
 
 type WishlistSectionProps = {
-  products: ProductSummary[];
+  products: WishlistProduct[];
   userEmail: string;
 };
 

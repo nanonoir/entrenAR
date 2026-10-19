@@ -30,7 +30,16 @@ export function CartLineItem({
         className,
       )}
     >
-      <ProductVisual brand={item.brand} className="h-24 rounded-card p-2" name={item.name} tone={item.imageTone} />
+      {item.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={item.imageAlt || item.name}
+          className="h-24 w-20 rounded-card bg-white object-contain p-2"
+          src={item.imageUrl}
+        />
+      ) : (
+        <ProductVisual brand={item.brand} className="h-24 rounded-card p-2" name={item.name} tone={item.imageTone} />
+      )}
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

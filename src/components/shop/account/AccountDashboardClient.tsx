@@ -23,11 +23,11 @@ import { useUIStore } from "@/stores/ui-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { isAccountSection } from "@/lib/account-sections";
 import type { AccountOrder, AccountSection } from "@/types/account";
-import type { ProductSummary } from "@/types/product";
+import type { WishlistProduct } from "@/types/account";
 
 type AccountDashboardClientProps = {
   orders: AccountOrder[];
-  products: ProductSummary[];
+  products: WishlistProduct[];
 };
 
 export function AccountDashboardClient({ orders, products }: AccountDashboardClientProps) {

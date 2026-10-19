@@ -1,3 +1,5 @@
+import type { ProductDetail, ProductSummary } from "@/types/product";
+
 export type AccountNavItem = {
   label: string;
   href: string;
@@ -134,3 +136,5 @@ export interface AccountOrder {
 }
 
 export type WishlistProductId = string;
+
+export type WishlistProduct = ProductSummary & Partial<Pick<ProductDetail, "images">>;

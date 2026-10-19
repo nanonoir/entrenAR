@@ -12,7 +12,7 @@ import type {
   AccountProfile,
   AccountSection,
 } from "@/types/account";
-import type { ProductSummary } from "@/types/product";
+import type { WishlistProduct } from "@/types/account";
 
 type AccountSectionPanelProps = {
   activeSection: AccountSection;
@@ -21,7 +21,7 @@ type AccountSectionPanelProps = {
   orders: AccountOrder[];
   ordersError: AccountOperationError | null;
   ordersStatus: AccountAsyncStatus;
-  products: ProductSummary[];
+  products: WishlistProduct[];
   profile: AccountProfile | null;
   userEmail: string;
 };
