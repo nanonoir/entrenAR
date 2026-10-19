@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import { LoaderCircle, RefreshCw } from "lucide-react";
+import {
+  BANK_TRANSFER_UNAVAILABLE_MESSAGE,
+  isUsableBankTransferConfig,
+} from "@/components/checkout/bank-transfer-config";
 import { formatCurrency } from "@/lib/pricing";
-import { DATA_SOURCE, getCheckoutDataSource } from "@/lib/api/config";
 import {
   type CheckoutPaymentMethod as ServerCheckoutPaymentMethod,
   type CheckoutPaymentOption,
@@ -41,7 +44,6 @@ export function PaymentOptions({ onSelectPayment, selectedPaymentId }: PaymentOp
   const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
-  const isMockSource = getCheckoutDataSource() === DATA_SOURCE.MOCK;
   const paymentChoices = serverQuote
     ? serverQuote.paymentMethods.map(toServerPaymentChoice)
     : checkoutPaymentMethods.map(toMockPaymentChoice);
@@ -50,7 +52,7 @@ export function PaymentOptions({ onSelectPayment, selectedPaymentId }: PaymentOp
   const selectedBankConfigurationMissing = Boolean(
     selectedServerMethod
       && selectedPaymentId === "bank-transfer"
-      && !selectedServerMethod.bankConfig,
+      && !isUsableBankTransferConfig(selectedServerMethod.bankConfig),
   );
 
   return (
@@ -80,9 +82,7 @@ export function PaymentOptions({ onSelectPayment, selectedPaymentId }: PaymentOp
 
       {!serverQuote && !quoteLoading ? (
         <p className="rounded-card border border-border bg-background p-3 text-xs text-text-muted" role="status">
-          {isMockSource
-            ? "Mostramos medios mock para mantener la vista previa disponible."
-            : "Los medios se muestran como referencia hasta que el servidor confirme la configuración."}
+          Los medios de pago disponibles se confirmarán al cotizar tu pedido.
         </p>
       ) : null}
 
@@ -123,7 +123,7 @@ export function PaymentOptions({ onSelectPayment, selectedPaymentId }: PaymentOp
               <span className="mt-1 block text-xs text-text-muted">{method.helper}</span>
               {method.options.length > 0 ? (
                 <span className="mt-2 block text-xs font-medium text-text-muted">
-                  Opciones confirmadas: {method.options.map((option) => `${option.fee} · ${option.receiveIn}`).join(" / ")}
+                  Opciones: {method.options.map((option) => `${option.fee} · ${option.receiveIn}`).join(" / ")}
                 </span>
               ) : null}
             </label>
@@ -134,19 +134,19 @@ export function PaymentOptions({ onSelectPayment, selectedPaymentId }: PaymentOp
           </p>
         )}
         <p className="text-xs text-text-muted" id="checkout-payment-options-helper">
-          {serverQuote ? "La disponibilidad y las opciones fueron confirmadas por el servidor." : "La disponibilidad final se confirmará al cotizar el pedido."}
+          La disponibilidad final se confirma al cotizar el pedido.
         </p>
         {selectedPaymentUnavailable ? (
           <p className="text-sm font-medium text-sale" role="alert">El medio de pago seleccionado ya no está disponible. Elegí otro para continuar.</p>
         ) : null}
         {selectedBankConfigurationMissing ? (
-          <p className="text-sm font-medium text-sale" role="alert">La configuración de transferencia bancaria no está disponible para esta cotización.</p>
+          <p className="text-sm font-medium text-sale" role="alert">{BANK_TRANSFER_UNAVAILABLE_MESSAGE}</p>
         ) : null}
       </fieldset>
 
       {serverQuote && serverQuote.discount > 0 ? (
         <p className="rounded-card border border-accent/40 bg-accent-soft p-3 text-sm font-semibold text-accent-hover">
-          Descuento confirmado por el servidor: -{formatCurrency(serverQuote.discount)}
+          Descuento aplicado: -{formatCurrency(serverQuote.discount)}
           {serverQuote.coupon?.code ? ` · ${serverQuote.coupon.code}` : ""}.
         </p>
       ) : null}
@@ -175,7 +175,7 @@ function toServerPaymentChoice(method: ServerCheckoutPaymentMethod): PaymentChoi
     description: method.description,
     helper: acceptedMethods.length > 0
       ? `Medios aceptados: ${acceptedMethods.join(", ")}.`
-      : "Configuración confirmada por el servidor.",
+      : "Disponible para este pedido.",
     id: method.id,
     logoSrc: method.logoSrc.startsWith("/") ? method.logoSrc : fallback?.logoSrc ?? "/transfer.svg",
     options: method.options,

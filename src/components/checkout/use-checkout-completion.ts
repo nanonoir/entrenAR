@@ -53,13 +53,6 @@ export function useCheckoutCompletion({
       return;
     }
 
-    if (form.selectedPaymentId === "bank-transfer" && !form.hasTransferProof) {
-      form.invalidateFrom(CHECKOUT_STEP.PAYMENT);
-      form.setActiveStep(CHECKOUT_STEP.PAYMENT);
-      form.scrollToStep(CHECKOUT_STEP.PAYMENT);
-      return;
-    }
-
     completionSubmitRef.current = true;
 
     try {

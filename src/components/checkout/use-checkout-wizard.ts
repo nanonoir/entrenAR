@@ -51,7 +51,6 @@ export interface CheckoutWizardModel {
   handleSelectPayment: (id: CheckoutPaymentMethodId) => void;
   handleSelectPickupPoint: (point: CheckoutPickupPoint) => void;
   handleSelectProvider: (provider: CheckoutShippingProvider) => void;
-  handleTransferProofChange: (hasProof: boolean) => void;
   hasFreeShipping: boolean;
   hasValidationErrors: boolean;
   hydrated: boolean;
@@ -112,11 +111,10 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     && items.length > 0
     && quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS
     && Boolean(quote)
-    && !configurationIssue
-    && (form.selectedPaymentId !== "bank-transfer" || form.hasTransferProof);
+    && !configurationIssue;
   const hasValidationErrors = Object.keys(form.identificationErrors).length > 0 || Object.keys(form.deliveryErrors).length > 0;
   const actionHelpText = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING || quoteStatus === CHECKOUT_ASYNC_STATUS.IDLE
-    ? "Estamos confirmando los valores con el servidor."
+    ? "Estamos confirmando los valores de tu pedido."
     : quoteStatus === CHECKOUT_ASYNC_STATUS.ERROR
       ? "Actualizá la cotización antes de continuar."
       : configurationIssue
@@ -148,7 +146,6 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     handleSelectPayment: form.handleSelectPayment,
     handleSelectPickupPoint: form.handleSelectPickupPoint,
     handleSelectProvider: form.handleSelectProvider,
-    handleTransferProofChange: form.handleTransferProofChange,
     hasFreeShipping,
     hasValidationErrors,
     hydrated: quoteLifecycle.hydrated,

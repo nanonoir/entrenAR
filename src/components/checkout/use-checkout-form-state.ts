@@ -36,7 +36,6 @@ export interface CheckoutFormState {
   deliveryForm: DeliveryForm;
   deliveryMethod: DeliveryMethod;
   detectedLocation: CheckoutPostalCodeLocation | undefined;
-  hasTransferProof: boolean;
   identificationErrors: FieldErrors<IdentificationForm>;
   identificationForm: IdentificationForm;
   invalidateFrom: (step: CheckoutStep) => void;
@@ -57,7 +56,6 @@ export interface CheckoutFormState {
   handleSelectPayment: (id: CheckoutPaymentMethodId) => void;
   handleSelectPickupPoint: (point: CheckoutPickupPoint) => void;
   handleSelectProvider: (provider: CheckoutShippingProvider) => void;
-  handleTransferProofChange: (hasProof: boolean) => void;
 }
 
 export function useCheckoutFormState(): CheckoutFormState {
@@ -89,7 +87,6 @@ export function useCheckoutFormState(): CheckoutFormState {
   const [selectedProvider, setSelectedProvider] = useState<CheckoutShippingProvider | null>(null);
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<CheckoutPickupPoint | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<CheckoutPaymentMethodId>("mercado-pago");
-  const [hasTransferProof, setHasTransferProof] = useState(false);
 
   const detectedLocation = checkoutPostalCodeLocations.find(
     (location) => location.postalCode === deliveryForm.postalCode,
@@ -215,11 +212,6 @@ export function useCheckoutFormState(): CheckoutFormState {
     invalidateFrom(CHECKOUT_STEP.PAYMENT);
   }
 
-  function handleTransferProofChange(hasProof: boolean) {
-    setHasTransferProof(hasProof);
-    invalidateFrom(CHECKOUT_STEP.PAYMENT);
-  }
-
   function scrollToStep(step: CheckoutStep): void {
     document.getElementById(`checkout-step-${step}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -237,8 +229,6 @@ export function useCheckoutFormState(): CheckoutFormState {
     handleSelectPayment,
     handleSelectPickupPoint,
     handleSelectProvider,
-    handleTransferProofChange,
-    hasTransferProof,
     identificationErrors,
     identificationForm,
     invalidateFrom,

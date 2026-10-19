@@ -1,3 +1,7 @@
+import {
+  BANK_TRANSFER_UNAVAILABLE_MESSAGE,
+  isUsableBankTransferConfig,
+} from "@/components/checkout/bank-transfer-config";
 import type { CheckoutQuote } from "@/lib/api/checkout/checkout.repository";
 import {
   isValidDni,
@@ -87,7 +91,7 @@ export function validateDelivery(
   if (!form.postalCode.trim()) {
     nextErrors.postalCode = "Ingresá tu código postal.";
   } else if (!detectedLocation) {
-    nextErrors.postalCode = "Código postal sin datos mock disponibles.";
+    nextErrors.postalCode = "No tenemos opciones de entrega para este código postal.";
   }
 
   if (!deliveryMethod) {
@@ -144,7 +148,7 @@ export function getCheckoutConfigurationIssue(
   if (!paymentMethod) return "El medio de pago seleccionado ya no está disponible.";
   const paymentOptionId = paymentMethod.selectedOptionId ?? paymentMethod.options[0]?.id;
   if (!paymentOptionId || !paymentMethod.options.some((option) => option.id === paymentOptionId)) return "El medio de pago seleccionado no tiene una opción configurada.";
-  if (selectedPaymentId === "bank-transfer" && !paymentMethod.bankConfig) return "La configuración de transferencia bancaria no está disponible.";
+  if (selectedPaymentId === "bank-transfer" && !isUsableBankTransferConfig(paymentMethod.bankConfig)) return BANK_TRANSFER_UNAVAILABLE_MESSAGE;
   if (deliveryMethod === "home" && (!selectedProvider || !quote.shippingOptions.some((option) => option.providerId === selectedProvider.id))) {
     return selectedProvider ? "La opción de envío seleccionada ya no está disponible." : "Seleccioná una opción de envío.";
   }

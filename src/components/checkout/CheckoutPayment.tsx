@@ -19,7 +19,6 @@ export type CheckoutPaymentProps = {
   isActive: boolean;
   onOpen: () => void;
   onSelectPayment: (id: CheckoutPaymentMethodId) => void;
-  onTransferProofChange: (hasProof: boolean) => void;
   selectedPaymentId: CheckoutPaymentMethodId;
 };
 
@@ -30,21 +29,14 @@ export function CheckoutPayment({
   isActive,
   onOpen,
   onSelectPayment,
-  onTransferProofChange,
   selectedPaymentId,
 }: CheckoutPaymentProps) {
-  const [transferProofFileName, setTransferProofFileName] = useState("");
   const [showTransferPanel, setShowTransferPanel] = useState(false);
   const sectionId = "checkout-step-payment";
 
   function handleSelectPayment(id: CheckoutPaymentMethodId) {
     setShowTransferPanel(id === "bank-transfer");
     onSelectPayment(id);
-  }
-
-  function handleTransferProofFileSelect(fileName: string) {
-    setTransferProofFileName(fileName);
-    onTransferProofChange(Boolean(fileName));
   }
 
   if (completion) {
@@ -96,11 +88,7 @@ export function CheckoutPayment({
       {isActive ? (
         <div className="border-t border-border p-5" id={`${sectionId}-content`}>
           <PaymentOptions onSelectPayment={handleSelectPayment} selectedPaymentId={selectedPaymentId} />
-          <BankTransferPanel
-            fileName={transferProofFileName}
-            onFileSelect={handleTransferProofFileSelect}
-            open={showTransferPanel || selectedPaymentId === "bank-transfer"}
-          />
+          <BankTransferPanel open={showTransferPanel || selectedPaymentId === "bank-transfer"} />
         </div>
       ) : null}
     </article>

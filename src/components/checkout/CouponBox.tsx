@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { LoaderCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { DATA_SOURCE, getCheckoutDataSource } from "@/lib/api/config";
 import {
   CHECKOUT_COUPON_RESULT,
   type CheckoutQuote,
@@ -31,7 +30,6 @@ export function CouponBox() {
   const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
-  const isMockSource = getCheckoutDataSource() === DATA_SOURCE.MOCK;
   const couponResult = serverQuote?.coupon;
   const rejectedCouponMessage = couponResult?.result === CHECKOUT_COUPON_RESULT.REJECTED
     ? couponResult.message ?? "El cupón no es válido para este pedido."
@@ -70,7 +68,7 @@ export function CouponBox() {
           Código de cupón
         </label>
         <p className="mt-1 text-xs leading-5 text-text-muted" id={helperId}>
-          {serverQuote ? "El servidor valida el cupón y calcula el descuento antes de continuar." : checkoutCouponCopy.helper}
+          {checkoutCouponCopy.helper}
         </p>
       </div>
       <div className={cn(
@@ -122,12 +120,7 @@ export function CouponBox() {
       ) : null}
       {serverQuote && serverQuote.discount > 0 && couponResult?.result !== CHECKOUT_COUPON_RESULT.APPLIED ? (
         <p className="rounded-card border border-accent/40 bg-accent-soft p-3 text-sm font-semibold text-accent-hover" role="status">
-          Descuento confirmado por el servidor: -{formatCurrency(serverQuote.discount)}.
-        </p>
-      ) : null}
-      {!serverQuote && !quoteLoading ? (
-        <p className="text-xs text-text-muted" role="status">
-          {isMockSource ? "La vista previa usa la validación mock disponible." : "La validación final depende de la respuesta del servidor."}
+          Descuento aplicado: -{formatCurrency(serverQuote.discount)}.
         </p>
       ) : null}
     </form>

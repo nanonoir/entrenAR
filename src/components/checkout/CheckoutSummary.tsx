@@ -106,11 +106,9 @@ export function CheckoutSummary({
         />
       ) : null}
       {isCheckoutAction && reconciliationMessage ? <p className="mt-4 rounded-card border border-border bg-background p-3 text-sm text-text-muted" role="status">{reconciliationMessage}</p> : null}
-      {quote ? (
+      {quote?.warnings.length ? (
         <div className="mt-4 rounded-card border border-border bg-background p-3 text-xs text-text-muted" role="status">
-          <p className="font-subtitle font-semibold uppercase text-text">Configuración confirmada · {quote.currency}</p>
-          <p className="mt-1">{quote.paymentMethods.length} medios de pago · {quote.shippingOptions.length} envíos · {quote.pickupPoints.length} puntos de retiro.</p>
-          {quote.warnings.length ? <ul className="mt-2 grid gap-1 text-amber-900">{quote.warnings.map((warning) => <li key={`${warning.code}-${warning.message}`}>{warning.message}</li>)}</ul> : null}
+          <ul className="grid gap-1 text-amber-900">{quote.warnings.map((warning) => <li key={`${warning.code}-${warning.message}`}>{warning.message}</li>)}</ul>
         </div>
       ) : null}
       {resolvedItems.length > 0 ? (

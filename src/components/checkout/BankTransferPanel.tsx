@@ -1,17 +1,17 @@
 "use client";
 
-import { LoaderCircle, RefreshCw, Upload } from "lucide-react";
-import { DATA_SOURCE, getCheckoutDataSource } from "@/lib/api/config";
+import { LoaderCircle, RefreshCw } from "lucide-react";
+import {
+  BANK_TRANSFER_UNAVAILABLE_MESSAGE,
+  isUsableBankTransferConfig,
+} from "@/components/checkout/bank-transfer-config";
 import {
   CHECKOUT_PAYMENT_METHOD,
   type CheckoutBankTransferConfig,
 } from "@/lib/api/checkout/checkout.repository";
-import { bankTransferInstructions } from "@/lib/data/checkout";
 import { CHECKOUT_ASYNC_STATUS, useCartStore } from "@/stores/cart-store";
 
 type BankTransferPanelProps = {
-  fileName: string;
-  onFileSelect: (fileName: string) => void;
   open: boolean;
 };
 
@@ -23,7 +23,7 @@ type BankTransferDisplayConfig = {
   cuitCuil: string;
 };
 
-export function BankTransferPanel({ fileName, onFileSelect, open }: BankTransferPanelProps) {
+export function BankTransferPanel({ open }: BankTransferPanelProps) {
   const quote = useCartStore((state) => state.quote);
   const quoteStatus = useCartStore((state) => state.quoteStatus);
   const quoteError = useCartStore((state) => state.quoteError);
@@ -38,11 +38,10 @@ export function BankTransferPanel({ fileName, onFileSelect, open }: BankTransfer
   const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
-  const isMockSource = getCheckoutDataSource() === DATA_SOURCE.MOCK;
   const serverPaymentMethod = serverQuote?.paymentMethods.find((method) => method.id === CHECKOUT_PAYMENT_METHOD.BANK_TRANSFER);
-  const serverConfig = serverPaymentMethod?.bankConfig ? toDisplayConfig(serverPaymentMethod.bankConfig) : null;
-  const configurationMissing = Boolean(serverQuote && (!serverPaymentMethod || !serverConfig));
-  const displayConfig = serverQuote ? serverConfig : quoteLoading ? null : mockDisplayConfig();
+  const bankConfig = serverPaymentMethod?.bankConfig;
+  const displayConfig = isUsableBankTransferConfig(bankConfig) ? toDisplayConfig(bankConfig) : null;
+  const transferUnavailable = Boolean(serverQuote && !displayConfig);
 
   return (
     <div className="mt-4 rounded-card border border-accent bg-accent-soft p-4" aria-busy={quoteLoading}>
@@ -71,17 +70,15 @@ export function BankTransferPanel({ fileName, onFileSelect, open }: BankTransfer
         </div>
       ) : null}
 
-      {configurationMissing ? (
+      {transferUnavailable ? (
         <p className="mt-3 text-sm font-medium text-sale" role="alert">
-          La configuración de transferencia bancaria no está disponible para esta cotización.
+          {BANK_TRANSFER_UNAVAILABLE_MESSAGE}
         </p>
       ) : null}
 
       {!serverQuote && !quoteLoading ? (
         <p className="mt-3 text-xs leading-5 text-text-muted" role="status">
-          {isMockSource
-            ? "Estos son datos mock para la vista previa; no se reciben pagos reales."
-            : "Estos datos son de referencia hasta que el servidor confirme la configuración."}
+          Los datos para transferir se informan cuando se cotiza tu pedido.
         </p>
       ) : null}
 
@@ -109,34 +106,8 @@ export function BankTransferPanel({ fileName, onFileSelect, open }: BankTransfer
           </div>
         </dl>
       ) : null}
-
-      <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-button border border-dashed border-accent bg-surface px-4 py-5 text-sm font-semibold text-accent-hover focus-within:ring-2 focus-within:ring-accent/20" htmlFor="checkout-transfer-proof">
-        <Upload aria-hidden size={18} />
-        {bankTransferInstructions.uploadLabel}
-        <input
-          accept="image/*,.pdf"
-          aria-describedby="checkout-transfer-proof-helper"
-          className="sr-only text-base md:text-sm"
-          id="checkout-transfer-proof"
-          onChange={(event) => onFileSelect(event.target.files?.[0]?.name ?? "")}
-          type="file"
-        />
-      </label>
-      {fileName ? <p className="mt-3 text-sm font-semibold text-text" role="status">Comprobante seleccionado: {fileName}</p> : null}
-      <p className="mt-3 text-xs leading-5 text-text-muted" id="checkout-transfer-proof-helper">{bankTransferInstructions.uploadHelper}</p>
-      <p className="mt-2 text-xs font-semibold leading-5 text-text">{bankTransferInstructions.note}</p>
     </div>
   );
-}
-
-function mockDisplayConfig(): BankTransferDisplayConfig {
-  return {
-    accountHolder: bankTransferInstructions.accountHolder,
-    alias: bankTransferInstructions.alias,
-    bankName: "EntrenAR Demo",
-    cbuCvu: bankTransferInstructions.cbu,
-    cuitCuil: "20-00000000-0",
-  };
 }
 
 function toDisplayConfig(config: CheckoutBankTransferConfig): BankTransferDisplayConfig {

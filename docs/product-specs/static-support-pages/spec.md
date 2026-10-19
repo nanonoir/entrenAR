@@ -41,25 +41,16 @@ The system MUST present the "Sobre nosotros" page with specific professional, mo
 - AND it MUST use a professional, close, modern tone
 - AND it MUST NOT invent fake history such as "since 1995"
 
-### Requirement: Contacto (Contact) Portfolio Page
+### Requirement: Contacto (Contact) Customer Support Page
 
-The system MUST render the Contact page as an explicit portfolio-oriented exception rather than ecommerce customer support.
+The system MUST render the Contact page as customer support for the shop, without developer attribution, portfolio content, or invented channels.
 
 #### Scenario: Contact Page Information
 - GIVEN a user views `/contacto`
 - WHEN the content is rendered
-- THEN it MUST state "Nahuel Nicolas Noir" and "Full Stack Developer"
-- AND it MUST include a short message thanking for visiting and inviting contact for similar ecommerce projects
-- AND it MUST NOT invent biography, experience, claims, or services list
-
-#### Scenario: Contact Channels
-- GIVEN a user views `/contacto`
-- WHEN the channel links are rendered
-- THEN it MUST show a Portfolio link using `logoNR.svg` pointing to `https://noirnahuel.vercel.app/`
-- AND a WhatsApp link using `whatsapp.svg` pointing to the exact provided API URL
-- AND a LinkedIn link using `linkedin.svg` pointing to `https://www.linkedin.com/in/nahuelnicolasnoir/`
-- AND a GitHub link using `github.svg` pointing to `https://github.com/nanonoir`
-- AND all links MUST open in a new tab with safe `rel` attributes
+- THEN it MUST present links to existing operative support routes (order management, shipping policy, returns policy, terms)
+- AND it MUST NOT show developer names, roles, portfolio or personal social/WhatsApp links
+- AND it MUST NOT invent phone numbers, emails, addresses, hours, or a form that does not send data
 
 ### Requirement: Términos y condiciones Content
 
@@ -106,6 +97,7 @@ The system MUST structure the Privacy Policy page with specific sections.
 - WHEN the content is rendered
 - THEN it MUST include the sections: Información que podemos recopilar, Uso de la información, Datos de pago, Cookies y tecnologías similares, Conservación de datos, Compartición con terceros, Seguridad de la información, Derechos del usuario, Menores de edad, Cambios en esta política, Última actualización
 - AND it MUST NOT name specific third-party providers unless actually integrated
+- AND it MUST describe only verified capabilities (no promised payment gateways, encryption, or providers that are not integrated)
 
 ### Requirement: Política de calidad Content
 
@@ -121,11 +113,12 @@ The system MUST render the Quality Policy with a precise, concise focus.
 
 The system MUST render footer links accurately without 404s.
 
-#### Scenario: Social Links
+#### Scenario: No Developer Attribution
 - GIVEN a user views the site footer
-- WHEN the social section is rendered
-- THEN it MUST include a Portfolio link using `logoNR.svg` pointing to `https://noirnahuel.vercel.app/` alongside LinkedIn and GitHub
-- AND all social links MUST open in a new tab
+- WHEN the footer is rendered
+- THEN it MUST NOT show developer attribution, personal portfolio/LinkedIn/GitHub links, or demo/showcase disclaimers
+- AND the legal line MUST be a neutral copyright ("© 2026 EntrenAR.") without invented rights or trademark claims
+- AND it MUST NOT state invented support hours or coverage
 
 #### Scenario: Link Safety
 - GIVEN a user views the site footer
@@ -147,3 +140,26 @@ The system MUST link to correct support routes from the Footer Help area and rem
 - WHEN a user attempts to access `/ayuda/cambios-devoluciones`
 - THEN the system MUST return a 404 Not Found
 - AND it MUST NOT redirect to another page
+
+### Requirement: Customer-Facing Copy Cleanliness
+
+The storefront, account and checkout MUST NOT show developer, demo, MVP, mock, phase, backend or server/debug language to customers, and MUST NOT present fixture data as real.
+
+#### Scenario: Checkout Fallback Without Quote
+- GIVEN no server quote is available
+- WHEN the bank-transfer panel renders
+- THEN it MUST NOT show fictitious bank data and MUST state that transfer data is provided when the order is quoted
+- AND it MUST NOT promise proof-of-payment upload or persistence that does not occur
+
+#### Scenario: Placeholder Or Missing Bank Configuration
+- GIVEN the current quote has no bank configuration, or one with known placeholder values (zeroed CBU/CUIT, "Demo" holder/alias/bank)
+- WHEN the bank-transfer panel renders or the user tries to finalize with bank transfer selected
+- THEN the panel MUST state "La transferencia bancaria no está disponible en este momento." and MUST NOT show the placeholder data
+- AND finalizing with bank transfer MUST be blocked from the current quote, without forcing another provider or altering the quote
+- AND checkout MUST NOT require a transfer-proof file for a real configuration
+
+#### Scenario: Support Request Routes Without Intake
+- GIVEN `/boton-de-arrepentimiento` and `/cambios-y-devoluciones` have no operative request intake
+- WHEN a user views them
+- THEN they MUST state "La solicitud online no está disponible en este momento", MUST NOT show a form or a success/received confirmation, and MUST link to `/gestion-de-pedidos` and `/mi-cuenta` only for consulting orders
+- AND the policy information on those pages MUST be preserved without claiming legal compliance
