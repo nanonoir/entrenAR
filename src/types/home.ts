@@ -1,7 +1,13 @@
+export type HeroBannerImage = {
+  src: string;
+  width: number;
+  height: number;
+};
+
 export type HeroBanner = {
   id: string;
-  imageSrc: string;
-  mobileImageSrc?: string;
+  image: HeroBannerImage;
+  mobileImage?: HeroBannerImage;
   alt: string;
   href: string;
 };

@@ -22,10 +22,11 @@ export function HomeCategoryCard({ category, className }: HomeCategoryCardProps)
       >
         <Image
           alt={category.alt}
-          className="h-[180px] w-full object-cover transition duration-300 hover:scale-[1.03]"
-          height={380}
+          className="aspect-video w-full object-cover transition duration-300 hover:scale-[1.03]"
+          height={541}
+          sizes="(min-width: 1024px) 320px, (min-width: 768px) 320px, 100vw"
           src={category.imageSrc}
-          width={640}
+          width={960}
         />
       </Link>
       <div className="flex min-h-[118px] flex-col items-center justify-center gap-4 bg-white px-5 py-5 text-center">
