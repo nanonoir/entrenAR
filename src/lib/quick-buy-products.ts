@@ -11,6 +11,7 @@ function toQuickBuyProduct(product: QuickBuyProduct): QuickBuyProduct {
     price: product.price,
     compareAtPrice: product.compareAtPrice,
     stock: product.stock,
+    images: product.images,
     variantOptions: product.variantOptions,
     variants: product.variants,
   };

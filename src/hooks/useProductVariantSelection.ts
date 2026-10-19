@@ -1,6 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  findVariantByOptions,
+  getInitialOptionSelection,
+  getStructuredOptions,
+  getVariantAttributes,
+  resolveOptionSelection,
+} from "@/lib/variant-selection";
 import type { ProductDetail, ProductVariant } from "@/types/product";
 
 type VariantSelectableProduct = Pick<
@@ -8,34 +15,19 @@ type VariantSelectableProduct = Pick<
   "compareAtPrice" | "price" | "variantOptions" | "variants"
 >;
 
-function getInitialOptionSelection(product: VariantSelectableProduct) {
-  if (!product.variantOptions?.length) {
-    return {};
-  }
-
-  const firstVariant = product.variants.find((variant) => variant.stock > 0) ?? product.variants[0];
-
-  return firstVariant?.optionValues ?? {};
-}
-
 function getSelectedVariant({
+  hasStructuredOptions,
   product,
   selectedOptions,
   variantId,
 }: {
+  hasStructuredOptions: boolean;
   product: VariantSelectableProduct;
   selectedOptions: Record<string, string>;
   variantId: string | undefined;
 }): ProductVariant | null {
-  if (product.variantOptions?.length) {
-    return (
-      product.variants.find((variant) =>
-        product.variantOptions?.every((option) => variant.optionValues?.[option.id] === selectedOptions[option.id]),
-      ) ??
-      product.variants.find((variant) => variant.stock > 0) ??
-      product.variants[0] ??
-      null
-    );
+  if (hasStructuredOptions) {
+    return findVariantByOptions(product, selectedOptions) ?? null;
   }
 
   return product.variants.find((variant) => variant.id === variantId) ?? product.variants[0] ?? null;
@@ -44,16 +36,20 @@ function getSelectedVariant({
 export function useProductVariantSelection(product: VariantSelectableProduct) {
   const firstVariantId = product.variants[0]?.id;
   const initialOptionSelection = useMemo(() => getInitialOptionSelection(product), [product]);
+  const hasStructuredOptions = useMemo(() => getStructuredOptions(product).length > 0, [product]);
   const [variantId, setVariantId] = useState(firstVariantId);
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(initialOptionSelection);
 
   const selectedVariant = useMemo(
-    () => getSelectedVariant({ product, selectedOptions, variantId }),
-    [product, selectedOptions, variantId],
+    () => getSelectedVariant({ hasStructuredOptions, product, selectedOptions, variantId }),
+    [hasStructuredOptions, product, selectedOptions, variantId],
+  );
+  const attributes = useMemo(
+    () => getVariantAttributes(product, selectedVariant?.optionValues ?? selectedOptions),
+    [product, selectedOptions, selectedVariant],
   );
 
-  const hasStructuredOptions = Boolean(product.variantOptions?.length);
   const hasVariantSelector = product.variants.length > 1;
   const price = product.price;
   const compareAtPrice = product.compareAtPrice;
@@ -66,11 +62,12 @@ export function useProductVariantSelection(product: VariantSelectableProduct) {
   }
 
   function selectOption(optionId: string, valueId: string) {
-    setSelectedOptions((current) => ({ ...current, [optionId]: valueId }));
+    setSelectedOptions((current) => resolveOptionSelection(product, current, optionId, valueId));
     setQuantity(1);
   }
 
   return {
+    attributes,
     compareAtPrice,
     hasStructuredOptions,
     hasVariantSelector,

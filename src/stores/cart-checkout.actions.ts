@@ -295,6 +295,7 @@ function reconcileCartWithQuote(items: readonly CartPreviewItem[], quote: Checko
       brand: current?.brand ?? "",
       compareAtPrice: quoteItem.compareAtPrice,
       imageTone: current?.imageTone ?? "black",
+      ...(current?.imageUrl ? { imageUrl: current.imageUrl, imageAlt: current.imageAlt } : {}),
       name: quoteItem.productName,
       price: quoteItem.unitPrice,
       productId: quoteItem.productId,
