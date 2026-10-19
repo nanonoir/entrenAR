@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { deriveVariantLabel, isPlaceholderVariantName } from "../catalog/variant-label";
+
 const STOCK_MODE = {
   TRACKED: "TRACKED",
   INFINITE: "INFINITE",
@@ -157,6 +159,7 @@ export function normalizeCatalogImportManifest(input: unknown): CatalogImportPla
 
     return {
       ...product,
+      variants: product.variants.map((variant) => ({ ...variant, name: isPlaceholderVariantName(variant.name, variant.sku) ? deriveVariantLabel(product.variantProperties, variant.attributes) ?? (product.variantProperties.length === 0 ? product.name : variant.name) : variant.name })),
       publicSlug,
       descriptionHtml: sanitizeHtml(product.descriptionHtml ?? ""),
       missingLogistics: product.heightCm === undefined || product.widthCm === undefined || product.lengthCm === undefined,

@@ -1,6 +1,7 @@
 import type { Prisma } from "../../generated/prisma/client";
 import { CatalogVisibility, StockMode } from "../../generated/prisma/enums";
 import { PUBLIC_INFINITE_STOCK, toPublicStockNumber } from "../inventory/inventory.mapper";
+import { resolveVariantLabel } from "./variant-label";
 
 export const catalogProductInclude = {
   categories: { include: { category: true } },
@@ -262,7 +263,7 @@ export function toAdminCatalogProduct(product: CatalogProduct): AdminCatalogProd
     stock: aggregateAdminProductStock(product.variants),
     tags: stringArray(product.tags),
     updatedAt: product.updatedAt.toISOString(),
-    variantCombinations: product.variants.map((variant) => toAdminCatalogVariant(variant, decimalToNumber(product.price))),
+    variantCombinations: product.variants.map((variant) => toAdminCatalogVariant(variant, decimalToNumber(product.price), product.variantProperties)),
     variantProperties: unknownArray(product.variantProperties),
     visibility: toVisibility(product.visibility),
     ...(product.weightGrams ? { weightGrams: product.weightGrams } : {}),
@@ -302,7 +303,7 @@ export function toPublicCatalogProduct(product: CatalogProduct): PublicCatalogPr
     tags: stringArray(product.tags),
     variants: product.variants.map((variant) => ({
       id: variant.id,
-      label: variant.name,
+      label: resolveVariantLabel(variant, product.variantProperties),
       ...(variant.primaryImageId ? { primaryImageId: variant.primaryImageId } : {}),
       optionValues: stringRecord(variant.attributes),
       price: productPrice,
@@ -401,11 +402,12 @@ function stringRecord(value: unknown): Record<string, string> {
 function toAdminCatalogVariant(
   variant: CatalogProduct["variants"][number],
   productPrice: number,
+  variantProperties: unknown,
 ): AdminCatalogVariant {
   return {
     attributes: stringRecord(variant.attributes),
     id: variant.id,
-    name: variant.name,
+    name: resolveVariantLabel(variant, variantProperties),
     price: productPrice,
     sku: variant.sku,
     stock: toAdminStock(variant.stockMode, variant.quantity),
