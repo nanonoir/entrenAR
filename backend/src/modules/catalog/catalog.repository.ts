@@ -25,7 +25,10 @@ export interface CreateCategoryRecord {
   visibility: CatalogVisibility;
 }
 
-export type UpdateCategoryRecord = Omit<CreateCategoryRecord, "sortOrder">;
+type Nullable<T> = { [K in keyof T]: undefined extends T[K] ? Exclude<T[K], undefined> | null : T[K] };
+
+/** PUT replaces the category: `null` clears an optional column, `undefined` would leave it untouched. */
+export type UpdateCategoryRecord = Nullable<Omit<CreateCategoryRecord, "sortOrder">>;
 
 export interface CreateCatalogVariantRecord {
   attributes: Prisma.InputJsonValue;
