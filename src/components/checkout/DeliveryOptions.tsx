@@ -10,7 +10,6 @@ import {
 import { PickupOptions } from "@/components/checkout/PickupOptions";
 import { ShippingOptions } from "@/components/checkout/ShippingOptions";
 import type { DeliveryForm, FieldErrors } from "@/components/checkout/checkout-form.validators";
-import { DATA_SOURCE, getCheckoutDataSource } from "@/lib/api/config";
 import {
   type CheckoutPickupPoint as MockCheckoutPickupPoint,
   type CheckoutPostalCodeLocation,
@@ -61,7 +60,6 @@ export function DeliveryOptions({
   const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
-  const isMockSource = getCheckoutDataSource() === DATA_SOURCE.MOCK;
   const shippingChoices = getShippingChoices(serverQuote);
   const pickupChoices = getPickupChoices(serverQuote, location);
   const selectedShippingUnavailable = isShippingSelectionUnavailable(
@@ -106,9 +104,7 @@ export function DeliveryOptions({
 
       {!serverQuote && !quoteLoading ? (
         <p className="rounded-card border border-border bg-background p-3 text-xs text-text-muted" role="status">
-          {isMockSource
-            ? "Mostramos la configuración mock disponible para continuar con la vista previa."
-            : "Las opciones se muestran como referencia hasta que el servidor confirme la configuración."}
+          Las opciones de entrega se confirmarán al cotizar tu pedido.
         </p>
       ) : null}
 

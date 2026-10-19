@@ -59,3 +59,13 @@ No migration required.
 ## Open Questions
 
 - None
+
+## Addendum 2026-10-15: customer-facing identity
+
+The original decisions above stay as historical record. Superseded by `docs/exec-plans/active/customer-facing-copy-cleanup.md`:
+
+- `/contacto` is no longer a developer portfolio page; it links only operative support routes (order management and policies).
+- The footer no longer carries `footerSocialLinks`, developer text, invented support hours, or the demo disclaimer; the legal line is "© 2026 EntrenAR.". Help links are unchanged.
+- `/nosotros` and `/politicas/privacidad` avoid MVP/technical language and unverified capabilities.
+- Personal SVG assets remain in `public/` (unused by the storefront); repository docs may still describe the portfolio nature of the project.
+- Review follow-up: `SupportActionForm` (which only simulated "Solicitud recibida" locally) was replaced by `SupportRequestUnavailable` on `/boton-de-arrepentimiento` and `/cambios-y-devoluciones`; no intake exists until a backend/email capability is decided. The local transfer-proof upload and its `hasTransferProof` guards were removed from checkout. `bank-transfer-config.ts` detects known placeholder bank data in the current quote; `getCheckoutConfigurationIssue` blocks finalization in that case (backend stays the authority; no provider is forced and the quote is not altered).

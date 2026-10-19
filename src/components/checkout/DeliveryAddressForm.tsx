@@ -40,7 +40,7 @@ export function DeliveryAddressForm({
           Provincia detectada: <strong className="text-text">{location.province}</strong>
         </div>
       ) : form.postalCode ? (
-        <p className="text-sm font-medium text-sale">No tenemos datos mock para este código postal.</p>
+        <p className="text-sm font-medium text-sale">No tenemos opciones de entrega para este código postal.</p>
       ) : null}
 
       {location ? (

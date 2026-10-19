@@ -35,15 +35,14 @@ export type CheckoutPaymentMethod = {
 
 export const checkoutSecureCopy = {
   title: "Compra segura",
-  description:
-    "Este checkout es una vista previa estática. No se crean órdenes, pagos ni reservas de stock en esta fase.",
-  finalActionLabel: "Confirmar pedido de prueba",
+  description: "Revisá los datos de tu pedido antes de confirmarlo.",
+  finalActionLabel: "Confirmar pedido",
 } as const;
 
 export const checkoutCouponCopy = {
   title: "Cupón de descuento",
   placeholder: "Ingresá tu cupón",
-  helper: "La validación real de cupones queda pendiente para la etapa backend.",
+  helper: "El descuento se calcula y valida al aplicar el cupón.",
   actionLabel: "Añadir",
 } as const;
 
@@ -72,7 +71,7 @@ export const checkoutShippingProviders: CheckoutShippingProvider[] = [
     logoSrc: "/andreani.svg",
     eta: "3 a 5 días hábiles",
     price: 4200,
-    description: "Entrega mock a domicilio con seguimiento visual pendiente de backend.",
+    description: "Entrega a domicilio.",
   },
   {
     id: "correo-argentino-branch",
@@ -80,7 +79,7 @@ export const checkoutShippingProviders: CheckoutShippingProvider[] = [
     logoSrc: "/correoArgentino.svg",
     eta: "4 a 7 días hábiles",
     price: 3600,
-    description: "Retiro mock en sucursal; no se genera etiqueta real en esta fase.",
+    description: "Retiro en sucursal.",
   },
 ];
 
@@ -130,22 +129,22 @@ export const checkoutPaymentMethods: CheckoutPaymentMethod[] = [
     id: "mercado-pago",
     logoSrc: "/mercadoPago.svg",
     title: "Mercado Pago",
-    description: "Tarjetas, saldo o dinero en cuenta desde una futura sesión de pago.",
-    helper: "Vista previa solamente: no se crea una preferencia ni un cobro real.",
+    description: "Tarjetas, saldo o dinero en cuenta.",
+    helper: "Disponibilidad a confirmar al cotizar tu pedido.",
   },
   {
     id: "stripe",
     logoSrc: "/stripe.svg",
     title: "Stripe",
-    description: "Pago internacional con tarjeta para una futura integración.",
-    helper: "Vista previa solamente: no se crea una sesión de Stripe Checkout.",
+    description: "Pago con tarjeta.",
+    helper: "Disponibilidad a confirmar al cotizar tu pedido.",
   },
   {
     id: "bank-transfer",
     logoSrc: "/transfer.svg",
     title: "Transferencia bancaria",
-    description: "Pago manual con comprobante y validación posterior.",
-    helper: "El comprobante seleccionado no se sube ni se persiste en esta fase.",
+    description: "Pago por transferencia bancaria.",
+    helper: "Disponibilidad a confirmar al cotizar tu pedido.",
   },
 ];
 
@@ -153,7 +152,4 @@ export const bankTransferInstructions = {
   accountHolder: "EntrenAR Demo",
   alias: "ENTRENAR.DEMO",
   cbu: "0000000000000000000000",
-  note: "La validación manual puede demorar hasta 48 horas hábiles una vez recibido el comprobante.",
-  uploadLabel: "Adjuntar comprobante",
-  uploadHelper: "El archivo se muestra solo como previsualización local; no se guarda ni se envía.",
 } as const;

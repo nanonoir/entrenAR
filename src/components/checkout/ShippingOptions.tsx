@@ -61,7 +61,7 @@ export function ShippingOptions({
         </p>
       )}
       <p className="text-xs text-text-muted" id="checkout-shipping-options-helper">
-        {serverQuote ? "Estas opciones fueron confirmadas por el servidor." : "La cotización final confirmará costo y disponibilidad."}
+        {serverQuote ? "Opciones de envío disponibles para tu pedido." : "La cotización final confirmará costo y disponibilidad."}
       </p>
       {selectedShippingUnavailable ? (
         <p className="text-sm font-medium text-sale" role="alert">La opción de envío seleccionada ya no está disponible. Elegí otra para continuar.</p>

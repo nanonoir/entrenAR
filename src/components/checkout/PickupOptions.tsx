@@ -48,7 +48,7 @@ export function PickupOptions({
         </p>
       )}
       <p className="text-xs text-text-muted" id="checkout-pickup-options-helper">
-        {serverQuote ? "Estos puntos fueron confirmados por el servidor." : "Los puntos disponibles pertenecen a la configuración mock."}
+        {serverQuote ? "Puntos de retiro disponibles para tu pedido." : "La disponibilidad final se confirma al cotizar el pedido."}
       </p>
       {selectedPickupUnavailable ? (
         <p className="text-sm font-medium text-sale" role="alert">El punto de retiro seleccionado ya no está disponible. Elegí otro para continuar.</p>

@@ -30,7 +30,6 @@ export function CheckoutWizard() {
       isActive={wizard.activeStep === "payment"}
       onOpen={() => wizard.openStep("payment")}
       onSelectPayment={wizard.handleSelectPayment}
-      onTransferProofChange={wizard.handleTransferProofChange}
       selectedPaymentId={wizard.selectedPaymentId}
     />
   );
