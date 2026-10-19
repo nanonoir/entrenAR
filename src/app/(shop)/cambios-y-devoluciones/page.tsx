@@ -1,4 +1,4 @@
-import { SupportActionForm } from "@/components/shop/support/SupportActionForm";
+import { SupportRequestUnavailable } from "@/components/shop/support/SupportRequestUnavailable";
 import { Container } from "@/components/ui/Container";
 
 export default function ReturnsExchangePage() {
@@ -15,14 +15,7 @@ export default function ReturnsExchangePage() {
             </p>
           </div>
 
-          <SupportActionForm
-            idPrefix="returns-exchanges"
-            messageHelper="Indicá qué productos están afectados y describí el inconveniente con el mayor detalle posible."
-            messageLabel="Productos afectados y detalle/descripción"
-            submitLabel="Enviar solicitud"
-            successMessage="Recibimos tu solicitud. Nuestro equipo va a contactarte a la brevedad para revisar el caso y coordinar los próximos pasos."
-            successTitle="Solicitud recibida"
-          />
+          <SupportRequestUnavailable requestLabel="solicitudes de cambio o devolución" />
         </div>
       </Container>
     </section>

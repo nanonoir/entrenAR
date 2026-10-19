@@ -46,6 +46,8 @@ The system MUST isolate the Auth CTA on `/gestion-de-pedidos` to avoid hydration
 
 ### Requirement: Support Action Forms
 
+> **Nota de actualización (octubre 2026)**: Requerimiento superado por `docs/product-specs/static-support-pages/spec.md` (Escenario: *Support Request Routes Without Intake*) y el plan de limpieza de identidad de cara al cliente. Al no existir integración de backend o servicio de correo para recepcionar solicitudes reales, los formularios simulados en frontend y sus modales de éxito fueron reemplazados por el componente honesto `SupportRequestUnavailable`, evitando promesas no respaldadas.
+
 The system MUST provide frontend-only forms for "Botón de Arrepentimiento" and "Cambios y Devoluciones" that use validation patterns similar to checkout.
 
 #### Scenario: Repentance Form Submission
