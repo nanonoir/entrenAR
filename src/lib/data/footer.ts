@@ -12,10 +12,6 @@ export type FooterSection = {
 
 export type FooterAction = FooterLink;
 
-export type FooterSocialLink = FooterLink & {
-  iconSrc: string;
-};
-
 export const footerSections: FooterSection[] = [
   {
     title: "NOSOTROS",
@@ -47,34 +43,10 @@ export const footerSections: FooterSection[] = [
   },
 ];
 
-export const footerHelpText =
-  "Atención al cliente: Lunes a viernes de 9 a 18 hs.\nRetiros coordinados y envíos a todo el país.";
-
 export const footerHelpActions: FooterAction[] = [
   { label: "Gestión de Pedidos", href: "/gestion-de-pedidos" },
   { label: "Botón de Arrepentimiento", href: "/boton-de-arrepentimiento" },
   { label: "Cambios y Devoluciones", href: "/cambios-y-devoluciones" },
 ];
 
-export const footerSocialLinks: FooterSocialLink[] = [
-  {
-    label: "Portfolio",
-    href: "https://noirnahuel.vercel.app/",
-    iconSrc: "/logoNR.svg",
-  },
-  {
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/nahuelnicolasnoir/",
-    iconSrc: "/linkedin.svg",
-  },
-  {
-    label: "GitHub",
-    href: "https://github.com/nanonoir",
-    iconSrc: "/github.svg",
-  },
-];
-
-export const footerDeveloperText = "Desarrollado por Nahuel Nicolas Noir.";
-
-export const footerLegalText =
-  "© 2026 EntrenAR. Los productos, precios y marcas mostradas son utilizados únicamente como parte de una demo.";
+export const footerLegalText = "© 2026 EntrenAR.";

@@ -3,39 +3,39 @@ import { Container } from "@/components/ui/Container";
 const sections = [
   {
     title: "Información que podemos recopilar",
-    body: "Podemos recopilar datos necesarios para operar la experiencia de compra, como nombre, datos de contacto, dirección de entrega, información de facturación y actividad básica dentro del sitio.",
+    body: "Recopilamos los datos que ingresás para crear tu cuenta y comprar, como nombre, correo electrónico, teléfono y dirección de entrega, junto con tu historial de pedidos y los productos que guardás en tu lista de deseos.",
   },
   {
     title: "Uso de la información",
-    body: "La información se utiliza para gestionar pedidos, responder consultas, mejorar la experiencia de usuario, prevenir abusos y cumplir obligaciones comerciales o normativas aplicables.",
+    body: "Usamos tu información para gestionar y entregar tus pedidos, mantener tu cuenta, atender consultas y cumplir obligaciones comerciales o normativas aplicables.",
   },
   {
     title: "Datos de pago",
-    body: "Los datos sensibles de pago no deben almacenarse en el storefront. Cuando se integre una plataforma de pago, su tratamiento dependerá de los mecanismos seguros del procesador correspondiente.",
+    body: "No solicitamos ni guardamos datos de tarjetas en este sitio. Si elegís pagar por transferencia bancaria, los datos de la operación se informan durante la compra.",
   },
   {
     title: "Cookies y tecnologías similares",
-    body: "El sitio puede utilizar cookies o tecnologías similares para recordar preferencias, medir el uso del sitio y mejorar la navegación. El usuario puede configurar su navegador para limitar estas tecnologías.",
+    body: "Usamos cookies y el almacenamiento local de tu navegador para mantener tu sesión y recordar tu carrito. Podés configurar tu navegador para limitar estas tecnologías, aunque algunas funciones podrían dejar de estar disponibles.",
   },
   {
     title: "Conservación de datos",
-    body: "Los datos se conservan durante el tiempo necesario para cumplir la finalidad para la que fueron recopilados, atender consultas, sostener registros comerciales y cumplir obligaciones aplicables.",
+    body: "Conservamos los datos durante el tiempo necesario para cumplir la finalidad para la que fueron recopilados, sostener registros comerciales y cumplir obligaciones aplicables.",
   },
   {
     title: "Compartición con terceros",
-    body: "La información puede compartirse con proveedores necesarios para operar la compra, el envío, la atención o la infraestructura del sitio. No se nombran proveedores específicos hasta que estén efectivamente integrados.",
+    body: "Podemos compartir la información necesaria con quienes intervienen en tu compra, por ejemplo para la entrega de tu pedido o el funcionamiento del sitio.",
   },
   {
     title: "Seguridad de la información",
-    body: "Se deben aplicar medidas razonables para proteger la información frente a accesos no autorizados, pérdida o uso indebido, especialmente en flujos sensibles como cuenta, checkout y administración.",
+    body: "El acceso a tu cuenta está protegido con una contraseña. Te recomendamos no compartirla y cerrar sesión en dispositivos que no sean tuyos.",
   },
   {
     title: "Derechos del usuario",
-    body: "El usuario puede solicitar acceso, actualización o eliminación de sus datos cuando corresponda, de acuerdo con la normativa aplicable y los canales habilitados por el sitio.",
+    body: "Podés solicitar acceso, actualización o eliminación de tus datos cuando corresponda, de acuerdo con la normativa aplicable.",
   },
   {
     title: "Menores de edad",
-    body: "El sitio no está orientado a recopilar deliberadamente información de menores de edad. Si se detecta un caso, se deberá evaluar la eliminación o corrección de esos datos.",
+    body: "El sitio no está orientado a menores de edad y no recopilamos deliberadamente su información. Si detectamos un caso, evaluaremos eliminar o corregir esos datos.",
   },
   {
     title: "Cambios en esta política",
@@ -51,8 +51,8 @@ export default function PrivacyPage() {
           <div className="grid gap-4">
             <h1 className="font-heading text-5xl leading-none">Política de privacidad</h1>
             <p className="text-base leading-7">
-              Esta política explica qué datos pueden utilizarse para operar la experiencia de
-              compra, atención y navegación en EntrenAR.
+              Esta política explica qué datos usamos para gestionar tu cuenta y tus compras en
+              EntrenAR.
             </p>
           </div>
 
