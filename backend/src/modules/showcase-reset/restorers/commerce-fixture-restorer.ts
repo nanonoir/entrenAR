@@ -2,7 +2,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import { PaymentMethodStatus, PickupCostType, PickupCoverageType, PickupPointStatus, ShippingProviderStatus } from "../../../generated/prisma/enums";
 import type { ShowcaseResetReport } from "../showcase-reset.report";
 import type { FixtureRestorer } from "../fixtures/fixture-restorer";
-import { COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS } from "../fixtures/catalog-commerce-baseline";
+import { COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS, weightBandCost } from "../fixtures/catalog-commerce-baseline";
 
 const PICKUP_POINT_ID = "retiro-principal";
 
@@ -29,7 +29,7 @@ export class CommerceFixtureRestorer implements FixtureRestorer {
       for (const [index, band] of DEFAULT_WEIGHT_BANDS.entries()) {
         const id = `${provider.id}-${band.id}`;
         const exists = await transaction.weightBand.findUnique({ where: { id }, select: { id: true } });
-        const data = { cost: band.cost, maxWeightGrams: band.maxWeightGrams, minWeightGrams: band.minWeightGrams, shippingProviderId: provider.id, sortOrder: index + 1 };
+        const data = { cost: weightBandCost(provider.id, band), maxWeightGrams: band.maxWeightGrams, minWeightGrams: band.minWeightGrams, shippingProviderId: provider.id, sortOrder: index + 1 };
         await transaction.weightBand.upsert({ where: { id }, create: { id, ...data }, update: data });
         exists ? updated++ : created++;
       }

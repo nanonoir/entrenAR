@@ -262,6 +262,7 @@ function mapAddress(snapshot: Record<string, unknown>): SaleAddress {
     number: stringValue(snapshot.number),
     ...(stringValue(snapshot.floor) ? { floor: stringValue(snapshot.floor) } : {}),
     ...(stringValue(snapshot.unit) ? { unit: stringValue(snapshot.unit) } : {}),
+    ...(stringValue(snapshot.neighborhood) ? { neighborhood: stringValue(snapshot.neighborhood) } : {}),
     city: stringValue(snapshot.city),
     province: stringValue(snapshot.province),
     postalCode: stringValue(snapshot.postalCode),

@@ -53,6 +53,7 @@ export interface SaleAddress {
   number: string;
   floor?: string;
   unit?: string;
+  neighborhood?: string;
   city: string;
   province: string;
   postalCode: string;

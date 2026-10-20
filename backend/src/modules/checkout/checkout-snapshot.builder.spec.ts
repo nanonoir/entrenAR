@@ -158,6 +158,59 @@ describe("CheckoutSnapshotBuilder", () => {
     expect(checkoutRepository.userForCheckout).toHaveBeenCalledWith(transaction, "customer-1");
     expect(checkoutRepository.addressByOwner).toHaveBeenCalledWith(transaction, "customer-1", "address-1");
   });
+
+  it("preserves structured floor and neighborhood in the address snapshot without touching the street", async () => {
+    const { builder } = createHarness();
+    const address = {
+      city: "Buenos Aires",
+      floor: "3° B",
+      neighborhood: "Barrio 31",
+      number: "1234",
+      postalCode: "1406",
+      province: "Ciudad Autónoma de Buenos Aires",
+      street: "9 de Julio",
+    };
+    const input = checkoutCompleteRequestSchema.parse({
+      address,
+      customer: { email: "guest@example.test", firstName: "Guest", lastName: "Buyer" },
+      idempotencyKey: "snapshot-key-2",
+      items: [{ productId: "product-1", quantity: 1, variantId: "variant-1" }],
+      paymentMethodId: "bank-transfer",
+      paymentOptionId: "direct-transfer",
+      shippingMethodId: "andreani:envío-a-domicilio",
+    });
+
+    const orderInput = await builder.createOrderInput(
+      {} as TransactionClient,
+      calculation(),
+      resolution(),
+      input,
+      undefined,
+      new Date("2026-09-01T12:34:56.000Z"),
+    );
+
+    expect(orderInput.shippingAddressSnapshot).toEqual(address);
+  });
+
+  it("validates optional floor and neighborhood: alphanumeric, bounded, never merged into street", () => {
+    const base = {
+      customer: { email: "guest@example.test", firstName: "Guest", lastName: "Buyer" },
+      idempotencyKey: "snapshot-key-3",
+      items: [{ productId: "product-1", quantity: 1, variantId: "variant-1" }],
+      paymentMethodId: "bank-transfer",
+      shippingMethodId: "andreani:envío-a-domicilio",
+    };
+    const address = { city: "Rosario", postalCode: "2000", province: "Santa Fe", street: "Calle 50" };
+    const parse = (extra: Record<string, unknown>) => checkoutCompleteRequestSchema.safeParse({ ...base, address: { ...address, ...extra } });
+
+    expect(parse({}).success).toBe(true);
+    expect(parse({ neighborhood: "1-11-14", floor: "PB" }).success).toBe(true);
+    expect(parse({ floor: "y".repeat(81) }).success).toBe(false);
+    expect(parse({ neighborhood: "z".repeat(121) }).success).toBe(false);
+    expect(parse({ floor: "3 <b>" }).success).toBe(false);
+    expect(parse({ neighborhood: "<script>" }).success).toBe(false);
+    expect(parse({ street: "s".repeat(201) }).success).toBe(false);
+  });
 });
 
 interface SnapshotHarness {

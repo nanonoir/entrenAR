@@ -42,3 +42,13 @@ Completion MUST return the original result for a repeated idempotency key, recor
 - GIVEN a completed request and the same idempotency key
 - WHEN the request is retried
 - THEN it SHALL return the original outcome without duplicate stock changes
+
+### Requirement: Structured Address Preservation
+
+Order completion MUST accept and preserve optional structured `floor` (up to 80 characters) and `neighborhood` (up to 120 characters) within the order's `shippingAddressSnapshot` JSON payload without requiring database migrations. These fields MUST be projected cleanly to the CRM sales address view (`SaleAddress.neighborhood`, order detail, and CRM address editing) alongside standard street, number, city, province, and postal code fields.
+
+#### Scenario: Preserve structured address in order snapshot
+- GIVEN a checkout completion payload with optional floor and neighborhood
+- WHEN the order is placed
+- THEN the persisted `shippingAddressSnapshot` SHALL retain floor and neighborhood
+- AND the CRM order detail and sale address views SHALL display these structured fields

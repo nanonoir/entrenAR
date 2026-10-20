@@ -174,6 +174,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
       number: sale!.shippingAddress?.number ?? "",
       floor: sale!.shippingAddress?.floor ?? "",
       unit: sale!.shippingAddress?.unit ?? "",
+      neighborhood: sale!.shippingAddress?.neighborhood ?? "",
       city: sale!.shippingAddress?.city ?? "",
       province: sale!.shippingAddress?.province ?? "",
       postalCode: sale!.shippingAddress?.postalCode ?? "",
@@ -195,6 +196,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
       number: shippingDraft.number.trim(),
       floor: shippingDraft.floor?.trim(),
       unit: shippingDraft.unit?.trim(),
+      neighborhood: shippingDraft.neighborhood?.trim(),
       city: shippingDraft.city.trim(),
       province: shippingDraft.province.trim(),
       postalCode: shippingDraft.postalCode.trim(),
@@ -466,6 +468,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                 {sale.shippingAddress.floor && (
                   <span>Piso {sale.shippingAddress.floor}{sale.shippingAddress.unit ? `, Dpto ${sale.shippingAddress.unit}` : ""}</span>
                 )}
+                {sale.shippingAddress.neighborhood && <span>Barrio {sale.shippingAddress.neighborhood}</span>}
                 <span>{sale.shippingAddress.city}, {sale.shippingAddress.province}</span>
                 <span>CP {sale.shippingAddress.postalCode}</span>
                 {sale.shippingAddress.notes && (

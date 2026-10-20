@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { Role } from "../src/generated/prisma/enums";
 import { SHOWCASE_FIXTURE_FAMILY, SHOWCASE_FIXTURE_MANIFEST, assertShowcaseFixtureIds, assertShowcaseFixtureManifest } from "../src/modules/showcase-reset/fixtures/showcase-fixture-manifest";
-import { CATALOG_PRODUCTS, CATALOG_SETTINGS_ID, CATEGORIES, COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS, inferredProperties, stockFields, variantAttributes } from "../src/modules/showcase-reset/fixtures/catalog-commerce-baseline";
+import { CATALOG_PRODUCTS, CATALOG_SETTINGS_ID, CATEGORIES, COMMERCE_DEFAULT_PREPARATION_HOURS, DEFAULT_WEIGHT_BANDS, PAYMENT_METHODS, SHIPPING_PROVIDERS, inferredProperties, stockFields, variantAttributes, weightBandCost } from "../src/modules/showcase-reset/fixtures/catalog-commerce-baseline";
 import { seedAbandonedCarts } from "./fixtures/abandoned-carts-fixtures";
 import { seedCheckout } from "./fixtures/checkout-fixtures";
 import { seedCustomersCrm } from "./fixtures/customers-crm-fixtures";
@@ -50,7 +50,7 @@ async function seedCommerce(prisma: PrismaClient): Promise<void> {
     await prisma.shippingProvider.upsert({ where: { id: provider.id }, create: { id: provider.id, ...providerData }, update: providerData });
     for (const [index, band] of DEFAULT_WEIGHT_BANDS.entries()) {
       const id = `${provider.id}-${band.id}`;
-      const data = { cost: band.cost, maxWeightGrams: band.maxWeightGrams, minWeightGrams: band.minWeightGrams, shippingProviderId: provider.id, sortOrder: index + 1 };
+      const data = { cost: weightBandCost(provider.id, band), maxWeightGrams: band.maxWeightGrams, minWeightGrams: band.minWeightGrams, shippingProviderId: provider.id, sortOrder: index + 1 };
       await prisma.weightBand.upsert({ where: { id }, create: { id, ...data }, update: data });
     }
   }

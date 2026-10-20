@@ -80,9 +80,14 @@ const moneySchema = z.union([
     .pipe(moneyNumberSchema),
 ]);
 
+const addressDetailSchema = (field: string, max: number) => requiredText(field, max)
+  .regex(/^[\p{L}\p{M}\d\s'.,°ºª/#-]+$/u, { error: `${field} contains invalid characters.` });
+
 const checkoutAddressSchema = z.object({
   city: requiredText("City", 120),
+  floor: addressDetailSchema("Floor", 80).optional(),
   label: requiredText("Address label", 60).optional(),
+  neighborhood: addressDetailSchema("Neighborhood", 120).optional(),
   number: requiredText("Street number", 32).optional(),
   phone: phoneSchema.optional(),
   postalCode: postalCodeSchema,

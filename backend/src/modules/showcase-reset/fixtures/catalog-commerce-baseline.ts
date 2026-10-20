@@ -55,8 +55,13 @@ const PAYMENT_METHODS: readonly PaymentMethodSeed[] = [
 ] as const;
 
 const DEFAULT_WEIGHT_BANDS: readonly WeightBandSeed[] = [
-  { id: "range-up-to-1kg", minWeightGrams: 0, maxWeightGrams: 1000, cost: "7500.00", sortOrder: 1 }, { id: "range-1kg-to-3kg", minWeightGrams: 1000, maxWeightGrams: 3000, cost: "10500.00", sortOrder: 2 }, { id: "range-3kg-to-5kg", minWeightGrams: 3000, maxWeightGrams: 5000, cost: "15000.00", sortOrder: 3 }, { id: "range-5kg-to-10kg", minWeightGrams: 5000, maxWeightGrams: 10000, cost: "22000.00", sortOrder: 4 }, { id: "range-over-10kg", minWeightGrams: 10000, maxWeightGrams: null, cost: "30000.00", sortOrder: 5 },
+  { id: "range-up-to-1kg", minWeightGrams: 0, maxWeightGrams: 1000, cost: "12487.00", sortOrder: 1 }, { id: "range-1kg-to-3kg", minWeightGrams: 1000, maxWeightGrams: 3000, cost: "14963.00", sortOrder: 2 }, { id: "range-3kg-to-5kg", minWeightGrams: 3000, maxWeightGrams: 5000, cost: "17849.00", sortOrder: 3 }, { id: "range-5kg-to-10kg", minWeightGrams: 5000, maxWeightGrams: 10000, cost: "21376.00", sortOrder: 4 }, { id: "range-over-10kg", minWeightGrams: 10000, maxWeightGrams: null, cost: "28742.00", sortOrder: 5 },
 ] as const;
+// Owner-approved paid tariffs (ARS) per provider and band; defaults above are the Correo Argentino values.
+const PROVIDER_WEIGHT_BAND_COSTS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  andreani: { "range-up-to-1kg": "13219.00", "range-1kg-to-3kg": "15847.00", "range-3kg-to-5kg": "18693.00", "range-5kg-to-10kg": "23158.00", "range-over-10kg": "31436.00" },
+};
+function weightBandCost(providerId: string, band: WeightBandSeed): string { return PROVIDER_WEIGHT_BAND_COSTS[providerId]?.[band.id] ?? band.cost; }
 const SHIPPING_PROVIDERS: readonly ShippingProviderSeed[] = [{ id: "andreani", name: "Andreani" }, { id: "correo-argentino", name: "Correo Argentino" }] as const;
 
 function stockFields(stock: StockSeed) {
@@ -82,5 +87,6 @@ export {
   productSku,
   stockFields,
   variantAttributes,
+  weightBandCost,
 };
 export type { CategorySeed, PaymentMethodSeed, ProductSeed, ShippingProviderSeed, VariantSeed, WeightBandSeed };
