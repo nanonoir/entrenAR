@@ -35,6 +35,7 @@ const HARNESS_PATHS = [
   "src/lib/api/admin/statistics/__tests__/statistics-adapter.harness.ts",
   "src/components/checkout/bank-transfer-config.harness.ts",
   "src/components/checkout/checkout-form.builders.harness.ts",
+  "src/components/checkout/checkout-form.harness.ts",
   "tests/harnesses/checkout-summary.harness.tsx",
   "src/stores/cart-store.harness.ts",
   "src/stores/__tests__/admin-sales-store.harness.ts",
