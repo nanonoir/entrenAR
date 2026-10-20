@@ -88,9 +88,7 @@ export function CheckoutWizard() {
             completed={wizard.completedSteps.delivery}
             errors={wizard.deliveryErrors}
             form={wizard.deliveryForm}
-            hasFreeShipping={wizard.hasFreeShipping}
             isActive={wizard.activeStep === "delivery"}
-            location={wizard.detectedLocation}
             onBlurField={wizard.blurDeliveryField}
             onContinue={() => wizard.continueFrom("delivery")}
             onFieldChange={wizard.updateDeliveryField}
@@ -99,11 +97,11 @@ export function CheckoutWizard() {
             onSelectLocality={wizard.handleSelectLocality}
             onSelectMethod={wizard.handleSelectDeliveryMethod}
             onSelectPickupPoint={wizard.handleSelectPickupPoint}
-            onSelectProvider={wizard.handleSelectProvider}
             onSelectProvince={wizard.handleSelectProvince}
+            onSelectShipping={wizard.handleSelectShipping}
             selectedMethod={wizard.deliveryMethod}
             selectedPickupPointId={wizard.selectedPickupPointId}
-            selectedProviderId={wizard.selectedProvider?.id ?? ""}
+            selectedShippingId={wizard.selectedShippingId}
           />
 
           {paymentStep}

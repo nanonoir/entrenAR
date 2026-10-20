@@ -10,11 +10,6 @@ import {
 import { PickupOptions } from "@/components/checkout/PickupOptions";
 import { ShippingOptions } from "@/components/checkout/ShippingOptions";
 import type { DeliveryErrors, DeliveryForm } from "@/components/checkout/checkout-form.validators";
-import type {
-  CheckoutPickupPoint as MockCheckoutPickupPoint,
-  CheckoutPostalCodeLocation,
-  CheckoutShippingProvider,
-} from "@/lib/data/checkout";
 import type { CheckoutLocality } from "@/lib/data/locations/localities";
 import { CHECKOUT_ASYNC_STATUS, useCartStore } from "@/stores/cart-store";
 import {
@@ -27,37 +22,33 @@ import {
 type DeliveryOptionsProps = {
   errors: DeliveryErrors;
   form: DeliveryForm;
-  hasFreeShipping: boolean;
-  location: CheckoutPostalCodeLocation | undefined;
   onBlurField: (field: keyof DeliveryForm) => void;
   onFieldChange: (field: keyof DeliveryForm, value: string) => void;
   onModeChange: (mode: DeliveryForm["localityMode"]) => void;
   onSelectLocality: (locality: CheckoutLocality) => void;
   onSelectMethod: (method: DeliveryMethod) => void;
-  onSelectPickupPoint: (point: MockCheckoutPickupPoint) => void;
-  onSelectProvider: (provider: CheckoutShippingProvider) => void;
+  onSelectPickupPoint: (id: string) => void;
   onSelectProvince: (provinceId: string) => void;
+  onSelectShipping: (selection: { id: string; providerId: string }) => void;
   selectedMethod: DeliveryMethod;
   selectedPickupPointId: string | null;
-  selectedProviderId: string;
+  selectedShippingId: string | null;
 };
 
 export function DeliveryOptions({
   errors,
   form,
-  hasFreeShipping,
-  location,
   onBlurField,
   onFieldChange,
   onModeChange,
   onSelectLocality,
   onSelectMethod,
   onSelectPickupPoint,
-  onSelectProvider,
   onSelectProvince,
+  onSelectShipping,
   selectedMethod,
   selectedPickupPointId,
-  selectedProviderId,
+  selectedShippingId,
 }: DeliveryOptionsProps) {
   const quote = useCartStore((state) => state.quote);
   const quoteStatus = useCartStore((state) => state.quoteStatus);
@@ -68,10 +59,16 @@ export function DeliveryOptions({
 
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
-  const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
+  // Keep last quoted options visible while refreshing, but show neutral prices until the new quote settles.
+  const serverQuote = quote && (quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS || quoteLoading) ? quote : null;
   const shippingChoices = getShippingChoices(serverQuote);
-  const pickupChoices = getPickupChoices(serverQuote, location);
-  const selectedShippingUnavailable = isShippingSelectionUnavailable(serverQuote, selectedMethod === DELIVERY_METHOD.HOME, selectedProviderId, shippingChoices);
+  const pickupChoices = getPickupChoices(serverQuote);
+  const selectedShippingUnavailable = isShippingSelectionUnavailable(
+    serverQuote,
+    selectedMethod === DELIVERY_METHOD.HOME,
+    selectedShippingId,
+    shippingChoices,
+  );
   const selectedPickupUnavailable = isPickupSelectionUnavailable(
     serverQuote,
     selectedMethod === DELIVERY_METHOD.PICKUP,
@@ -119,22 +116,24 @@ export function DeliveryOptions({
 
       {selectedMethod === DELIVERY_METHOD.HOME ? (
         <ShippingOptions
-          hasFreeShipping={hasFreeShipping}
-          onSelectProvider={onSelectProvider}
-          selectedProviderId={selectedProviderId}
+          errorText={errors.shipping}
+          onSelectShipping={onSelectShipping}
+          quoteLoading={quoteLoading}
+          quoteReady={Boolean(serverQuote)}
+          selectedShippingId={selectedShippingId}
           selectedShippingUnavailable={selectedShippingUnavailable}
-          serverQuote={serverQuote}
           shippingChoices={shippingChoices}
         />
       ) : null}
 
       {selectedMethod === DELIVERY_METHOD.PICKUP ? (
         <PickupOptions
+          errorText={errors.pickupPoint}
           onSelectPickupPoint={onSelectPickupPoint}
           pickupChoices={pickupChoices}
+          quoteReady={Boolean(serverQuote)}
           selectedPickupPointId={selectedPickupPointId}
           selectedPickupUnavailable={selectedPickupUnavailable}
-          serverQuote={serverQuote}
         />
       ) : null}
 
