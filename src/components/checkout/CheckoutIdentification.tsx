@@ -12,6 +12,7 @@ export type CheckoutIdentificationProps = {
   errors: FieldErrors<IdentificationForm>;
   form: IdentificationForm;
   isActive: boolean;
+  onBlurField: (field: keyof IdentificationForm) => void;
   onContinue: () => void;
   onFieldChange: (field: keyof IdentificationForm, value: string) => void;
   onOpen: () => void;
@@ -23,6 +24,7 @@ export function CheckoutIdentification({
   errors,
   form,
   isActive,
+  onBlurField,
   onContinue,
   onFieldChange,
   onOpen,
@@ -58,11 +60,11 @@ export function CheckoutIdentification({
       {isActive ? (
         <div className="border-t border-border p-5" id={`${sectionId}-content`}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input errorText={errors.email} helperText="Usaremos este correo para enviarte novedades del pedido." id="checkout-email" label="Correo*" onChange={(event) => onFieldChange("email", event.target.value)} trailingIcon={<Mail aria-hidden size={16} />} type="email" value={form.email} />
-            <Input errorText={errors.firstName} helperText="Tu nombre legal o de contacto." id="checkout-first-name" label="Nombres*" onChange={(event) => onFieldChange("firstName", event.target.value)} trailingIcon={<User aria-hidden size={16} />} value={form.firstName} />
-            <Input errorText={errors.lastName} helperText="Tu apellido." id="checkout-last-name" label="Apellido*" onChange={(event) => onFieldChange("lastName", event.target.value)} trailingIcon={<User aria-hidden size={16} />} value={form.lastName} />
-            <Input errorText={errors.dni} helperText="Documento para identificación de la compra." id="checkout-dni" label="DNI*" onChange={(event) => onFieldChange("dni", event.target.value)} trailingIcon={<IdCard aria-hidden size={16} />} value={form.dni} />
-            <Input errorText={errors.phone} helperText="Teléfono para coordinación de entrega." id="checkout-phone" label="Teléfono/Celular*" onChange={(event) => onFieldChange("phone", event.target.value)} trailingIcon={<Phone aria-hidden size={16} />} value={form.phone} />
+            <Input errorText={errors.email} helperText="Usaremos este correo para enviarte novedades del pedido." id="checkout-email" label="Correo*" onBlur={() => onBlurField("email")} onChange={(event) => onFieldChange("email", event.target.value)} trailingIcon={<Mail aria-hidden size={16} />} type="email" value={form.email} />
+            <Input errorText={errors.firstName} helperText="Tu nombre legal o de contacto." id="checkout-first-name" label="Nombres*" onBlur={() => onBlurField("firstName")} onChange={(event) => onFieldChange("firstName", event.target.value)} trailingIcon={<User aria-hidden size={16} />} value={form.firstName} />
+            <Input errorText={errors.lastName} helperText="Tu apellido." id="checkout-last-name" label="Apellido*" onBlur={() => onBlurField("lastName")} onChange={(event) => onFieldChange("lastName", event.target.value)} trailingIcon={<User aria-hidden size={16} />} value={form.lastName} />
+            <Input errorText={errors.dni} helperText="Documento para identificación de la compra." id="checkout-dni" label="DNI*" onBlur={() => onBlurField("dni")} onChange={(event) => onFieldChange("dni", event.target.value)} trailingIcon={<IdCard aria-hidden size={16} />} value={form.dni} />
+            <Input errorText={errors.phone} helperText="Teléfono para coordinación de entrega." id="checkout-phone" label="Teléfono/Celular*" onBlur={() => onBlurField("phone")} onChange={(event) => onFieldChange("phone", event.target.value)} trailingIcon={<Phone aria-hidden size={16} />} value={form.phone} />
           </div>
           <label className="mt-4 flex items-start gap-3 text-sm text-text-muted">
             <input className="mt-1 accent-accent" type="checkbox" />

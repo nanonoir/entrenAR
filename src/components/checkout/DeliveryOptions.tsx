@@ -9,12 +9,13 @@ import {
 } from "@/components/checkout/DeliveryMethodOptions";
 import { PickupOptions } from "@/components/checkout/PickupOptions";
 import { ShippingOptions } from "@/components/checkout/ShippingOptions";
-import type { DeliveryForm, FieldErrors } from "@/components/checkout/checkout-form.validators";
-import {
-  type CheckoutPickupPoint as MockCheckoutPickupPoint,
-  type CheckoutPostalCodeLocation,
-  type CheckoutShippingProvider,
+import type { DeliveryErrors, DeliveryForm } from "@/components/checkout/checkout-form.validators";
+import type {
+  CheckoutPickupPoint as MockCheckoutPickupPoint,
+  CheckoutPostalCodeLocation,
+  CheckoutShippingProvider,
 } from "@/lib/data/checkout";
+import type { CheckoutLocality } from "@/lib/data/locations/localities";
 import { CHECKOUT_ASYNC_STATUS, useCartStore } from "@/stores/cart-store";
 import {
   getPickupChoices,
@@ -24,17 +25,21 @@ import {
 } from "@/components/checkout/delivery-options.utils";
 
 type DeliveryOptionsProps = {
-  errors: FieldErrors<DeliveryForm>;
+  errors: DeliveryErrors;
   form: DeliveryForm;
   hasFreeShipping: boolean;
   location: CheckoutPostalCodeLocation | undefined;
+  onBlurField: (field: keyof DeliveryForm) => void;
   onFieldChange: (field: keyof DeliveryForm, value: string) => void;
+  onModeChange: (mode: DeliveryForm["localityMode"]) => void;
+  onSelectLocality: (locality: CheckoutLocality) => void;
+  onSelectMethod: (method: DeliveryMethod) => void;
   onSelectPickupPoint: (point: MockCheckoutPickupPoint) => void;
+  onSelectProvider: (provider: CheckoutShippingProvider) => void;
+  onSelectProvince: (provinceId: string) => void;
   selectedMethod: DeliveryMethod;
   selectedPickupPointId: string | null;
   selectedProviderId: string;
-  onSelectMethod: (method: DeliveryMethod) => void;
-  onSelectProvider: (provider: CheckoutShippingProvider) => void;
 };
 
 export function DeliveryOptions({
@@ -42,10 +47,14 @@ export function DeliveryOptions({
   form,
   hasFreeShipping,
   location,
+  onBlurField,
   onFieldChange,
-  onSelectPickupPoint,
+  onModeChange,
+  onSelectLocality,
   onSelectMethod,
+  onSelectPickupPoint,
   onSelectProvider,
+  onSelectProvince,
   selectedMethod,
   selectedPickupPointId,
   selectedProviderId,
@@ -57,27 +66,22 @@ export function DeliveryOptions({
   const quoteRetryAvailable = useCartStore((state) => state.quoteRetryAvailable);
   const retryQuote = useCartStore((state) => state.retryQuote);
 
-  const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const operationError = quoteConflict ?? quoteError;
   const quoteLoading = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
+  const serverQuote = quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS ? quote : null;
   const shippingChoices = getShippingChoices(serverQuote);
   const pickupChoices = getPickupChoices(serverQuote, location);
-  const selectedShippingUnavailable = isShippingSelectionUnavailable(
-    serverQuote,
-    selectedMethod === DELIVERY_METHOD.HOME,
-    selectedProviderId,
-    shippingChoices,
-  );
+  const selectedShippingUnavailable = isShippingSelectionUnavailable(serverQuote, selectedMethod === DELIVERY_METHOD.HOME, selectedProviderId, shippingChoices);
   const selectedPickupUnavailable = isPickupSelectionUnavailable(
     serverQuote,
     selectedMethod === DELIVERY_METHOD.PICKUP,
     selectedPickupPointId,
     pickupChoices,
-  );
+  ) && !quoteLoading;
 
   return (
     <div className="grid gap-5" aria-busy={quoteLoading}>
-      <DeliveryMethodOptions onSelectMethod={onSelectMethod} selectedMethod={selectedMethod} />
+      <DeliveryMethodOptions errorText={errors.deliveryMethod} onSelectMethod={onSelectMethod} selectedMethod={selectedMethod} />
 
       {quoteLoading ? (
         <p className="flex items-center gap-2 text-sm text-text-muted" role="status">
@@ -102,17 +106,14 @@ export function DeliveryOptions({
         </div>
       ) : null}
 
-      {!serverQuote && !quoteLoading ? (
-        <p className="rounded-card border border-border bg-background p-3 text-xs text-text-muted" role="status">
-          Las opciones de entrega se confirmarán al cotizar tu pedido.
-        </p>
-      ) : null}
-
       <DeliveryAddressForm
         errors={errors}
         form={form}
-        location={location}
+        onBlurField={onBlurField}
         onFieldChange={onFieldChange}
+        onModeChange={onModeChange}
+        onSelectLocality={onSelectLocality}
+        onSelectProvince={onSelectProvince}
         selectedMethod={selectedMethod}
       />
 

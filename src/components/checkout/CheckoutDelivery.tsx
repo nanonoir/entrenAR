@@ -4,31 +4,36 @@ import { CheckCircle2, Pencil, Truck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DeliveryOptions } from "@/components/checkout/DeliveryOptions";
 import type {
+  CheckoutPickupPoint,
+  CheckoutPostalCodeLocation,
+  CheckoutShippingProvider,
+} from "@/lib/data/checkout";
+import type {
+  DeliveryErrors,
   DeliveryForm,
   DeliveryMethod,
-  FieldErrors,
 } from "@/components/checkout/checkout-form.validators";
-import {
-  type CheckoutPickupPoint,
-  type CheckoutPostalCodeLocation,
-  type CheckoutShippingProvider,
-} from "@/lib/data/checkout";
+import type { CheckoutLocality } from "@/lib/data/locations/localities";
 import { cn } from "@/lib/utils";
 
 export type CheckoutDeliveryProps = {
   canOpen: boolean;
   completed: boolean;
-  errors: FieldErrors<DeliveryForm>;
+  errors: DeliveryErrors;
   form: DeliveryForm;
   hasFreeShipping: boolean;
   isActive: boolean;
   location: CheckoutPostalCodeLocation | undefined;
+  onBlurField: (field: keyof DeliveryForm) => void;
   onContinue: () => void;
   onFieldChange: (field: keyof DeliveryForm, value: string) => void;
+  onModeChange: (mode: DeliveryForm["localityMode"]) => void;
   onOpen: () => void;
+  onSelectLocality: (locality: CheckoutLocality) => void;
   onSelectMethod: (method: DeliveryMethod) => void;
   onSelectPickupPoint: (point: CheckoutPickupPoint) => void;
   onSelectProvider: (provider: CheckoutShippingProvider) => void;
+  onSelectProvince: (provinceId: string) => void;
   selectedMethod: DeliveryMethod;
   selectedPickupPointId: string | null;
   selectedProviderId: string;
@@ -42,12 +47,16 @@ export function CheckoutDelivery({
   hasFreeShipping,
   isActive,
   location,
+  onBlurField,
   onContinue,
   onFieldChange,
+  onModeChange,
   onOpen,
+  onSelectLocality,
   onSelectMethod,
   onSelectPickupPoint,
   onSelectProvider,
+  onSelectProvince,
   selectedMethod,
   selectedPickupPointId,
   selectedProviderId,
@@ -87,10 +96,14 @@ export function CheckoutDelivery({
             form={form}
             hasFreeShipping={hasFreeShipping}
             location={location}
+            onBlurField={onBlurField}
             onFieldChange={onFieldChange}
+            onModeChange={onModeChange}
+            onSelectLocality={onSelectLocality}
             onSelectMethod={onSelectMethod}
             onSelectPickupPoint={onSelectPickupPoint}
             onSelectProvider={onSelectProvider}
+            onSelectProvince={onSelectProvince}
             selectedMethod={selectedMethod}
             selectedPickupPointId={selectedPickupPointId}
             selectedProviderId={selectedProviderId}
