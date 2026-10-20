@@ -44,7 +44,7 @@ export function toCheckoutDestination(
     deliveryMethod: selection.deliveryMethod,
     pickupPointId: selection.deliveryMethod === "pickup" ? selection.pickupPointId : null,
     postalCode: ["cp4", "cpa"].includes(getPostalCodeFormat(postalCode)) ? postalCode : "",
-    provinceId: form.provinceId,
+    provinceId: form.provinceId ?? "",
     shippingId: selection.deliveryMethod === "home" ? selection.shippingId : null,
     shippingProviderId: selection.deliveryMethod === "home" ? selection.shippingProviderId : null,
   };
