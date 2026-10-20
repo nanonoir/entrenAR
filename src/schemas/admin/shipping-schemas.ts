@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 export const DEFAULT_WEIGHT_RANGES = [
-  { id: "range-up-to-1kg", minGrams: 0, maxGrams: 1000, cost: 7500 },
-  { id: "range-1kg-to-3kg", minGrams: 1000, maxGrams: 3000, cost: 10500 },
-  { id: "range-3kg-to-5kg", minGrams: 3000, maxGrams: 5000, cost: 15000 },
-  { id: "range-5kg-to-10kg", minGrams: 5000, maxGrams: 10000, cost: 22000 },
-  { id: "range-over-10kg", minGrams: 10000, maxGrams: 999999, cost: 30000 },
+  { id: "range-up-to-1kg", minGrams: 0, maxGrams: 1000, cost: 12487 },
+  { id: "range-1kg-to-3kg", minGrams: 1000, maxGrams: 3000, cost: 14963 },
+  { id: "range-3kg-to-5kg", minGrams: 3000, maxGrams: 5000, cost: 17849 },
+  { id: "range-5kg-to-10kg", minGrams: 5000, maxGrams: 10000, cost: 21376 },
+  { id: "range-over-10kg", minGrams: 10000, maxGrams: 999999, cost: 28742 },
 ] as const;
 
 const nameLikePattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/;

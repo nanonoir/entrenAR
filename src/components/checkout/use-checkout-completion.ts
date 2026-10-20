@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import type { CheckoutDestination } from "@/components/checkout/checkout-destination";
 import { buildCompletionInput } from "@/components/checkout/checkout-form.builders";
 import { getCheckoutConfigurationIssue } from "@/components/checkout/checkout-form.validators";
 import { CHECKOUT_STEP } from "@/components/checkout/checkout-wizard.types";
@@ -20,7 +21,7 @@ export interface CheckoutCompletionDependencies {
   completeCheckout: (options: CheckoutCompletionOptions) => Promise<CheckoutCompletion | null>;
   completionStatus: CheckoutAsyncStatus;
   form: CheckoutFormState;
-  refreshQuote: () => Promise<CheckoutQuote | null>;
+  refreshQuote: (destination?: CheckoutDestination) => Promise<CheckoutQuote | null>;
 }
 
 export interface CheckoutCompletionController {
@@ -56,7 +57,9 @@ export function useCheckoutCompletion({
     completionSubmitRef.current = true;
 
     try {
-      const currentQuote = await refreshQuote();
+      // Finalize commits the pending destination fields first, then re-quotes with the exact selection.
+      const destination = form.commitDestination();
+      const currentQuote = await refreshQuote(destination);
       if (!currentQuote) {
         form.setActiveStep(CHECKOUT_STEP.PAYMENT);
         return;
@@ -65,8 +68,8 @@ export function useCheckoutCompletion({
       const currentConfigurationIssue = getCheckoutConfigurationIssue(
         currentQuote,
         form.deliveryMethod,
-        form.selectedProvider,
-        form.selectedPickupPoint,
+        form.selectedShippingId,
+        form.selectedPickupPointId,
         form.selectedPaymentId,
       );
       if (currentConfigurationIssue) {
@@ -84,14 +87,11 @@ export function useCheckoutCompletion({
       const completionInput = buildCompletionInput({
         currentQuote,
         deliveryForm: form.deliveryForm,
-        deliveryMethod: form.deliveryMethod,
+        destination,
         identificationForm: form.identificationForm,
         paymentMethodId: form.selectedPaymentId,
         paymentOptionId,
-        selectedPickupPoint: form.selectedPickupPoint,
-        selectedProvider: form.selectedProvider,
         sessionToken: checkoutSessionToken,
-        province: form.detectedLocation?.province,
       });
       const completed = await completeCheckout(completionInput);
 

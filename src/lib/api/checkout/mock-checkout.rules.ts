@@ -215,9 +215,21 @@ export function resolveMockDelivery(
   const shippingMethodId = input.shippingMethodId;
   const selected = shippingMethodId
     ? shippingOptions.find((option) => option.id === normalizeShippingOptionId(shippingMethodId))
-    : shippingOptions.find((option) => option.providerId === input.shippingProviderId);
+    : uniqueProviderOption(shippingOptions, input.shippingProviderId, input.deliveryType);
   if (!selected) throw shippingUnavailable();
+  if (input.deliveryType === CHECKOUT_DELIVERY_TYPE.SHIPPING && selected.modality !== CHECKOUT_SHIPPING_MODALITY.HOME_DELIVERY) throw shippingUnavailable();
   return selected.cost;
+}
+
+/** Provider-only selection is valid only when exactly one eligible service matches; it is never provider-wide. */
+function uniqueProviderOption(
+  shippingOptions: readonly CheckoutShippingOption[],
+  providerId: string | undefined,
+  deliveryType: CheckoutQuoteInput["deliveryType"],
+): CheckoutShippingOption | undefined {
+  const candidates = shippingOptions.filter((option) => option.providerId === providerId
+    && (deliveryType !== CHECKOUT_DELIVERY_TYPE.SHIPPING || option.modality === CHECKOUT_SHIPPING_MODALITY.HOME_DELIVERY));
+  return candidates.length === 1 ? candidates[0] : undefined;
 }
 
 export function mockCoupon(code: string | undefined, subtotal: number): CheckoutQuote["coupon"] {

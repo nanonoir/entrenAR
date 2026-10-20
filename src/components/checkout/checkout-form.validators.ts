@@ -239,12 +239,9 @@ export function getCheckoutConfigurationIssue(
   if (selectedPaymentId === "bank-transfer" && !isUsableBankTransferConfig(paymentMethod.bankConfig)) return BANK_TRANSFER_UNAVAILABLE_MESSAGE;
   if (deliveryMethod === "home") {
     if (!selectedShipping) return "Seleccioná una opción de envío.";
-    const available = quote.shippingOptions.some((option) => {
-      if (option.modality !== CHECKOUT_HOME_DELIVERY_MODALITY) return false;
-      return typeof selectedShipping === "string"
-        ? option.id === selectedShipping
-        : option.providerId === selectedShipping.id;
-    });
+    const available = typeof selectedShipping === "string"
+      ? quote.shippingOptions.some((option) => option.modality === CHECKOUT_HOME_DELIVERY_MODALITY && option.id === selectedShipping)
+      : quote.shippingOptions.filter((option) => option.modality === CHECKOUT_HOME_DELIVERY_MODALITY && option.providerId === selectedShipping.id).length === 1;
     if (!available) return "La opción de envío seleccionada ya no está disponible.";
   }
   const pickupPointId = typeof selectedPickupPoint === "string" ? selectedPickupPoint : selectedPickupPoint?.id;
