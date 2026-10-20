@@ -14,6 +14,11 @@ import {
   isValidTextOnly,
 } from "@/lib/checkout-validation";
 import { getPostalCodeFormat, getPostalProvinceConflict } from "@/lib/data/locations/postal-code";
+import type {
+  CheckoutPickupPoint,
+  CheckoutPostalCodeLocation,
+  CheckoutShippingProvider,
+} from "@/lib/data/checkout";
 
 export const CHECKOUT_FORM_DELIVERY_METHOD = {
   HOME: "home",
@@ -38,11 +43,11 @@ export type IdentificationForm = {
 
 export type DeliveryForm = {
   postalCode: string;
-  provinceId: string;
-  localityId: string;
+  provinceId?: string;
+  localityId?: string;
   /** Locality name: from the official Georef list, or typed manually when `localityMode` is "manual". */
   city: string;
-  localityMode: "" | "manual";
+  localityMode?: "" | "manual";
   street: string;
   streetNumber: string;
   floor: string;
@@ -100,7 +105,7 @@ export function validateDeliveryField(field: keyof DeliveryForm, form: DeliveryF
       const format = getPostalCodeFormat(form.postalCode);
       if (format === "empty") return "Ingresá tu código postal.";
       if (format === "invalid") return "Ingresá un código postal de 4 dígitos o un CPA de 8 caracteres (por ejemplo C1406ABC).";
-      return getPostalProvinceConflict(form.postalCode, form.provinceId) ?? undefined;
+      return getPostalProvinceConflict(form.postalCode, form.provinceId ?? "") ?? undefined;
     }
     case "provinceId":
       return form.provinceId ? undefined : "Seleccioná una provincia.";
@@ -140,7 +145,26 @@ export const DELIVERY_VALIDATED_FIELDS: readonly (keyof DeliveryForm)[] = [
   "recipient",
 ];
 
-export function validateDelivery(form: DeliveryForm, selection: DeliverySelection): DeliveryErrors {
+export function validateDelivery(form: DeliveryForm, selection: DeliverySelection): DeliveryErrors;
+/** Backwards-compatible overload while the existing checkout wizard is migrated in the next unit. */
+export function validateDelivery(
+  form: DeliveryForm,
+  deliveryMethod: DeliveryMethod,
+  detectedLocation: CheckoutPostalCodeLocation | undefined,
+  selectedProvider: CheckoutShippingProvider | null,
+  selectedPickupPoint: CheckoutPickupPoint | null,
+): FieldErrors<DeliveryForm>;
+export function validateDelivery(
+  form: DeliveryForm,
+  selectionOrMethod: DeliverySelection | DeliveryMethod,
+  detectedLocation?: CheckoutPostalCodeLocation,
+  selectedProvider?: CheckoutShippingProvider | null,
+  selectedPickupPoint?: CheckoutPickupPoint | null,
+): DeliveryErrors {
+  if (selectionOrMethod === null || typeof selectionOrMethod === "string") {
+    return validateLegacyDelivery(form, selectionOrMethod, detectedLocation, selectedProvider ?? null, selectedPickupPoint ?? null);
+  }
+  const selection = selectionOrMethod;
   const nextErrors: DeliveryErrors = {};
   for (const field of DELIVERY_VALIDATED_FIELDS) {
     const error = validateDeliveryField(field, form, selection.deliveryMethod);
@@ -156,6 +180,33 @@ export function validateDelivery(form: DeliveryForm, selection: DeliverySelectio
   }
 
   return nextErrors;
+}
+
+function validateLegacyDelivery(
+  form: DeliveryForm,
+  deliveryMethod: DeliveryMethod,
+  detectedLocation: CheckoutPostalCodeLocation | undefined,
+  selectedProvider: CheckoutShippingProvider | null,
+  selectedPickupPoint: CheckoutPickupPoint | null,
+): FieldErrors<DeliveryForm> {
+  const errors: FieldErrors<DeliveryForm> = {};
+  if (!form.postalCode.trim()) errors.postalCode = "Ingresá tu código postal.";
+  else if (!detectedLocation) errors.postalCode = "No tenemos opciones de entrega para este código postal.";
+  if (!deliveryMethod) errors.street = "Seleccioná una forma de entrega.";
+  if (!form.city.trim()) errors.city = "Seleccioná una ciudad.";
+  if (deliveryMethod === CHECKOUT_FORM_DELIVERY_METHOD.HOME) {
+    if (!selectedProvider) errors.postalCode = errors.postalCode ?? "Seleccioná una opción de envío.";
+    if (!form.street.trim()) errors.street = "Ingresá la calle.";
+    else if (!isValidStreetName(form.street)) errors.street = "Ingresá un nombre de calle válido (hasta 200 caracteres, con al menos una letra).";
+    if (!form.streetNumber.trim()) errors.streetNumber = "Ingresá el número.";
+    else if (!isValidNumericOnly(form.streetNumber)) errors.streetNumber = "Usá solo números.";
+    if (form.neighborhood && !isValidNeighborhood(form.neighborhood)) errors.neighborhood = "Usá hasta 120 caracteres: letras, números y . , / # - °.";
+    if (form.recipient && !isValidTextOnly(form.recipient)) errors.recipient = "Usá solo letras.";
+  }
+  if (deliveryMethod === CHECKOUT_FORM_DELIVERY_METHOD.PICKUP && !selectedPickupPoint) {
+    errors.postalCode = errors.postalCode ?? "Seleccioná un punto de retiro.";
+  }
+  return errors;
 }
 
 /** Stable Spanish copy for known coupon error codes; the backend message is English and must not reach the UI. */
@@ -175,8 +226,8 @@ export function hasErrors(errors: object): boolean {
 export function getCheckoutConfigurationIssue(
   quote: CheckoutQuote | null,
   deliveryMethod: DeliveryMethod,
-  selectedShippingId: string | null,
-  selectedPickupPointId: string | null,
+  selectedShipping: string | CheckoutShippingProvider | null,
+  selectedPickupPoint: string | CheckoutPickupPoint | null,
   selectedPaymentId: string,
 ): string | null {
   if (!quote) return null;
@@ -187,12 +238,18 @@ export function getCheckoutConfigurationIssue(
   if (!paymentOptionId || !paymentMethod.options.some((option) => option.id === paymentOptionId)) return "El medio de pago seleccionado no tiene una opción configurada.";
   if (selectedPaymentId === "bank-transfer" && !isUsableBankTransferConfig(paymentMethod.bankConfig)) return BANK_TRANSFER_UNAVAILABLE_MESSAGE;
   if (deliveryMethod === "home") {
-    if (!selectedShippingId) return "Seleccioná una opción de envío.";
-    const exact = quote.shippingOptions.some((option) => option.id === selectedShippingId && option.modality === CHECKOUT_HOME_DELIVERY_MODALITY);
-    if (!exact) return "La opción de envío seleccionada ya no está disponible.";
+    if (!selectedShipping) return "Seleccioná una opción de envío.";
+    const available = quote.shippingOptions.some((option) => {
+      if (option.modality !== CHECKOUT_HOME_DELIVERY_MODALITY) return false;
+      return typeof selectedShipping === "string"
+        ? option.id === selectedShipping
+        : option.providerId === selectedShipping.id;
+    });
+    if (!available) return "La opción de envío seleccionada ya no está disponible.";
   }
-  if (deliveryMethod === "pickup" && (!selectedPickupPointId || !quote.pickupPoints.some((point) => point.id === selectedPickupPointId))) {
-    return selectedPickupPointId ? "El punto de retiro seleccionado ya no está disponible." : "Seleccioná un punto de retiro.";
+  const pickupPointId = typeof selectedPickupPoint === "string" ? selectedPickupPoint : selectedPickupPoint?.id;
+  if (deliveryMethod === "pickup" && (!pickupPointId || !quote.pickupPoints.some((point) => point.id === pickupPointId))) {
+    return pickupPointId ? "El punto de retiro seleccionado ya no está disponible." : "Seleccioná un punto de retiro.";
   }
 
   return null;
