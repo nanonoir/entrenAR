@@ -4,8 +4,14 @@ export class CheckoutAddressDto {
   @ApiProperty()
   city!: string;
 
+  @ApiPropertyOptional({ maxLength: 80 })
+  floor?: string;
+
   @ApiPropertyOptional()
   label?: string;
+
+  @ApiPropertyOptional({ maxLength: 120 })
+  neighborhood?: string;
 
   @ApiPropertyOptional()
   number?: string;

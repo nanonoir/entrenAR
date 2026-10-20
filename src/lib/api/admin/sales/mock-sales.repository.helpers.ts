@@ -345,6 +345,7 @@ function toUiAddress(value: Record<string, unknown>): SaleAddress {
     number: textValue(value.number),
     ...(textValue(value.floor) ? { floor: textValue(value.floor) } : {}),
     ...(textValue(value.unit) ? { unit: textValue(value.unit) } : {}),
+    ...(textValue(value.neighborhood) ? { neighborhood: textValue(value.neighborhood) } : {}),
     city: textValue(value.city),
     province: textValue(value.province),
     postalCode: textValue(value.postalCode),

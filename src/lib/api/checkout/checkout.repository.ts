@@ -62,7 +62,9 @@ export interface CheckoutAddressInput {
   postalCode: string;
   province: string;
   street: string;
+  floor?: string;
   label?: string;
+  neighborhood?: string;
   number?: string;
   phone?: string;
   recipient?: string;

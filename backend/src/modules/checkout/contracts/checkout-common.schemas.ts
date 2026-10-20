@@ -47,9 +47,18 @@ export const couponCodeSchema = requiredText("Coupon code", 80)
 
 export const paymentMethodIdSchema = z.enum(CHECKOUT_PAYMENT_METHOD_IDS);
 
+const CHECKOUT_FLOOR_MAX_LENGTH = 80;
+const CHECKOUT_NEIGHBORHOOD_MAX_LENGTH = 120;
+
+/** Optional structured address text: letters, digits and a small set of address punctuation. */
+const addressDetailSchema = (field: string, max: number) => requiredText(field, max)
+  .regex(/^[\p{L}\p{M}\d\s'.,°ºª/#-]+$/u, { error: `${field} contains invalid characters.` });
+
 export const checkoutAddressSchema = z.object({
   city: requiredText("City", 120),
+  floor: addressDetailSchema("Floor", CHECKOUT_FLOOR_MAX_LENGTH).optional(),
   label: requiredText("Address label", 60).optional(),
+  neighborhood: addressDetailSchema("Neighborhood", CHECKOUT_NEIGHBORHOOD_MAX_LENGTH).optional(),
   number: requiredText("Street number", 32).optional(),
   phone: phoneSchema.optional(),
   postalCode: postalCodeSchema,

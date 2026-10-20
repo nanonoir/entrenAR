@@ -217,6 +217,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
               <address className="not-italic text-sm text-zinc-700 grid gap-0.5">
                 <span>{order.shippingAddress.street} {order.shippingAddress.number}</span>
                 {order.shippingAddress.floor && <span>Piso {order.shippingAddress.floor}</span>}
+                {order.shippingAddress.neighborhood && <span>Barrio {order.shippingAddress.neighborhood}</span>}
                 <span>{order.shippingAddress.city}, {order.shippingAddress.province}</span>
                 <span>CP {order.shippingAddress.postalCode}</span>
               </address>

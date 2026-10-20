@@ -4,6 +4,7 @@ import { ERROR_CODE } from "../../common/errors/api-error.response";
 import type { Prisma } from "../../generated/prisma/client";
 import {
   CHECKOUT_DELIVERY_TYPE,
+  CHECKOUT_SHIPPING_MODALITY,
   type CheckoutDeliveryType,
 } from "./checkout.constants";
 import type {
@@ -31,6 +32,7 @@ import { CommerceRepository } from "../commerce/commerce.repository";
 
 export interface CheckoutDeliveryInput {
   address?: CheckoutAddressInput;
+  deliveryType?: CheckoutDeliveryType;
   pickupPointId?: string;
   province?: string;
   shippingMethodId?: string;
@@ -190,11 +192,14 @@ export class CheckoutDeliveryRules {
 
     let selectedId = input.shippingMethodId ? normalizeShippingMethodId(input.shippingMethodId) : undefined;
     if (!selectedId && input.shippingProviderId) {
-      selectedId = shippingOptions.find((option) => option.providerId === input.shippingProviderId)?.id;
+      selectedId = this.uniqueProviderService(input, shippingOptions);
     }
     if (selectedId) {
       const shippingOption = shippingOptions.find((option) => option.id === selectedId);
       if (!shippingOption || (input.shippingProviderId && shippingOption.providerId !== input.shippingProviderId)) {
+        throw this.shippingUnavailable();
+      }
+      if (input.deliveryType === CHECKOUT_DELIVERY_TYPE.SHIPPING && shippingOption.modality !== CHECKOUT_SHIPPING_MODALITY.HOME_DELIVERY) {
         throw this.shippingUnavailable();
       }
       return {
@@ -216,6 +221,20 @@ export class CheckoutDeliveryRules {
 
     if (required) throw this.shippingUnavailable();
     return { baseCost: 0, cost: 0, snapshot: { type: "none" } };
+  }
+
+  /** A provider-only selection resolves only when it identifies exactly one eligible service. */
+  private uniqueProviderService(
+    input: CheckoutDeliveryInput,
+    shippingOptions: readonly CheckoutShippingOptionProjection[],
+  ): string {
+    const candidates = shippingOptions.filter((option) => {
+      return option.providerId === input.shippingProviderId
+        && (input.deliveryType !== CHECKOUT_DELIVERY_TYPE.SHIPPING || option.modality === CHECKOUT_SHIPPING_MODALITY.HOME_DELIVERY);
+    });
+    const [only] = candidates;
+    if (candidates.length !== 1 || !only) throw this.shippingUnavailable();
+    return only.id;
   }
 
   private shippingUnavailable(): ConflictException {
