@@ -6,14 +6,19 @@ import { Button } from "@/components/ui/Button";
 import {
   CHECKOUT_COUPON_RESULT,
   type CheckoutQuote,
-  type CheckoutShippingOption,
 } from "@/lib/api/checkout/checkout.repository";
+import { getCouponOperationMessage } from "@/components/checkout/checkout-form.validators";
 import { checkoutCouponCopy } from "@/lib/data/checkout";
 import { formatCurrency } from "@/lib/pricing";
-import { CHECKOUT_ASYNC_STATUS, type CheckoutQuoteOptions, useCartStore } from "@/stores/cart-store";
+import { CHECKOUT_ASYNC_STATUS, useCartStore } from "@/stores/cart-store";
 import { cn } from "@/lib/utils";
 
-export function CouponBox() {
+export type CouponBoxProps = {
+  /** Routes the request through the checkout quote lifecycle (committed destination, exact service/pickup ids). */
+  onApplyCoupon?: (couponCode: string) => Promise<CheckoutQuote | null>;
+};
+
+export function CouponBox({ onApplyCoupon }: CouponBoxProps = {}) {
   const [couponCode, setCouponCode] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
@@ -34,7 +39,7 @@ export function CouponBox() {
   const rejectedCouponMessage = couponResult?.result === CHECKOUT_COUPON_RESULT.REJECTED
     ? couponResult.message ?? "El cupón no es válido para este pedido."
     : null;
-  const errorMessage = validationMessage ?? operationError?.message ?? rejectedCouponMessage;
+  const errorMessage = validationMessage ?? (operationError ? getCouponOperationMessage(operationError) : null) ?? rejectedCouponMessage;
   const helperId = "checkout-coupon-helper";
   const errorId = "checkout-coupon-error";
 
@@ -51,7 +56,9 @@ export function CouponBox() {
     setIsApplying(true);
 
     try {
-      const nextQuote = await requestQuote(buildCouponQuoteOptions(serverQuote, normalizedCode));
+      // Checkout supplies the committed wizard destination and exact selection; the cart has neither, so the coupon
+      // is validated against the cart alone. A shipping service is never inferred from the quoted cost.
+      const nextQuote = await (onApplyCoupon ?? ((code: string) => requestQuote({ couponCode: code })))(normalizedCode);
       if (nextQuote?.coupon?.result === CHECKOUT_COUPON_RESULT.REJECTED) {
         setValidationMessage(nextQuote.coupon.message ?? "El cupón no es válido para este pedido.");
       }
@@ -125,23 +132,4 @@ export function CouponBox() {
       ) : null}
     </form>
   );
-}
-
-function buildCouponQuoteOptions(quote: CheckoutQuote | null, couponCode: string): CheckoutQuoteOptions {
-  const shippingOption = quote && quote.shipping > 0
-    ? quote.shippingOptions.find((option) => option.cost === quote.shipping)
-    : undefined;
-
-  return {
-    couponCode,
-    ...(shippingOption ? toShippingSelection(shippingOption) : {}),
-  };
-}
-
-function toShippingSelection(option: CheckoutShippingOption): Pick<CheckoutQuoteOptions, "deliveryType" | "shippingMethodId" | "shippingProviderId"> {
-  return {
-    deliveryType: "shipping",
-    shippingMethodId: option.id,
-    shippingProviderId: option.providerId,
-  };
 }

@@ -9,6 +9,7 @@ import {
   type CheckoutQuote,
   type CheckoutQuoteInput,
 } from "@/lib/api/checkout/checkout.repository";
+import { clearCheckoutDraft } from "@/lib/checkout-draft";
 import {
   CHECKOUT_ASYNC_STATUS,
   type CheckoutCompletionOptions,
@@ -181,6 +182,7 @@ async function executeCartCompletion(
     const completion = await getCheckoutRepository().complete(input);
     if (requestSequence !== completionRequestSequence) return completion;
 
+    clearCheckoutDraft();
     set({
       checkoutSessionToken: null,
       completion,
@@ -225,6 +227,7 @@ async function reconcileAuthenticatedCart(
   const normalizedEmail = normalizeOptionalValue(email)?.toLocaleLowerCase() ?? null;
   const accountChanged = Boolean(state.activeUserEmail && normalizedEmail && state.activeUserEmail !== normalizedEmail);
   const sessionToken = accountChanged ? null : state.checkoutSessionToken;
+  if (accountChanged) clearCheckoutDraft();
   invalidateCheckoutRequests();
   set({ activeUserEmail: normalizedEmail, ...createIdleCheckoutState(sessionToken) });
   if (state.items.length === 0) return true;

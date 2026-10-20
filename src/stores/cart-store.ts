@@ -9,6 +9,7 @@ import {
   type CartStoreSetter,
 } from "@/stores/cart-checkout.actions";
 import type { CheckoutCompletion, CheckoutQuote } from "@/lib/api/checkout/checkout.repository";
+import { clearCheckoutDraft } from "@/lib/checkout-draft";
 import {
   CHECKOUT_ASYNC_STATUS,
   type CheckoutCompletionOptions,
@@ -69,6 +70,7 @@ export const useCartStore = create<CartState>()(
           );
         }),
       clearCart: () => {
+        clearCheckoutDraft();
         invalidateCheckoutRequests();
         set({ items: [], ...createIdleCheckoutState(null) });
       },
