@@ -10,16 +10,18 @@ export const DELIVERY_METHOD = {
 export type DeliveryMethod = (typeof DELIVERY_METHOD)[keyof typeof DELIVERY_METHOD] | null;
 
 export type DeliveryMethodOptionsProps = {
+  errorText?: string;
   onSelectMethod: (method: DeliveryMethod) => void;
   selectedMethod: DeliveryMethod;
 };
 
 export function DeliveryMethodOptions({
+  errorText,
   onSelectMethod,
   selectedMethod,
 }: DeliveryMethodOptionsProps) {
   return (
-    <fieldset className="grid gap-3" aria-describedby="checkout-delivery-method-helper">
+    <fieldset className="grid gap-3" aria-describedby={errorText ? "checkout-delivery-method-helper checkout-delivery-method-error" : "checkout-delivery-method-helper"}>
       <legend className="font-subtitle text-lg font-bold uppercase text-text">Método de entrega*</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={deliveryChoiceClass(selectedMethod === DELIVERY_METHOD.HOME)}>
@@ -48,6 +50,7 @@ export function DeliveryMethodOptions({
       <p className="text-xs text-text-muted" id="checkout-delivery-method-helper">
         Elegí cómo querés recibir tu pedido.
       </p>
+      {errorText ? <p className="text-xs font-medium text-sale" id="checkout-delivery-method-error">{errorText}</p> : null}
     </fieldset>
   );
 }

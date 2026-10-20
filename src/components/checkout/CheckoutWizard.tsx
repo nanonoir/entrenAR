@@ -52,7 +52,7 @@ export function CheckoutWizard() {
 
   return (
     <Container className="py-10" size="wide">
-      <h1 className="font-title text-3xl font-bold text-text sm:text-4xl">Checkout</h1>
+      <h1 className="font-heading text-3xl font-bold text-text sm:text-4xl">Checkout</h1>
       <div className="mt-4 grid gap-3">
         {wizard.hasValidationErrors ? (
           <div role="alert">
@@ -77,6 +77,7 @@ export function CheckoutWizard() {
             errors={wizard.identificationErrors}
             form={wizard.identificationForm}
             isActive={wizard.activeStep === "identification"}
+            onBlurField={wizard.blurIdentificationField}
             onContinue={() => wizard.continueFrom("identification")}
             onFieldChange={wizard.updateIdentificationField}
             onOpen={() => wizard.openStep("identification")}
@@ -90,14 +91,18 @@ export function CheckoutWizard() {
             hasFreeShipping={wizard.hasFreeShipping}
             isActive={wizard.activeStep === "delivery"}
             location={wizard.detectedLocation}
+            onBlurField={wizard.blurDeliveryField}
             onContinue={() => wizard.continueFrom("delivery")}
             onFieldChange={wizard.updateDeliveryField}
+            onModeChange={wizard.handleSetLocalityMode}
             onOpen={() => wizard.openStep("delivery")}
+            onSelectLocality={wizard.handleSelectLocality}
             onSelectMethod={wizard.handleSelectDeliveryMethod}
             onSelectPickupPoint={wizard.handleSelectPickupPoint}
             onSelectProvider={wizard.handleSelectProvider}
+            onSelectProvince={wizard.handleSelectProvince}
             selectedMethod={wizard.deliveryMethod}
-            selectedPickupPointId={wizard.selectedPickupPoint?.id ?? null}
+            selectedPickupPointId={wizard.selectedPickupPointId}
             selectedProviderId={wizard.selectedProvider?.id ?? ""}
           />
 
@@ -108,14 +113,14 @@ export function CheckoutWizard() {
             <CheckoutSummary
               actionLabel="Finalizar Compra"
               discountTotal={wizard.discountTotal}
-              freeShippingRemaining={wizard.freeShippingRemaining}
               items={wizard.items}
               onAction={wizard.handleFinalize}
               actionDisabled={!wizard.canFinalize}
               actionHelpText={wizard.actionHelpText}
+              onApplyCoupon={wizard.applyCoupon}
               onRefreshQuote={wizard.refreshQuote}
               reconciliationMessage={wizard.reconciliationMessage}
-              shippingCost={wizard.selectedProvider?.price ?? null}
+              shippingResolved={wizard.shippingResolved}
               subtotal={wizard.subtotal}
           />
           <p className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-text-muted">
