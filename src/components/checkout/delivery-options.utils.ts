@@ -1,26 +1,24 @@
+import { CHECKOUT_HOME_DELIVERY_MODALITY } from "@/components/checkout/checkout-form.validators";
 import type {
   CheckoutAddressInput,
-  CheckoutPickupPoint as ServerCheckoutPickupPoint,
+  CheckoutPickupPoint,
   CheckoutQuote,
   CheckoutShippingOption,
 } from "@/lib/api/checkout/checkout.repository";
-import {
-  checkoutShippingProviders,
-  type CheckoutPickupPoint as MockCheckoutPickupPoint,
-  type CheckoutPostalCodeLocation,
-  type CheckoutShippingProvider,
-} from "@/lib/data/checkout";
+import { formatCurrency } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
+/** One selectable home-delivery service. `id` is the exact `CheckoutShippingOption.id`, never a provider id. */
 export type ShippingChoice = {
   id: string;
-  label: string;
-  description: string;
-  eta: string;
-  logoSrc: string;
+  providerId: string;
+  /** Carrier brand: the primary label of the card. */
+  carrierName: string;
+  logoSrc: string | null;
+  /** Service description: secondary text. */
+  serviceLabel: string;
+  eta: string | null;
   price: number;
-  provider: CheckoutShippingProvider;
-  selectionIds: readonly string[];
 };
 
 export type PickupChoice = {
@@ -28,58 +26,52 @@ export type PickupChoice = {
   name: string;
   address: string;
   eta: string;
-  point: MockCheckoutPickupPoint;
 };
 
-export function getShippingChoices(serverQuote: CheckoutQuote | null): ShippingChoice[] {
-  return serverQuote
-    ? serverQuote.shippingOptions.map(toServerShippingChoice)
-    : checkoutShippingProviders.map(toMockShippingChoice);
+const CARRIER_BRANDS: readonly { logoSrc: string; match: string; name: string }[] = [
+  { logoSrc: "/correoArgentino.svg", match: "correo", name: "Correo Argentino" },
+  { logoSrc: "/andreani.svg", match: "andreani", name: "Andreani" },
+];
+
+export function getCarrierBrand(providerId: string, providerName: string): { logoSrc: string | null; name: string } {
+  const normalized = providerId.trim().toLocaleLowerCase();
+  const brand = CARRIER_BRANDS.find((candidate) => normalized.includes(candidate.match));
+  return brand ? { logoSrc: brand.logoSrc, name: brand.name } : { logoSrc: null, name: providerName };
 }
 
-export function getPickupChoices(
-  serverQuote: CheckoutQuote | null,
-  location: CheckoutPostalCodeLocation | undefined,
-): PickupChoice[] {
-  return serverQuote
-    ? serverQuote.pickupPoints.map(toServerPickupChoice)
-    : (location?.pickupPoints ?? []).map(toMockPickupChoice);
+/** Home delivery lists only `home_delivery` services; branch/pickup modalities are never offered here. */
+export function getShippingChoices(quote: CheckoutQuote | null): ShippingChoice[] {
+  if (!quote) return [];
+  return quote.shippingOptions
+    .filter((option) => option.modality === CHECKOUT_HOME_DELIVERY_MODALITY)
+    .map(toShippingChoice);
 }
 
-export function isShippingChoiceSelected(choice: ShippingChoice, selectedProviderId: string): boolean {
-  return choice.selectionIds.some((id) => matchesId(id, selectedProviderId));
+/** Choices only exist for services of a ready quote, so zero is a confirmed quoted zero, never a fallback. */
+export function formatShippingPrice(price: number): string {
+  return price === 0 ? "Gratis" : formatCurrency(price);
 }
 
-export function isPickupChoiceSelected(choice: PickupChoice, selectedPickupPointId: string | null): boolean {
-  return selectedPickupPointId === choice.id;
+export function getPickupChoices(quote: CheckoutQuote | null): PickupChoice[] {
+  return quote ? quote.pickupPoints.map(toPickupChoice) : [];
 }
 
 export function isShippingSelectionUnavailable(
-  serverQuote: CheckoutQuote | null,
+  quote: CheckoutQuote | null,
   isHomeDelivery: boolean,
-  selectedProviderId: string,
+  selectedShippingId: string | null,
   choices: readonly ShippingChoice[],
 ): boolean {
-  return Boolean(
-    serverQuote
-      && isHomeDelivery
-      && selectedProviderId
-      && !choices.some((choice) => isShippingChoiceSelected(choice, selectedProviderId)),
-  );
+  return Boolean(quote && isHomeDelivery && selectedShippingId && !choices.some((choice) => choice.id === selectedShippingId));
 }
 
 export function isPickupSelectionUnavailable(
-  serverQuote: CheckoutQuote | null,
+  quote: CheckoutQuote | null,
   isPickupDelivery: boolean,
   selectedPickupPointId: string | null,
   choices: readonly PickupChoice[],
 ): boolean {
-  return Boolean(
-    serverQuote
-      && isPickupDelivery
-      && selectedPickupPointId
-      && !choices.some((choice) => isPickupChoiceSelected(choice, selectedPickupPointId)),
-  );
+  return Boolean(quote && isPickupDelivery && selectedPickupPointId && !choices.some((choice) => choice.id === selectedPickupPointId));
 }
 
 export function deliveryChoiceClass(selected: boolean): string {
@@ -96,60 +88,26 @@ export function deliveryCardClass(selected: boolean): string {
   );
 }
 
-export function toMockShippingChoice(provider: CheckoutShippingProvider): ShippingChoice {
-  const normalizedId = normalizeProviderId(provider.id);
-  const normalizedProvider = { ...provider, id: normalizedId };
+export function toShippingChoice(option: CheckoutShippingOption): ShippingChoice {
+  const brand = getCarrierBrand(option.providerId, option.providerName);
 
   return {
-    description: provider.description,
-    eta: provider.eta,
-    id: normalizedId,
-    label: provider.name,
-    logoSrc: provider.logoSrc,
-    price: provider.price,
-    provider: normalizedProvider,
-    selectionIds: [normalizedId, provider.id],
-  };
-}
-
-export function toServerShippingChoice(option: CheckoutShippingOption): ShippingChoice {
-  const fallback = checkoutShippingProviders.find((provider) => normalizeProviderId(provider.id) === normalizeProviderId(option.providerId));
-  const label = option.label || option.providerName;
-  const provider: CheckoutShippingProvider = {
-    description: label,
-    eta: option.estimatedDelivery ?? fallback?.eta ?? "Consultar disponibilidad",
-    id: option.providerId,
-    logoSrc: fallback?.logoSrc ?? shippingLogoFor(option.providerId),
-    name: option.providerName,
+    carrierName: brand.name,
+    eta: option.estimatedDelivery ?? null,
+    id: option.id,
+    logoSrc: brand.logoSrc,
     price: option.cost,
-  };
-
-  return {
-    description: label,
-    eta: provider.eta,
-    id: option.providerId,
-    label,
-    logoSrc: provider.logoSrc,
-    price: option.cost,
-    provider,
-    selectionIds: [option.providerId, option.id],
+    providerId: option.providerId,
+    serviceLabel: option.label,
   };
 }
 
-export function toMockPickupChoice(point: MockCheckoutPickupPoint): PickupChoice {
-  return { address: point.address, eta: point.eta, id: point.id, name: point.name, point };
-}
-
-export function toServerPickupChoice(point: ServerCheckoutPickupPoint): PickupChoice {
-  const address = formatAddress(point.address);
-  const eta = formatPreparationTime(point.preparationHours);
-
+export function toPickupChoice(point: CheckoutPickupPoint): PickupChoice {
   return {
-    address,
-    eta,
+    address: formatAddress(point.address),
+    eta: formatPreparationTime(point.preparationHours),
     id: point.id,
     name: point.name,
-    point: { address, eta, id: point.id, name: point.name },
   };
 }
 
@@ -160,22 +118,4 @@ export function formatAddress(address: CheckoutAddressInput): string {
 
 export function formatPreparationTime(hours: number): string {
   return hours === 1 ? "Retiro disponible en 1 hora" : `Retiro disponible en ${hours} hs`;
-}
-
-export function matchesId(left: string, right: string): boolean {
-  return normalizeProviderId(left) === normalizeProviderId(right);
-}
-
-export function normalizeProviderId(value: string): string {
-  const normalized = value.trim().toLocaleLowerCase();
-  const aliases: Record<string, string> = {
-    "andreani-home": "andreani",
-    "correo-argentino-branch": "correo-argentino",
-  };
-
-  return aliases[normalized] ?? normalized;
-}
-
-export function shippingLogoFor(providerId: string): string {
-  return normalizeProviderId(providerId).includes("correo") ? "/correoArgentino.svg" : "/andreani.svg";
 }

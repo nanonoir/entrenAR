@@ -4,11 +4,6 @@ import { CheckCircle2, Pencil, Truck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DeliveryOptions } from "@/components/checkout/DeliveryOptions";
 import type {
-  CheckoutPickupPoint,
-  CheckoutPostalCodeLocation,
-  CheckoutShippingProvider,
-} from "@/lib/data/checkout";
-import type {
   DeliveryErrors,
   DeliveryForm,
   DeliveryMethod,
@@ -21,9 +16,7 @@ export type CheckoutDeliveryProps = {
   completed: boolean;
   errors: DeliveryErrors;
   form: DeliveryForm;
-  hasFreeShipping: boolean;
   isActive: boolean;
-  location: CheckoutPostalCodeLocation | undefined;
   onBlurField: (field: keyof DeliveryForm) => void;
   onContinue: () => void;
   onFieldChange: (field: keyof DeliveryForm, value: string) => void;
@@ -31,12 +24,12 @@ export type CheckoutDeliveryProps = {
   onOpen: () => void;
   onSelectLocality: (locality: CheckoutLocality) => void;
   onSelectMethod: (method: DeliveryMethod) => void;
-  onSelectPickupPoint: (point: CheckoutPickupPoint) => void;
-  onSelectProvider: (provider: CheckoutShippingProvider) => void;
+  onSelectPickupPoint: (id: string) => void;
   onSelectProvince: (provinceId: string) => void;
+  onSelectShipping: (selection: { id: string; providerId: string }) => void;
   selectedMethod: DeliveryMethod;
   selectedPickupPointId: string | null;
-  selectedProviderId: string;
+  selectedShippingId: string | null;
 };
 
 export function CheckoutDelivery({
@@ -44,9 +37,7 @@ export function CheckoutDelivery({
   completed,
   errors,
   form,
-  hasFreeShipping,
   isActive,
-  location,
   onBlurField,
   onContinue,
   onFieldChange,
@@ -55,11 +46,11 @@ export function CheckoutDelivery({
   onSelectLocality,
   onSelectMethod,
   onSelectPickupPoint,
-  onSelectProvider,
   onSelectProvince,
+  onSelectShipping,
   selectedMethod,
   selectedPickupPointId,
-  selectedProviderId,
+  selectedShippingId,
 }: CheckoutDeliveryProps) {
   const sectionId = "checkout-step-delivery";
 
@@ -94,19 +85,17 @@ export function CheckoutDelivery({
           <DeliveryOptions
             errors={errors}
             form={form}
-            hasFreeShipping={hasFreeShipping}
-            location={location}
             onBlurField={onBlurField}
             onFieldChange={onFieldChange}
             onModeChange={onModeChange}
             onSelectLocality={onSelectLocality}
             onSelectMethod={onSelectMethod}
             onSelectPickupPoint={onSelectPickupPoint}
-            onSelectProvider={onSelectProvider}
             onSelectProvince={onSelectProvince}
+            onSelectShipping={onSelectShipping}
             selectedMethod={selectedMethod}
             selectedPickupPointId={selectedPickupPointId}
-            selectedProviderId={selectedProviderId}
+            selectedShippingId={selectedShippingId}
           />
           <Button className="mt-5" onClick={onContinue}>Continuar</Button>
         </div>
