@@ -27,12 +27,30 @@ async function run(): Promise<void> {
   assert(wheyPreviewItem !== undefined, "The preview cart must contain a whey checkout fixture.");
   assert(creatinePreviewItem !== undefined, "The preview cart must contain a creatine checkout fixture.");
 
+  const draftStorage = new Map<string, string>();
+  (globalThis as { window?: unknown }).window = {
+    sessionStorage: {
+      getItem: (key: string) => draftStorage.get(key) ?? null,
+      removeItem: (key: string) => { draftStorage.delete(key); },
+      setItem: (key: string, value: string) => { draftStorage.set(key, value); },
+    },
+  };
+  const { CHECKOUT_DRAFT_STORAGE_KEY, createEmptyCheckoutDraftValues, writeCheckoutDraft } = await import("@/lib/checkout-draft");
+  const seedCheckoutDraft = (): void => {
+    writeCheckoutDraft({ ...createEmptyCheckoutDraftValues(), email: "draft@example.com" });
+    assert(draftStorage.has(CHECKOUT_DRAFT_STORAGE_KEY), "The harness could not seed a checkout draft.");
+  };
+  const hasCheckoutDraft = (): boolean => draftStorage.has(CHECKOUT_DRAFT_STORAGE_KEY);
+
   clearAccountAccessToken();
+  seedCheckoutDraft();
   store.getState().clearCart();
+  assert(!hasCheckoutDraft(), "clearCart did not clear the session checkout draft, even with no wizard mounted.");
 
   const quote = await runQuoteAndCompletionScenario(wheyPreviewItem, repository);
   await runConflictAndRetryScenario(creatinePreviewItem);
   await runReconciliationScenario(wheyPreviewItem, creatinePreviewItem, quote);
+  await runOutOfOrderScenario(wheyPreviewItem);
 
   clearAccountAccessToken();
   store.getState().clearCart();
@@ -83,9 +101,11 @@ async function run(): Promise<void> {
       paymentOptionId: "direct-transfer",
       shippingMethodId: "andreani:envío-a-domicilio",
     };
+    seedCheckoutDraft();
     const completed = await store.getState().completeCheckout(completionOptions);
 
     assert(completed !== null, "The cart store did not complete an eligible quote.");
+    assert(!hasCheckoutDraft(), "Successful completion did not clear the session checkout draft.");
     assert(completed.orderId.length > 0, "The cart store completion did not return an order ID.");
     assert(completed.total === quote.total, "The cart store completion changed the quoted total.");
 
@@ -116,6 +136,27 @@ async function run(): Promise<void> {
     assert(cleanupError.status === 401, "Completed checkout cleanup returned the wrong error status.");
 
     return quote;
+  }
+
+  async function runOutOfOrderScenario(previewItem: CartPreviewItem): Promise<void> {
+    const items = [checkoutLine(previewItem, 1)];
+    // Two overlapping requests (an older shipping-selection quote and a newer plain one): only the newest may settle.
+    const older = store.getState().requestQuote({
+      address: addressInput(),
+      deliveryType: "shipping",
+      items,
+      sessionToken: null,
+      shippingMethodId: "andreani:envío-a-domicilio",
+    });
+    const newer = store.getState().requestQuote({ items, sessionToken: null });
+    const [olderQuote, newerQuote] = await Promise.all([older, newer]);
+
+    assert(olderQuote !== null && newerQuote !== null, "Overlapping quote requests did not both resolve.");
+    assert(olderQuote.shipping !== newerQuote.shipping, "The out-of-order scenario needs quotes with different shipping.");
+    const settled = store.getState();
+    assert(settled.quote?.quoteId === newerQuote.quoteId, "An older quote response restored outdated state.");
+    assert(settled.quote?.shipping === newerQuote.shipping, "An older quote response restored an outdated shipping total.");
+    assert(settled.quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS, "Overlapping quotes left the quote state unsettled.");
   }
 
   async function runConflictAndRetryScenario(previewItem: CartPreviewItem): Promise<void> {

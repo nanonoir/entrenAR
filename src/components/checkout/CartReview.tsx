@@ -47,7 +47,7 @@ export function CartReview() {
   return (
     <>
       <Container className="py-10" size="wide">
-        <h1 className="font-title text-3xl font-bold text-text sm:text-4xl">Mi Carrito</h1>
+        <h1 className="font-heading text-3xl font-bold text-text sm:text-4xl">Mi Carrito</h1>
         <div className="mt-6 grid gap-6 lg:grid-cols-4 lg:items-start">
           <section className="min-w-0 lg:col-span-3">
             <CartFreeShippingProgress
@@ -103,7 +103,6 @@ export function CartReview() {
               actionDisabled={!hasCartItems}
               actionHelpText={!hasCartItems ? "Agregá al menos un producto para iniciar el pago." : undefined}
               discountTotal={discountTotal}
-              freeShippingRemaining={freeShippingRemaining}
               subtotal={subtotal}
             />
           </div>

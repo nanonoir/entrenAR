@@ -9,6 +9,7 @@ import {
 import { getAccountRepository } from "@/lib/api/account/account.repository";
 import { DATA_SOURCE, getAccountDataSource } from "@/lib/api/config";
 import { normalizeAccountEmail } from "@/lib/account-validation";
+import { clearCheckoutDraft } from "@/lib/checkout-draft";
 import { useAccountProfileStore } from "@/stores/account-profile-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -119,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
 
         if (getAccountDataSource() !== DATA_SOURCE.API) {
           clearAccountAccessToken();
+          clearCheckoutDraft();
           useCartStore.getState().detachAuthenticatedUser();
           set({
             error: null,
@@ -134,6 +136,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           await useCartStore.getState().syncBeforeLogout();
           await getAccountRepository(DATA_SOURCE.API).logout();
+          clearCheckoutDraft();
           clearAuthenticatedStores(currentUser);
           set({
             error: null,
@@ -143,6 +146,7 @@ export const useAuthStore = create<AuthState>()(
           });
           return true;
         } catch (error) {
+          clearCheckoutDraft();
           clearAuthenticatedStores(currentUser);
           setAuthError(set, error, "AUTH_LOGOUT_FAILED", "The account session could not be closed.");
           set({ isBootstrapped: true, user: null });

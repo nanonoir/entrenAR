@@ -2,6 +2,7 @@
 
 import { LoaderCircle, RefreshCw } from "lucide-react";
 import { CouponBox } from "@/components/checkout/CouponBox";
+import { getSummaryShippingDisplay } from "@/components/checkout/checkout-summary.shipping";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -16,14 +17,15 @@ type CheckoutSummaryProps = {
   actionHelpText?: string;
   actionHref?: string;
   discountTotal?: number;
-  freeShippingRemaining?: number;
   subtotal?: number;
   actionLabel?: string;
   items?: CartPreviewItem[];
   onAction?: () => void | Promise<void>;
+  onApplyCoupon?: (couponCode: string) => Promise<CheckoutQuote | null>;
   onRefreshQuote?: () => void | Promise<unknown>;
   reconciliationMessage?: string | null;
-  shippingCost?: number | null;
+  /** True only when the quote offers the exact service or pickup point the customer selected. */
+  shippingResolved?: boolean;
 };
 
 export function CheckoutSummary({
@@ -32,12 +34,12 @@ export function CheckoutSummary({
   actionHref = checkoutRoutes.checkout,
   actionLabel = "Iniciar Pago",
   discountTotal = 0,
-  freeShippingRemaining = 0,
   items,
   onAction,
+  onApplyCoupon,
   onRefreshQuote,
   reconciliationMessage,
-  shippingCost = null,
+  shippingResolved = false,
   subtotal = 0,
 }: CheckoutSummaryProps) {
   const storeItems = useCartStore((state) => state.items);
@@ -76,8 +78,16 @@ export function CheckoutSummary({
     }));
   const resolvedSubtotal = quote?.subtotal ?? subtotal;
   const resolvedDiscount = quote?.discount ?? discountTotal;
-  const resolvedShipping = quote?.shipping ?? (freeShippingRemaining === 0 ? 0 : shippingCost);
-  const total = quote?.total ?? resolvedSubtotal + (resolvedShipping ?? 0);
+  // "Gratis" is only ever a quoted zero for a selected, valid service; pending or refreshing shipping stays neutral.
+  const shippingRefreshing = isCheckoutAction && quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING;
+  const shippingDisplay = getSummaryShippingDisplay({
+    quotedShipping: quote?.shipping ?? null,
+    refreshing: shippingRefreshing,
+    resolved: shippingResolved,
+  });
+  const shippingFinal = shippingDisplay.final;
+  const shippingLabel = shippingDisplay.label;
+  const total = quote?.total ?? resolvedSubtotal;
   const effectiveActionDisabled = actionDisabled
     || quoteLoading
     || completionLoading
@@ -123,13 +133,14 @@ export function CheckoutSummary({
           </ul>
         </div>
       ) : null}
-      <div className="mt-5"><CouponBox /></div>
+      <div className="mt-5"><CouponBox onApplyCoupon={onApplyCoupon} /></div>
       <dl className="mt-5 grid gap-3 border-t border-border pt-5 text-sm">
         <div className="flex items-center justify-between gap-3"><dt className="text-text-muted">Subtotal</dt><dd className="font-subtitle font-semibold tabular-nums text-text">{formatCurrency(resolvedSubtotal)}</dd></div>
         {resolvedDiscount > 0 ? <div className="flex items-center justify-between gap-3"><dt className="text-text-muted">Descuento</dt><dd className="font-subtitle font-semibold tabular-nums text-accent">-{formatCurrency(resolvedDiscount)}</dd></div> : null}
-        <div className="flex items-center justify-between gap-3"><dt className="text-text-muted">Envío</dt><dd className="font-subtitle font-semibold tabular-nums text-text">{resolvedShipping === null ? "A calcular" : resolvedShipping === 0 ? "Gratis" : formatCurrency(resolvedShipping)}</dd></div>
-        <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><dt className="font-subtitle text-base font-bold uppercase text-text">Total</dt><dd className="font-subtitle text-xl font-bold tabular-nums text-text">{formatCurrency(total)}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-text-muted">Envío</dt><dd className="font-subtitle font-semibold tabular-nums text-text">{shippingLabel}</dd></div>
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><dt className="font-subtitle text-base font-bold uppercase text-text">{shippingFinal ? "Total" : "Total provisorio"}</dt><dd className="font-subtitle text-xl font-bold tabular-nums text-text">{shippingRefreshing ? "Calculando…" : formatCurrency(total)}</dd></div>
       </dl>
+      {shippingFinal ? null : <p className="mt-3 text-xs text-text-muted">El envío se suma cuando elegís un servicio de entrega.</p>}
       {onAction ? <Button aria-busy={quoteLoading || completionLoading} className="mt-5 w-full" disabled={effectiveActionDisabled} onClick={() => { if (!effectiveActionDisabled) void onAction(); }} size="lg">{quoteLoading || completionLoading ? <LoaderCircle aria-hidden className="mr-2 inline animate-spin" size={16} /> : null}{completionLoading ? "Procesando..." : quoteLoading ? "Calculando..." : actionLabel}</Button> : actionDisabled ? <Button className="mt-5 w-full" disabled size="lg">{actionLabel}</Button> : <LinkButton className="mt-5 w-full" href={actionHref} size="lg">{actionLabel}</LinkButton>}
       {actionHelpText ? <p className="mt-3 text-center text-xs font-medium text-text-muted">{actionHelpText}</p> : null}
     </aside>
