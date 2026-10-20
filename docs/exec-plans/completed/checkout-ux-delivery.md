@@ -24,9 +24,9 @@ Include only the reviewed checkout implementation, its tests, relevant specs/des
 - [x] Inventory/provenance confirmed; excluded local edits and migration identified.
 - [x] Nine implementation/test PRs merged in order: #197 structured address/server rules/tariff tool; #198 geography; #199 draft/validation primitives; #200 form-state integration; #201 provisional summary and cleanup; #202 quote lifecycle; #203 locality/address UI; #204 exact delivery selection; #205 checkout regression harness.
 - [x] Every PR stayed at or below 600 authored code/test lines (largest was #199 at 541; #204 462; #205 439).
-- [ ] Final specification, design and execution-record reconciliation PR created and merged.
+- [x] Final specification, design and execution-record reconciliation PR #206 merged.
 - [x] Per-PR snapshots validated and merged in order. PR #203's isolated snapshot passed root TypeScript and 21 registered acceptance harnesses; PR #205 added the comprehensive checkout harness and acceptance now passes 22/22.
-- [ ] Remote/local `main` verified after documentation merge; excluded work preserved.
+- [x] Remote and local `main` verified after documentation merge; excluded work preserved.
 
 ## Validation
 Reuse checkout implementation evidence where unchanged. Run focused diff checks and relevant tests against staged/committed snapshots; verify each PR's actual diff size against its base. Do not bypass repository checks or protection.
@@ -64,6 +64,6 @@ All nine PRs were merged in order into `main`; the largest measured code/test di
 
 ### Final verification
 
-- Remote `main` fetched after the last merge and contained PR #205.
+- Documentation reconciliation PR #206 is merged. Remote `main` is `e9684ec`; local `main` was fast-forwarded to the same commit in a clean worktree (`git rev-list --left-right --count main...origin/main` returned `0 0`).
 - PR snapshots were checked against their actual base; focused source ESLint, root TypeScript and frontend acceptance checks passed. PR #203's isolated `main` candidate passed 21 registered harnesses; after PR #205, the complete acceptance suite passed 22/22.
 - Excluded local work remains outside the published PRs.
