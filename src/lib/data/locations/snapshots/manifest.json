@@ -1,0 +1,130 @@
+{
+  "apiVersion": "georef-v2.1",
+  "localityTotal": 4028,
+  "provinces": [
+    {
+      "checksum": "93edc33b5753ebf6bebaa20a8c8b6985b5f6c1ce64a71fde264ecd8f4407bc72",
+      "id": "02",
+      "localities": 49
+    },
+    {
+      "checksum": "9290979d63dbc06e5ee458cd12781e4cee94aa8be38719527537c9bbf2a89219",
+      "id": "06",
+      "localities": 889
+    },
+    {
+      "checksum": "7da7c57cbe5b5ab54619a4b7183a713dd0a11fc501702edd28327a744f656f44",
+      "id": "10",
+      "localities": 170
+    },
+    {
+      "checksum": "0ac1beec3d1def6a5a42bc277608f5fec534949768d2c6f3218a9923421a39b0",
+      "id": "14",
+      "localities": 515
+    },
+    {
+      "checksum": "8b5410a5be91636bd181dee42b56b2e137a1c65e430ee97ececbfa3cf60625f5",
+      "id": "18",
+      "localities": 76
+    },
+    {
+      "checksum": "e3eeb62ced45779b1b2d97a608a14c088a02c75cd8d90df4ac1cb8587c18ee37",
+      "id": "22",
+      "localities": 91
+    },
+    {
+      "checksum": "cf626353e71926dbf40a7281c636096ff8c7379529a6157b7d10861689263971",
+      "id": "26",
+      "localities": 91
+    },
+    {
+      "checksum": "a184cc50e8b408ee12947bdcb3b9c35838ef8207b0f05304da1b167980577547",
+      "id": "30",
+      "localities": 182
+    },
+    {
+      "checksum": "f6f4a28bfb173ac3389c3d0479992e3667480e3cc352d2b1fc5d60aedd4d34b7",
+      "id": "34",
+      "localities": 63
+    },
+    {
+      "checksum": "1c4e9e8654f9e57448a6931667d802dbee11d3424c06f5e80fe7ebce31e8f3e3",
+      "id": "38",
+      "localities": 161
+    },
+    {
+      "checksum": "304ce81cac96d855d034b919ec6ad486dc685050a1a679b3170e6680eefd2da1",
+      "id": "42",
+      "localities": 89
+    },
+    {
+      "checksum": "71b8ad172d35e56fb5fcfe11d208ef71a9d56ba8afbb17d405a1b2090af84fa6",
+      "id": "46",
+      "localities": 95
+    },
+    {
+      "checksum": "d40d854047ddd01bc9f022bd071f9acf0dfb56789e13b90059d7e8831b036478",
+      "id": "50",
+      "localities": 206
+    },
+    {
+      "checksum": "4393aaa7f5c1417389ebf744c3bfec588a6186ca421e1a925e6692ca18bbe078",
+      "id": "54",
+      "localities": 140
+    },
+    {
+      "checksum": "ef83b65556f1cadbdf906668f8eaf6a6c28f3f20edc8f930690b7ecf8e13628e",
+      "id": "58",
+      "localities": 59
+    },
+    {
+      "checksum": "c2051e97d5fa89895c9ea23518e6f5d738c1a3f6bd260ae7182c784309f696a4",
+      "id": "62",
+      "localities": 149
+    },
+    {
+      "checksum": "0812f83c04f687e221cf951b152067350e50af3738349acde296286ef8b174d8",
+      "id": "66",
+      "localities": 131
+    },
+    {
+      "checksum": "5ff28ce09f67d48bd32c441d6958cd3e6f08a4444a3a397d0b3823cae20906b4",
+      "id": "70",
+      "localities": 95
+    },
+    {
+      "checksum": "5390a11a54a1cf40fc93dc84febd7f3fb445a0dde08d6a49c1d6821f68d76d50",
+      "id": "74",
+      "localities": 91
+    },
+    {
+      "checksum": "c232b9fe5a057d9d629a6a2ca71f9e56c3ca256f6fede10179b69095d7557068",
+      "id": "78",
+      "localities": 26
+    },
+    {
+      "checksum": "c68b05cd40c282ebb406b3eb9703dd1f12c6d4fa251b5ac5c2316a99d2c24693",
+      "id": "82",
+      "localities": 386
+    },
+    {
+      "checksum": "7d08bd6d41c7dfdfe5d545f31db1f5dba8b0f9844f4410127b074b84c07854fd",
+      "id": "86",
+      "localities": 160
+    },
+    {
+      "checksum": "6cf04f970cfb334bdce0863513db822f9113c4f1e18a59c093ce625d9ceb17f1",
+      "id": "90",
+      "localities": 110
+    },
+    {
+      "checksum": "f47e4e5f5eb92a9d1f93d411595d6c4cd930c26ac1dfdbacb41f5251bd174dea",
+      "id": "94",
+      "localities": 4
+    }
+  ],
+  "provincesChecksum": "b13ee6cd3d2baff829ddef6f15d128ed6bdccbc94303cec11a63724c8b8422f8",
+  "provincesCount": 24,
+  "retrievedAt": "2026-10-19T04:36:57.418Z",
+  "sourceUrl": "https://apis.datos.gob.ar/georef/api/v2.1"
+}
