@@ -1,8 +1,11 @@
 "use client";
 
 import { useCartTotals } from "@/hooks/useCartTotals";
+import type { CheckoutDestination } from "@/components/checkout/checkout-destination";
 import {
   getCheckoutConfigurationIssue,
+  hasErrors,
+  type DeliveryErrors,
   type DeliveryForm,
   type DeliveryMethod,
   type FieldErrors,
@@ -18,6 +21,7 @@ import {
   type CheckoutPostalCodeLocation,
   type CheckoutShippingProvider,
 } from "@/lib/data/checkout";
+import type { CheckoutLocality } from "@/lib/data/locations/localities";
 import {
   CHECKOUT_ASYNC_STATUS,
   useCartStore,
@@ -34,25 +38,35 @@ export type { CheckoutStep } from "@/components/checkout/checkout-wizard.types";
 export interface CheckoutWizardModel {
   activeStep: CheckoutStep;
   actionHelpText: string;
+  applyCoupon: (couponCode: string) => Promise<CheckoutQuote | null>;
   canFinalize: boolean;
   canOpenStep: (step: CheckoutStep) => boolean;
   completedSteps: Record<CheckoutStep, boolean>;
   completion: CheckoutCompletion | null;
   configurationIssue: string | null;
   continueFrom: (step: CheckoutStep) => void;
-  deliveryErrors: FieldErrors<DeliveryForm>;
+  blurDeliveryField: (field: keyof DeliveryForm) => void;
+  blurIdentificationField: (field: keyof IdentificationForm) => void;
+  deliveryErrors: DeliveryErrors;
   deliveryForm: DeliveryForm;
   deliveryMethod: DeliveryMethod;
+  /** Transitional adapter for the existing delivery-card UI. */
   detectedLocation: CheckoutPostalCodeLocation | undefined;
+  destination: CheckoutDestination;
   discountTotal: number;
-  freeShippingRemaining: number;
   handleFinalize: () => Promise<void>;
   handleSelectDeliveryMethod: (method: DeliveryMethod) => void;
-  handleSelectPayment: (id: CheckoutPaymentMethodId) => void;
-  handleSelectPickupPoint: (point: CheckoutPickupPoint) => void;
+  /** Transitional adapter for the existing delivery-card UI. */
   handleSelectProvider: (provider: CheckoutShippingProvider) => void;
-  hasFreeShipping: boolean;
+  handleSelectPayment: (id: CheckoutPaymentMethodId) => void;
+  handleSelectLocality: (locality: CheckoutLocality) => void;
+  handleSelectPickupPoint: (point: CheckoutPickupPoint | string) => void;
+  handleSelectProvince: (provinceId: string) => void;
+  handleSelectShipping: (selection: { id: string; providerId: string }) => void;
+  handleSetLocalityMode: (mode: DeliveryForm["localityMode"]) => void;
   hasValidationErrors: boolean;
+  hasFreeShipping: boolean;
+  freeShippingRemaining: number;
   hydrated: boolean;
   identificationErrors: FieldErrors<IdentificationForm>;
   identificationForm: IdentificationForm;
@@ -61,10 +75,15 @@ export interface CheckoutWizardModel {
   quote: CheckoutQuote | null;
   quoteStatus: CheckoutAsyncStatus;
   reconciliationMessage: string | null;
-  refreshQuote: () => Promise<CheckoutQuote | null>;
+  refreshQuote: (destination?: CheckoutDestination) => Promise<CheckoutQuote | null>;
   selectedPaymentId: CheckoutPaymentMethodId;
+  /** Transitional adapters for existing checkout summary/delivery components. */
   selectedPickupPoint: CheckoutPickupPoint | null;
+  selectedPickupPointId: string | null;
   selectedProvider: CheckoutShippingProvider | null;
+  selectedShippingId: string | null;
+  /** True only when the quote offers the exact selected service or pickup point. */
+  shippingResolved: boolean;
   showConfigurationIssue: boolean;
   subtotal: number;
   updateDeliveryField: (field: keyof DeliveryForm, value: string) => void;
@@ -81,23 +100,29 @@ export function useCheckoutWizard(): CheckoutWizardModel {
   const completionStatus = useCartStore((state) => state.completionStatus);
   const completeCheckout = useCartStore((state) => state.completeCheckout);
   const { discountTotal, freeShippingRemaining, subtotal } = useCartTotals(items);
-  const form = useCheckoutFormState();
   const hasFreeShipping = freeShippingRemaining === 0;
+  const form = useCheckoutFormState();
   const quoteLifecycle = useCheckoutQuoteLifecycle({
-    deliveryForm: form.deliveryForm,
-    deliveryMethod: form.deliveryMethod,
-    detectedLocation: form.detectedLocation,
+    destination: form.destination,
     items,
+    quote,
     requestQuote,
-    selectedPickupPoint: form.selectedPickupPoint,
-    selectedProvider: form.selectedProvider,
   });
   const configurationIssue = getCheckoutConfigurationIssue(
     quote,
     form.deliveryMethod,
-    form.selectedProvider,
-    form.selectedPickupPoint,
+    form.selectedProvider && form.selectedShippingId === form.selectedProvider.id
+      ? form.selectedProvider
+      : form.selectedShippingId,
+    form.selectedPickupPointId,
     form.selectedPaymentId,
+  );
+  const shippingResolved = isShippingResolved(
+    quote,
+    form.deliveryMethod,
+    form.selectedShippingId,
+    form.selectedShippingProviderId,
+    form.selectedPickupPointId,
   );
   const { handleFinalize } = useCheckoutCompletion({
     checkoutSessionToken,
@@ -112,7 +137,8 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     && quoteStatus === CHECKOUT_ASYNC_STATUS.SUCCESS
     && Boolean(quote)
     && !configurationIssue;
-  const hasValidationErrors = Object.keys(form.identificationErrors).length > 0 || Object.keys(form.deliveryErrors).length > 0;
+  // The global alert belongs to advance/finalize attempts; blur messages stay on their own field.
+  const hasValidationErrors = form.validationAttempted && (hasErrors(form.identificationErrors) || hasErrors(form.deliveryErrors));
   const actionHelpText = quoteStatus === CHECKOUT_ASYNC_STATUS.LOADING || quoteStatus === CHECKOUT_ASYNC_STATUS.IDLE
     ? "Estamos confirmando los valores de tu pedido."
     : quoteStatus === CHECKOUT_ASYNC_STATUS.ERROR
@@ -129,7 +155,10 @@ export function useCheckoutWizard(): CheckoutWizardModel {
   return {
     activeStep: form.activeStep,
     actionHelpText,
+    applyCoupon: quoteLifecycle.applyCoupon,
     canFinalize,
+    blurDeliveryField: form.blurDeliveryField,
+    blurIdentificationField: form.blurIdentificationField,
     canOpenStep: form.canOpenStep,
     completedSteps: form.completedSteps,
     completion,
@@ -139,15 +168,20 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     deliveryForm: form.deliveryForm,
     deliveryMethod: form.deliveryMethod,
     detectedLocation: form.detectedLocation,
+    destination: form.destination,
     discountTotal,
-    freeShippingRemaining,
     handleFinalize,
     handleSelectDeliveryMethod: form.handleSelectDeliveryMethod,
-    handleSelectPayment: form.handleSelectPayment,
-    handleSelectPickupPoint: form.handleSelectPickupPoint,
     handleSelectProvider: form.handleSelectProvider,
-    hasFreeShipping,
+    handleSelectPayment: form.handleSelectPayment,
+    handleSelectLocality: form.handleSelectLocality,
+    handleSelectPickupPoint: form.handleSelectPickupPoint,
+    handleSelectProvince: form.handleSelectProvince,
+    handleSelectShipping: form.handleSelectShipping,
+    handleSetLocalityMode: form.handleSetLocalityMode,
     hasValidationErrors,
+    hasFreeShipping,
+    freeShippingRemaining,
     hydrated: quoteLifecycle.hydrated,
     identificationErrors: form.identificationErrors,
     identificationForm: form.identificationForm,
@@ -159,10 +193,32 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     refreshQuote: quoteLifecycle.refreshQuote,
     selectedPaymentId: form.selectedPaymentId,
     selectedPickupPoint: form.selectedPickupPoint,
+    selectedPickupPointId: form.selectedPickupPointId,
     selectedProvider: form.selectedProvider,
+    selectedShippingId: form.selectedShippingId,
+    shippingResolved,
     showConfigurationIssue,
     subtotal,
     updateDeliveryField: form.updateDeliveryField,
     updateIdentificationField: form.updateIdentificationField,
   };
+}
+
+function isShippingResolved(
+  quote: CheckoutQuote | null,
+  deliveryMethod: DeliveryMethod,
+  selectedShippingId: string | null,
+  selectedShippingProviderId: string | null,
+  selectedPickupPointId: string | null,
+): boolean {
+  if (!quote) return false;
+  if (deliveryMethod === "home") {
+    if (selectedShippingId && quote.shippingOptions.some((option) => option.id === selectedShippingId)) return true;
+    const matchingProviderOptions = quote.shippingOptions.filter((option) =>
+      option.modality === "home_delivery" && option.providerId === selectedShippingProviderId,
+    );
+    return Boolean(selectedShippingId && selectedShippingProviderId === selectedShippingId && matchingProviderOptions.length === 1);
+  }
+  if (deliveryMethod === "pickup") return Boolean(selectedPickupPointId) && quote.pickupPoints.some((point) => point.id === selectedPickupPointId);
+  return false;
 }

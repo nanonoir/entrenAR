@@ -111,7 +111,7 @@ export const checkoutPostalCodeLocations: CheckoutPostalCodeLocation[] = [
   },
   {
     postalCode: "1406",
-    province: "Buenos Aires",
+    province: "Ciudad Autónoma de Buenos Aires",
     cities: ["Ciudad Autónoma de Buenos Aires", "Ramos Mejía", "Morón"],
     pickupPoints: [
       {
