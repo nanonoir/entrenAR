@@ -175,14 +175,14 @@ export function useCheckoutFormState(): CheckoutFormState {
     firstName: identificationForm.firstName,
     floor: deliveryForm.floor,
     lastName: identificationForm.lastName,
-    localityId: deliveryForm.localityId,
-    localityMode: deliveryForm.localityMode,
+    localityId: deliveryForm.localityId ?? "",
+    localityMode: deliveryForm.localityMode ?? CHECKOUT_LOCALITY_MODE.OFFICIAL,
     neighborhood: deliveryForm.neighborhood,
     paymentMethodId: selectedPaymentId,
     phone: identificationForm.phone,
     pickupPointId: selectedPickupPointId ?? "",
     postalCode: deliveryForm.postalCode,
-    provinceId: deliveryForm.provinceId,
+    provinceId: deliveryForm.provinceId ?? "",
     recipient: deliveryForm.recipient,
     shippingMethodId: selectedShippingId ?? "",
     shippingProviderId: selectedShippingProviderId ?? "",
@@ -411,15 +411,6 @@ export function useCheckoutFormState(): CheckoutFormState {
     invalidateFrom(CHECKOUT_STEP.DELIVERY);
   }
 
-  /** Transitional adapter for the existing provider-card component. */
-  function handleSelectProvider(provider: CheckoutShippingProvider) {
-    setLegacySelectedProvider(provider);
-    setSelectedShippingId(provider.id);
-    setSelectedShippingProviderId(provider.id);
-    setDeliveryError("shipping", undefined);
-    invalidateFrom(CHECKOUT_STEP.DELIVERY);
-  }
-
   function handleSelectProvider(provider: CheckoutShippingProvider) {
     setLegacySelectedProvider(provider);
     setSelectedShippingId(provider.id);
@@ -471,7 +462,6 @@ export function useCheckoutFormState(): CheckoutFormState {
     handleSelectLocality,
     handleSelectPayment,
     handleSelectPickupPoint,
-    handleSelectProvider,
     handleSelectProvince,
     handleSelectShipping,
     handleSetLocalityMode,
@@ -500,7 +490,7 @@ export function useCheckoutFormState(): CheckoutFormState {
 function committablePostalCode(form: Pick<DeliveryForm, "postalCode" | "provinceId">): string {
   const format = getPostalCodeFormat(form.postalCode);
   if (format !== "cp4" && format !== "cpa") return "";
-  return getPostalProvinceConflict(form.postalCode, form.provinceId) ? "" : form.postalCode;
+    return getPostalProvinceConflict(form.postalCode, form.provinceId ?? "") ? "" : form.postalCode;
 }
 
 /** Restored values are untrusted intent: re-sanitized, and ids are only kept to be resolved against the next quote. */
