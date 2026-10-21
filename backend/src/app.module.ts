@@ -1,6 +1,7 @@
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { AppConfig, validateEnvironment } from "./config/app.config";
@@ -44,6 +45,7 @@ import { ShowcaseResetModule } from "./modules/showcase-reset/showcase-reset.mod
         },
       ],
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     AccountModule,

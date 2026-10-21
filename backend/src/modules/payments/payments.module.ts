@@ -4,7 +4,10 @@ import { InventoryModule } from "../inventory/inventory.module";
 import { MercadoPagoHttpOrdersAdapter } from "./mercadopago/mercadopago-orders.http-adapter";
 import { MERCADOPAGO_ORDERS_PORT } from "./mercadopago/mercadopago-orders.port";
 import { MercadoPagoWebhookController } from "./mercadopago/mercadopago-webhook.controller";
+import { PaymentAttentionService } from "./payment-attention.service";
 import { PaymentNotificationProcessorService } from "./payment-notification-processor.service";
+import { PaymentReconciliationService } from "./payment-reconciliation.service";
+import { PaymentWorkersService } from "./payment-workers.service";
 import { PaymentNotificationService } from "./payment-notification.service";
 import { PaymentCircuitService } from "./payment-circuit.service";
 import { PaymentDispatchService } from "./payment-dispatch.service";
@@ -30,11 +33,14 @@ import { PaymentsTransaction } from "./payments-transaction";
     { provide: MERCADOPAGO_ORDERS_PORT, useClass: MercadoPagoHttpOrdersAdapter },
     PaymentCircuitService,
     PaymentDispatchService,
+    PaymentAttentionService,
     PaymentNotificationProcessorService,
     PaymentNotificationService,
+    PaymentReconciliationService,
     PaymentReducerService,
     PaymentRetryService,
     PaymentStatusService,
+    PaymentWorkersService,
     PaymentsRepository,
     PaymentsTransaction,
   ],

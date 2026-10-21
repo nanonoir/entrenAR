@@ -38,6 +38,8 @@ export interface AppConfig {
   mercadoPago?: MercadoPagoConfig;
   refreshConcurrencyToleranceSeconds?: number;
   nodeEnv: NodeEnvironment;
+  /** Periodic payment workers (inbox, expiry, reconciliation). Off under NODE_ENV=test and when PAYMENT_WORKERS_ENABLED=false. */
+  paymentWorkersEnabled?: boolean;
   port: number;
   throttleLimit: number;
   throttleTtlSeconds: number;
@@ -100,6 +102,10 @@ const appConfigSchema = z.object({
   ),
   MERCADOPAGO_WEBHOOK_SECRET: optionalSecretSchema("MERCADOPAGO_WEBHOOK_SECRET"),
   NODE_ENV: z.enum([NODE_ENV.DEVELOPMENT, NODE_ENV.PRODUCTION, NODE_ENV.TEST]).default(NODE_ENV.DEVELOPMENT),
+  PAYMENT_WORKERS_ENABLED: z.preprocess(
+    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    z.enum(["true", "false"], { error: "PAYMENT_WORKERS_ENABLED must be true or false." }).optional(),
+  ),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   THROTTLE_LIMIT: z.coerce.number().int().min(1).max(1_000).default(100),
   THROTTLE_TTL_SECONDS: z.coerce.number().int().min(1).max(3_600).default(60),
@@ -169,6 +175,7 @@ export function loadAppConfig(environment: EnvironmentVariables = process.env): 
       : {}),
     refreshConcurrencyToleranceSeconds: parsed.REFRESH_CONCURRENCY_TOLERANCE_SECONDS,
     nodeEnv: parsed.NODE_ENV,
+    paymentWorkersEnabled: parsed.PAYMENT_WORKERS_ENABLED !== "false" && parsed.NODE_ENV !== NODE_ENV.TEST,
     port: parsed.PORT,
     throttleLimit: parsed.THROTTLE_LIMIT,
     throttleTtlSeconds: parsed.THROTTLE_TTL_SECONDS,
