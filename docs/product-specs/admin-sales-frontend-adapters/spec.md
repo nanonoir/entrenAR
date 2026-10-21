@@ -63,6 +63,8 @@ Sales, Customers, Statistics, Abandoned Carts, Commerce, and Catalog transports 
 
 The sales list response schema SHALL remain strict and SHALL accept an optional `customerId` on each summary. Unknown fields SHALL still be rejected. Detail items SHALL accept `variantName` and `weightGrams`.
 
+For provider-managed payments, summary/detail contracts MUST additionally preserve the safe payment metadata and eligibility/warnings required by [admin sales lifecycle](../admin-sales-lifecycle/spec.md), including `PARTIALLY_REFUNDED` and `CHARGED_BACK` without coercing them to ordinary received payment. Unexpected fields MUST still be rejected, and credentials/tokens MUST NOT enter the client contract.
+
 #### Scenario: Summary carries customerId
 
 - GIVEN the API returns a summary with `customerId`

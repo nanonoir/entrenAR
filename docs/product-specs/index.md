@@ -73,6 +73,7 @@ Catalog of canonical product and behavioral specifications for EntrenAR.
 - [`inventory-management`](./inventory-management/spec.md): Inventory Management Specification
 - [`inventory-sales-transactions`](./inventory-sales-transactions/spec.md): Inventory Sales Transactions Specification
 - [`local-catalog-cutover`](./local-catalog-cutover/spec.md): Local Catalog Cutover Specification
+- [`mercadopago-card-payments`](./mercadopago-card-payments/spec.md): Embedded card payments, provider verification, retries, recovery and financial holds
 - [`mock-deletion-gate`](./mock-deletion-gate/spec.md): Mock Deletion Gate Specification
 - [`money-calculation-engine`](./money-calculation-engine/spec.md): Money Calculation Engine Specification
 - [`order-history`](./order-history/spec.md): Order History Specification

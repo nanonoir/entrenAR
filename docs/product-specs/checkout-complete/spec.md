@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Place orders.
+Place orders. Bank transfer uses the completion flow below unchanged. Real card submission and provider-managed finalization are owned by [Mercado Pago card payments](../mercadopago-card-payments/spec.md), not the manual completion endpoint.
 
 ## Requirements
 
@@ -22,7 +22,9 @@ Place orders.
 
 ### Requirement: Atomic Pending Order Placement
 
-Completion MUST atomically create pending order, snapshots, payment record, referenced stock deductions, inventory policy/effect ownership, and cart cleanup; no real payment SHALL occur. Tracked deductions MUST share one stable effect identity and the created Order MUST own it as `LEDGER_MANAGED`; an infinite-only order MUST be `NOT_APPLICABLE`. No duplicate stock truth MAY be persisted on order or item status fields.
+Bank-transfer/manual completion MUST atomically create pending order, snapshots, payment record, referenced stock deductions, inventory policy/effect ownership, and cart cleanup; no real payment SHALL occur through this endpoint. Integrated Mercado Pago MUST use its card submission flow instead and MUST NOT bypass gateway processing through manual completion. Tracked deductions MUST share one stable effect identity and the created Order MUST own it as `LEDGER_MANAGED`; an infinite-only order MUST be `NOT_APPLICABLE`. No duplicate stock truth MAY be persisted on order or item status fields.
+
+Mercado Pago first submission MUST share the placement validation, immutable snapshots and referenced-stock invariants, but MUST defer cart/session finalization until verified approval or accepted processing/review as defined in its canonical specification.
 
 #### Scenario: Persist an order atomically
 - GIVEN sufficient stock for every line

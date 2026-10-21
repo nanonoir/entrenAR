@@ -4,6 +4,8 @@
 
 Defines the admin sales management module: listing, detail, create, edit, and all lifecycle actions (cancel, reopen, archive, logistics transitions, payment marking) implemented as a fully mock/in-memory local flow without backend integration.
 
+Provider-managed Mercado Pago sales are not a simulated local payment flow: [admin sales lifecycle](../admin-sales-lifecycle/spec.md) owns their authoritative command/fulfillment guards and [Mercado Pago card payments](../mercadopago-card-payments/spec.md) owns payment truth, risk/refund warnings and recovery. Local/manual scenarios below MUST NOT be applied to override gateway financial state. Existing transfer behavior is unchanged.
+
 ## Requirements
 
 ### Requirement: Sales List View
@@ -19,7 +21,7 @@ The system MUST render `/admin/ventas` showing a paginated/indexed list of non-a
 | Cliente | Customer full name |
 | Total | ARS formatted (e.g. `$ 4.999,00`) |
 | Productos | Unit count |
-| Pago | Badge (Pendiente / Recibido / Cancelado / Reembolsado) |
+| Pago | Badge (Pendiente / Recibido / Cancelado / Reembolsado; gateway records also distinguish partial refund and chargeback) |
 | Envío | Badge (Por empaquetar / Por enviar / Enviado / Entregado / Por retirar / Cancelado) |
 | Acciones | Three-dot contextual menu |
 
@@ -87,7 +89,7 @@ The header MUST show `Ventas  N abiertas` and two actions: `Exportar lista` (sec
 
 The system MUST render `/admin/ventas/:id` in a two-column desktop layout (left: products + payment + notes; right: customer, shipping, billing, history, tracking) and a single-column stack on mobile.
 
-The header MUST show sale number, payment and shipping badges, date, source/type, and contextual actions (`Más opciones`, `Editar`, `Imprimir resumen`). When sale is cancelled MUST hide those three actions and show `Re-Abrir` instead.
+The header MUST show sale number, payment and shipping badges, date, source/type, and contextual actions (`Más opciones`, `Editar`, `Imprimir resumen`). When a manual sale is cancelled MUST hide those three actions and show `Re-Abrir` instead; provider-managed cancelled orders MUST NOT offer manual reopening. Gateway payment detail MUST show the safe provider/attempt information and warnings required by [admin sales lifecycle](../admin-sales-lifecycle/spec.md).
 
 #### Scenario: Detail renders with all cards
 
@@ -205,7 +207,7 @@ The system MUST expose in-card action buttons on the detail view based on the cu
 
 ### Requirement: Mark Payment as Received
 
-The system MUST show `Marcar como recibido` in the payment card when `paymentStatus` is `"pending"`. Clicking it MUST transition to `"received"` and append a `payment_received` history event.
+For manual/transfer records, the system MUST show `Marcar como recibido` in the payment card when `paymentStatus` is `"pending"`. Clicking it MUST transition to `"received"` and append a `payment_received` history event. For provider-managed Mercado Pago records, manual receipt MUST be disabled regardless of status; only verified provider state MAY confirm receipt.
 
 #### Scenario: Mark payment received
 
@@ -225,7 +227,7 @@ The system MUST show `Marcar como recibido` in the payment card when `paymentSta
 
 The system MUST open a right-side `CancelSaleDrawer` from `Más opciones → Cancelar`. The drawer MUST require a cancellation reason (select), and show checkboxes `Enviar e-mail al cliente` (default checked) and `Restaurar stock` (default checked). The confirm button (`Cancelar venta`, destructive red) MUST be disabled until a reason is selected.
 
-On confirm: `paymentStatus` → `"cancelled"`, `previousPaymentStatus` and `previousShippingStatus` saved, cancellation reason saved, history events `sale_cancelled` (and `stock_restored` if checkbox active, `email_sent`/`email_failed` if email checkbox active) appended. Shipping status MUST NOT change.
+For the manual/local flow on confirm: `paymentStatus` → `"cancelled"`, `previousPaymentStatus` and `previousShippingStatus` saved, cancellation reason saved, history events `sale_cancelled` (and `stock_restored` if checkbox active, `email_sent`/`email_failed` if email checkbox active) appended. Shipping status MUST NOT change. Gateway cancellation MUST instead obey [admin sales lifecycle](../admin-sales-lifecycle/spec.md), preserve financial status, and never simulate a refund or stock restoration. Paid/partially refunded gateway cancellation MUST show the required panel-refund instructions; a verified full refund permits the restoration choice only within the legal lifecycle.
 
 #### Scenario: Cancel with reason required
 
@@ -250,7 +252,7 @@ On confirm: `paymentStatus` → `"cancelled"`, `previousPaymentStatus` and `prev
 
 ### Requirement: Reopen Cancelled Sale
 
-The system MUST restore a cancelled sale's previous payment and shipping statuses and append a `sale_reopened` history event when `Re-Abrir` is clicked.
+For manual/local sales only, the system MUST restore a cancelled sale's previous payment and shipping statuses and append a `sale_reopened` history event when `Re-Abrir` is clicked. This MUST NOT be offered as a gateway-payment override.
 
 #### Scenario: Reopen restores previous states
 

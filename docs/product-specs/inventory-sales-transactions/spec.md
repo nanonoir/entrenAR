@@ -10,6 +10,13 @@ Defines auditable inventory restoration caused by sales cancellation and purchas
 
 The system MUST restore stock atomically only when `restoreStock: true`, the Order is `LEDGER_MANAGED`, and referenced uncompensated deductions exist. Restoration MUST derive exact targets and quantities from those movements and append one immutable uniquely linked compensation movement per deduction. `restoreStock: false` MUST not change inventory. `NOT_APPLICABLE` MUST perform no inventory operation; `UNKNOWN` and `TRANSFERRED` MUST reject restoration with controlled 409 conflicts.
 
+This option governs admin cancellation. Automatic unpaid Mercado Pago cancellation/expiry MUST compensate outstanding deductions exactly once under [Mercado Pago card payments](../mercadopago-card-payments/spec.md), only after its payment-safety checks. Payment uncertainty, review and challenge MUST NOT release stock by local timeout. Refunds/chargebacks alone MUST NOT restore stock. Admin cancellation after a verified full refund retains the explicit restoration choice. Payment-attempt `UNKNOWN` and inventory-policy `UNKNOWN` are separate safeguards.
+
+#### Scenario: Competing payment expiry and admin cancellation
+- GIVEN an unpaid gateway order is eligible for safe cancellation and has outstanding deductions
+- WHEN expiry and authorized admin cancellation race to restore stock
+- THEN only one compensation per deduction MAY commit, atomically with cancellation
+
 #### Scenario: Restore on cancellation
 - GIVEN a cancellable ledger-managed sale with outstanding deductions and `restoreStock: true`
 - WHEN an ADMIN cancels the sale

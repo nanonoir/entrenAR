@@ -24,6 +24,8 @@ The system MUST list sales with search, status, paymentStatus, shippingStatus, i
 
 The system MUST return a sale detail containing immutable customer, billing, shipping, item, payment, note, and ordered timeline snapshots.
 
+Gateway-managed sales MUST additionally expose safe provider status/detail, attempt timeline/count, provider order/transaction/reference identifiers, retry deadline, held-stock/review age, last verification time, refunded amount, fraud/dispute flags and unresolved-reconciliation warnings. These mutable observations MUST NOT rewrite original snapshots. Visibility and attention thresholds follow [Mercado Pago card payments](../mercadopago-card-payments/spec.md).
+
 #### Scenario: Historical detail
 - GIVEN customer or catalog data changes after sale creation
 - WHEN an ADMIN reads that sale
@@ -32,6 +34,34 @@ The system MUST return a sale detail containing immutable customer, billing, shi
 ### Requirement: Authorized Sales State Machine
 
 The system MUST support CONFIRM, PACK, UNPACK, SHIP, DELIVER, CANCEL, REOPEN, ARCHIVE, and UNARCHIVE only from valid lifecycle states, recording each accepted command in the timeline. CANCEL and REOPEN MUST use referenced ledger state: an uncompensated effect reopens without stock work; a compensated effect re-deducts exact latest targets atomically or returns out-of-stock and remains cancelled. UNKNOWN and TRANSFERRED MUST reject inventory-changing transitions.
+
+Provider-managed Mercado Pago records additionally MUST satisfy the gateway rules below. Transfer and historical manual records retain existing lifecycle behavior.
+
+### Requirement: Gateway Lifecycle and Fulfillment Authority
+
+Manual CONFIRM MUST be disabled in the UI and rejected by the backend for provider-managed payments. Status setters, conversion-to-manual-sale and reopen paths MUST NOT bypass provider truth or transfer a live gateway order's inventory ownership. Cancelled gateway orders MUST NOT reopen through the manual path.
+
+PACK, SHIP and DELIVER MUST require verified `PAID` or `PARTIALLY_REFUNDED`, no active fraud/dispute/full-refund/unknown hold, and an otherwise legal order lifecycle. A partial refund alone MUST NOT block fulfillment; its warning MUST show the refunded amount. A full refund MUST block further fulfillment. A later alert MUST NOT invent reversal of an already committed shipment/delivery.
+
+Admin cancellation of a previously paid Mercado Pago order MUST be rejected until a full refund is verified and reflected internally, including when only a partial refund exists. The rejection MUST instruct the admin to refund in Mercado Pago's panel and wait for verification. After a verified full refund, an otherwise legal cancellation MAY use `restoreStock: true` to compensate outstanding original deductions exactly once, or `false` to cancel without stock movement. Cancellation MUST preserve `REFUNDED` and the refunded amount; EntrenAR MUST NOT issue the refund. Existing shipping/lifecycle restrictions still apply.
+
+Unpaid gateway cancellation and investigated UNKNOWN cancellation MUST follow the canonical [payment-safety rules](../mercadopago-card-payments/spec.md); any potentially payable attempt blocks cancellation/restoration. Eligibility, accepted lifecycle/history changes and any ledger compensation MUST be atomic and safe against concurrent provider observations.
+
+#### Scenario: Manual gateway confirmation denied
+- GIVEN a provider-managed pending Mercado Pago payment
+- WHEN an ADMIN requests CONFIRM directly
+- THEN the command MUST be rejected without changing order/payment/history, even if the UI action is bypassed
+
+#### Scenario: Partial refund permits fulfillment but not cancellation
+- GIVEN a legally fulfillable confirmed Mercado Pago order with a verified partial refund and no other hold
+- WHEN an ADMIN packs the order
+- THEN packing MAY succeed and the refunded-amount warning MUST remain visible
+- AND cancellation MUST remain rejected with Mercado Pago panel instructions until the full refund is verified
+
+#### Scenario: Fully refunded cancellation with optional restoration
+- GIVEN a verified fully refunded Mercado Pago order whose lifecycle permits cancellation
+- WHEN an ADMIN cancels with either restoration choice
+- THEN cancellation and history MUST commit together, `REFUNDED` MUST remain unchanged, and only `restoreStock: true` MAY restore uncompensated stock once
 
 #### Scenario: Fulfillment path
 - GIVEN a confirmed, unpacked sale
@@ -66,6 +96,8 @@ The system MUST allow archive only for CANCELLED sales or DELIVERED and PAID sal
 
 Manual sales MUST calculate authoritative money, create payment/history, deduct tracked product and variant stock, and assign `LEDGER_MANAGED` ownership in one transaction. Infinite-only sales MUST be `NOT_APPLICABLE`. Order-to-sale conversion MUST transfer—not duplicate—the existing effect and MUST leave only the destination eligible for compensation.
 
+Conversion MUST NOT be used to turn a live provider-managed payment into a manual sale or transfer its ledger ownership around gateway guards.
+
 #### Scenario: Manual tracked sale
 - GIVEN stock 10 and a manual quantity of 2
 - WHEN an ADMIN creates the sale
@@ -92,14 +124,14 @@ The backend MUST derive line subtotal, subtotal, total, and payment amount using
 
 ### Requirement: Atomic Payment Confirmation Matrix
 
-`CONFIRM` MUST mean payment received. In one transaction it MUST conditionally set `PENDING→CONFIRMED` or retain `CONFIRMED`, set missing `confirmedAt`, change PENDING payment to PAID, and append `PAYMENT_RECEIVED`.
+For transfer and legacy/manual records only, `CONFIRM` MUST mean payment received. In one transaction it MUST conditionally set `PENDING→CONFIRMED` or retain `CONFIRMED`, set missing `confirmedAt`, change PENDING payment to PAID, and append `PAYMENT_RECEIVED`. Provider-managed records MUST reject manual CONFIRM regardless of current status.
 
 | Order / payment state | Result |
 | --- | --- |
 | PENDING / PENDING | Confirm order and pay payment. |
 | CONFIRMED / PENDING | Retain order confirmation and pay payment. |
 | PENDING or CONFIRMED / missing | 409 conflict. |
-| Any / PAID or REFUNDED | 409 conflict; never overwrite. |
+| Any / PAID, PARTIALLY_REFUNDED, REFUNDED or CHARGED_BACK | 409 conflict; never overwrite. |
 | CANCELLED or archived / any | Existing lifecycle conflict. |
 
 Concurrent duplicates MUST return a controlled conflict and MUST NOT create partial state.
