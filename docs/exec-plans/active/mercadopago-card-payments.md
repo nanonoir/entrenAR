@@ -64,6 +64,7 @@ Evidence log:
 - Pre-existing: 5 integration suites (`showcase-reset`, `checkout-quote`, `checkout-completion`, `commerce`, `catalog-persistence`) fail on the local dev DB with `Product p-whey-pro must have at least one ProductVariant`, independent of this work.
 - Stage 1: migration `20261021180000_mercadopago_payments_foundation` applied with `prisma migrate deploy`; build, `tsc`, unit (610) pass; `migrate status` up to date.
 - Stage 2: build, `tsc`, unit (665), e2e (15 suites) and `payments-card.integration-spec.ts` pass. Independent review PASS WITH FINDINGS; fixed: active endpoint scoped to session, provider AUTH → order cancelled without charge + 5-min circuit breaker, cart trimmed by purchased quantity, no redundant GET on challenge, CREATE limited to 1 call until Stage 7 verifies idempotency retention.
+- Stage 3: build, `tsc`, unit (707), e2e (16 suites incl. webhook) pass. Independent review PASS WITH FINDINGS; fixed in `a0bcd5f`: fraud alerts always quarantined (`unverified_fraud_association`, topic is unsigned), dedup key bound to signed request id + ts, topic read only from query. Note: the local test webhook secret was printed once in a debug terminal session (never committed); owner advised to rotate it.
 - Deferred (tech debt): guest cart items added during payment become unreachable after the guest session completes; `cancelUncreated` and cart trim lack DB-level integration tests.
 
 ## 8. Final Implementation Outcome
