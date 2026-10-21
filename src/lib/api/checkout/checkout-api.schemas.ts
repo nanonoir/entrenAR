@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import type { CheckoutAddressInput } from "@/lib/api/checkout/checkout.repository";
+import {
+  paymentCardSchema,
+  paymentDeviceIdSchema,
+  paymentIdempotencyKeySchema,
+} from "@/lib/api/payments/payments.schemas";
 
 const CHECKOUT_CURRENCY = "ARS" as const;
 
@@ -164,6 +169,17 @@ export const checkoutCompleteRequestSchema = z.object({
   quoteId: opaqueTokenSchema.optional(),
 }).strict().superRefine(validateDeliverySelection);
 
+/** Card placement: same selection as completion plus the allowlisted card payload and a required quote. */
+export const checkoutCardPaymentRequestSchema = z.object({
+  ...checkoutSelectionShape,
+  card: paymentCardSchema,
+  customer: checkoutCustomerSchema,
+  deviceId: paymentDeviceIdSchema.optional(),
+  idempotencyKey: paymentIdempotencyKeySchema,
+  paymentOptionId: identifierSchema.optional(),
+  quoteId: opaqueTokenSchema,
+}).strict().superRefine(validateDeliverySelection);
+
 const checkoutQuoteItemSchema = z.object({
   availableQuantity: z.number().int().nonnegative().nullable().optional(),
   compareAtPrice: moneySchema.optional(),
@@ -283,6 +299,7 @@ export const checkoutCompleteResponseSchema = z.object({
 
 export type CheckoutQuoteRequestDto = z.output<typeof checkoutQuoteRequestSchema>;
 export type CheckoutCompleteRequestDto = z.output<typeof checkoutCompleteRequestSchema>;
+export type CheckoutCardPaymentRequestDto = z.output<typeof checkoutCardPaymentRequestSchema>;
 export type CheckoutQuoteResponseDto = z.output<typeof checkoutQuoteResponseSchema>;
 export type CheckoutCompleteResponseDto = z.output<typeof checkoutCompleteResponseSchema>;
 

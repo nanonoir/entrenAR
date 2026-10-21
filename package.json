@@ -14,15 +14,16 @@
     "test:backend:e2e": "npm --prefix backend run test:e2e",
     "verify:frontend-acceptance": "npx tsx tests/harnesses/frontend-acceptance.harness.ts",
     "db:migrate": "npm --prefix backend run db:migrate:dev",
-    "db:seed": "npm --prefix backend run seed"
-    ,"seed:crm-showcase": "npm --prefix backend run seed:crm-showcase --"
-    ,"test:crm-showcase": "npm --prefix backend run test:crm-showcase --"
-    ,"catalog:scrape": "npm --prefix backend run catalog:scrape"
-    ,"catalog:sync-categories": "npm --prefix backend run catalog:sync-categories"
-    ,"catalog:handoff": "npm --prefix backend run catalog:handoff"
+    "db:seed": "npm --prefix backend run seed",
+    "seed:crm-showcase": "npm --prefix backend run seed:crm-showcase --",
+    "test:crm-showcase": "npm --prefix backend run test:crm-showcase --",
+    "catalog:scrape": "npm --prefix backend run catalog:scrape",
+    "catalog:sync-categories": "npm --prefix backend run catalog:sync-categories",
+    "catalog:handoff": "npm --prefix backend run catalog:handoff"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@mercadopago/sdk-react": "1.0.7",
     "he": "^1.2.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
