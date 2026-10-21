@@ -421,6 +421,7 @@ model ProductVariant {
 
   @@index([productId])
   @@index([stockMode])
+  @@index([primaryImageId])
 }
 
 model ProductImage {
