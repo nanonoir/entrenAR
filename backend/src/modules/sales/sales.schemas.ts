@@ -15,7 +15,9 @@ const jsonObject = z.record(z.string(), z.unknown());
 const boolQuery = z.preprocess((value) => value === "true" ? true : value === "false" ? false : value, z.boolean());
 const enumQuery = <const T extends readonly [string, ...string[]]>(values: T) => z.preprocess((value) => typeof value === "string" ? value.toUpperCase() : value, z.enum(values));
 const orderStatus = enumQuery([OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED] as const);
+// Manual sales may only be created with the legacy manual states; provider-driven states are filterable only.
 const paymentStatus = enumQuery([PaymentStatus.PENDING, PaymentStatus.PAID, PaymentStatus.REFUNDED] as const);
+const paymentStatusFilter = enumQuery([PaymentStatus.PENDING, PaymentStatus.PAID, PaymentStatus.REFUNDED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.CHARGED_BACK] as const);
 const shippingStatus = enumQuery([OrderShippingStatus.TO_PACK, OrderShippingStatus.TO_SHIP, OrderShippingStatus.SHIPPED, OrderShippingStatus.DELIVERED, OrderShippingStatus.PICKUP, OrderShippingStatus.CANCELLED] as const);
 
 const dateRange = z.object({ from: z.coerce.date(), to: z.coerce.date() }).strict().superRefine((range, context) => {
@@ -24,7 +26,7 @@ const dateRange = z.object({ from: z.coerce.date(), to: z.coerce.date() }).stric
 
 export const salesListQuerySchema = z.object({
   dateRange: dateRange.optional(), isArchived: boolQuery.optional(), limit: z.coerce.number().int().min(1).max(100).default(20), page: z.coerce.number().int().min(1).default(1),
-  paymentStatus: paymentStatus.optional(), search: z.string().trim().min(1).max(240).optional(), shippingStatus: shippingStatus.optional(),
+  paymentStatus: paymentStatusFilter.optional(), search: z.string().trim().min(1).max(240).optional(), shippingStatus: shippingStatus.optional(),
   sortBy: z.enum([SALE_SORT_BY.CREATED_AT, SALE_SORT_BY.UPDATED_AT, SALE_SORT_BY.TOTAL, SALE_SORT_BY.NUMBER, SALE_SORT_BY.CUSTOMER_NAME] as const).default(SALE_SORT_BY.CREATED_AT),
   sortOrder: z.enum(["asc", "desc"] as const).default("desc"), status: orderStatus.optional(),
 }).strict();

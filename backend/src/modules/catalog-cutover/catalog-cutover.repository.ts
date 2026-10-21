@@ -34,6 +34,7 @@ export const SNAPSHOT_MODELS: readonly ModelDefinition[] = [
   { name: "CheckoutSession", primaryKey: ["id"] }, { name: "CheckoutSessionHistory", primaryKey: ["id"] },
   { name: "CartRecoverySettings", primaryKey: ["id"] }, { name: "Order", primaryKey: ["id"] },
   { name: "OrderItem", primaryKey: ["id"] }, { name: "OrderPayment", primaryKey: ["id"] },
+  { name: "PaymentAttempt", primaryKey: ["id"] }, { name: "PaymentNotification", primaryKey: ["id"] },
   { name: "OrderHistory", primaryKey: ["id"] }, { name: "Supplier", primaryKey: ["id"] },
   { name: "PurchaseOrder", primaryKey: ["id"] }, { name: "PurchaseOrderItem", primaryKey: ["id"] },
   { name: "CheckoutIdempotencyKey", primaryKey: ["id"] }, { name: "CouponRedemption", primaryKey: ["id"] },

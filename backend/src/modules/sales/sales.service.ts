@@ -116,6 +116,7 @@ export class SalesService {
         if (!order.payment) throw this.conflict("Sale cannot be confirmed without a payment record.");
         if (order.payment.status === PaymentStatus.PAID) throw this.conflict("Sale payment has already been received.");
         if (order.payment.status === PaymentStatus.REFUNDED) throw this.conflict("Refunded payments cannot be confirmed.");
+        if (order.payment.status !== PaymentStatus.PENDING) throw this.conflict("Only pending payments can be confirmed.");
         const claimed = await this.salesRepository.confirmPaymentIfCurrent(transaction, order.id, order.status, transition.patch);
         if (!claimed) throw this.conflict("Sale payment changed before confirmation could be completed.");
       } else if (command.type === SALE_COMMAND.CANCEL) {
