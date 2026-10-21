@@ -15,6 +15,7 @@ import {
   PaymentAttemptStatus,
   PaymentProvider,
   PaymentStatus,
+  type Role,
 } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { InventoryRepository } from "../inventory/inventory.repository";
@@ -60,7 +61,17 @@ export interface UnknownOutcomeDetails {
   providerTransactionId?: string;
 }
 
+export interface CancelUncreatedOptions {
+  /** Admin who resolved the attempt; recorded on the history entry. */
+  actor?: { id?: string; role: Role };
+  orderReason?: string;
+  /** Re-validated under the order/payment lock: only an UNKNOWN attempt may be closed. */
+  requireUnknown?: boolean;
+}
+
 interface HistoryEntry {
+  actorId?: string | undefined;
+  actorRole?: Role;
   description?: string;
   effectKey: string;
   metadata?: Prisma.InputJsonValue;
@@ -192,17 +203,18 @@ export class PaymentReducerService {
    * card's: close the attempt and cancel the order without a retry window. Stock returns through the same
    * idempotent compensation as any other cancellation, so it is returned exactly once.
    */
-  async cancelUncreated(attemptId: string, reason: string): Promise<PaymentApplyResult> {
+  async cancelUncreated(attemptId: string, reason: string, options: CancelUncreatedOptions = {}): Promise<PaymentApplyResult> {
     return this.transactions.run(async (transaction) => {
       const context = await this.load(transaction, attemptId);
       const now = await databaseNow(transaction);
       const { attempt, order, payment } = context;
       if (!isUnsettledAttempt(attempt.status) || attempt.providerOrderId) return this.result(context, "ignore");
+      if (options.requireUnknown && attempt.status !== PaymentAttemptStatus.UNKNOWN) return this.result(context, "ignore");
 
       const cancellable = order.status === OrderStatus.PENDING
         && payment.status === PaymentStatus.PENDING
         && !context.otherSuccessExists;
-      if (cancellable) await this.cancelOrder(transaction, context, "Payment unavailable", now);
+      if (cancellable) await this.cancelOrder(transaction, context, options.orderReason ?? "Payment unavailable", now);
 
       await transaction.paymentAttempt.update({
         data: {
@@ -218,12 +230,15 @@ export class PaymentReducerService {
         data: { activeAttemptId: null, retryUntil: null, rowVersion: { increment: 1 } },
         where: { id: payment.id },
       });
-      if (cancellable) {
+      if (cancellable || options.actor) {
         await this.appendHistory(transaction, order.id, [{
-          description: `Attempt ${attempt.attemptNumber} was not created at the provider.`,
+          ...(options.actor ? { actorId: options.actor.id, actorRole: options.actor.role } : {}),
+          description: options.actor
+            ? `Attempt ${attempt.attemptNumber} had an unconfirmed outcome; the provider confirmed no order exists, so an admin closed it${cancellable ? " and cancelled the order" : ""}.`
+            : `Attempt ${attempt.attemptNumber} was not created at the provider.`,
           effectKey: `payment:${attempt.id}:order_cancelled`,
           metadata: { attemptNumber: attempt.attemptNumber },
-          title: "Order cancelled",
+          title: cancellable ? "Order cancelled" : "Payment attempt closed",
           type: OrderHistoryEventType.ORDER_CANCELLED,
         }]);
       }
@@ -611,6 +626,7 @@ export class PaymentReducerService {
 
     await transaction.orderHistory.createMany({
       data: entries.map((entry) => ({
+        ...(entry.actorRole ? { actorId: entry.actorId ?? null, actorRole: entry.actorRole } : {}),
         description: entry.description ?? null,
         effectKey: entry.effectKey,
         ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }),
