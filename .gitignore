@@ -58,6 +58,7 @@ next-env.d.ts
 
 #tests
 .playwright-mcp
+/recordings
 scrape-output/**
 !scrape-output/.gitkeep
 backend/scrape-output/**
