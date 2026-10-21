@@ -211,6 +211,7 @@ function mapParsedSaleSummary(parsed: AdminSaleSummaryResponseDto): AdminSale {
     products: [],
     paymentStatus: toPaymentStatus(parsed.paymentStatus, saleStatus),
     shippingStatus: toShippingStatus(parsed.shippingStatus),
+    status: saleStatus,
     subtotal: 0,
     shippingCost: 0,
     total: parsed.total,
@@ -323,12 +324,11 @@ function toPaymentStatus(
   status: (typeof API_PAYMENT_STATUS)[number] | null,
   saleStatus?: "pending" | "confirmed" | "cancelled",
 ): SalePaymentStatus {
-  if (saleStatus === SALE_ORDER_STATUS.CANCELLED) return "cancelled";
   if (status === "PAID") return "received";
   if (status === "REFUNDED") return "refunded";
   if (status === "PARTIALLY_REFUNDED") return "partially_refunded";
   if (status === "CHARGED_BACK") return "charged_back";
-  return "pending";
+  return saleStatus === SALE_ORDER_STATUS.CANCELLED ? "cancelled" : "pending";
 }
 
 function toShippingStatus(status: AdminSaleSummaryResponseDto["shippingStatus"]): SaleShippingStatus {
