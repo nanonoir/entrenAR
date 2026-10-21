@@ -18,7 +18,7 @@ export const canShipSale = (state: SaleState) => canUnpackSale(state) && state.d
 export const canDeliverSale = (state: SaleState) => !state.isArchived && state.status === OrderStatus.CONFIRMED && state.shippingStatus === OrderShippingStatus.SHIPPED;
 export const canCancelSale = (state: SaleState) => !state.isArchived && state.status !== OrderStatus.CANCELLED && state.shippingStatus !== OrderShippingStatus.SHIPPED && state.shippingStatus !== OrderShippingStatus.DELIVERED && state.shippingStatus !== OrderShippingStatus.CANCELLED;
 export const canReopenSale = (state: SaleState) => !state.isArchived && state.status === OrderStatus.CANCELLED;
-export const canArchiveSale = (state: SaleState) => !state.isArchived && (state.status === OrderStatus.CANCELLED || state.shippingStatus === OrderShippingStatus.DELIVERED && state.paymentStatus === PaymentStatus.PAID);
+export const canArchiveSale = (state: SaleState) => !state.isArchived && (state.status === OrderStatus.CANCELLED || state.shippingStatus === OrderShippingStatus.DELIVERED && (state.paymentStatus === PaymentStatus.PAID || state.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED));
 export const canUnarchiveSale = (state: SaleState) => state.isArchived;
 export const canEditSale = (state: SaleState) => !state.isArchived && state.status !== OrderStatus.CANCELLED && state.shippingStatus === OrderShippingStatus.TO_PACK;
 
