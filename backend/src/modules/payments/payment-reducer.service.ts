@@ -258,6 +258,7 @@ export class PaymentReducerService {
         && payment.status === PaymentStatus.PENDING
         && payment.retryUntil !== null
         && payment.retryUntil.getTime() <= now.getTime()
+        && payment.attempts.length > 0
         && payment.attempts.every((attempt) => attempt.status === PaymentAttemptStatus.REJECTED
           || attempt.status === PaymentAttemptStatus.CANCELLED
           || attempt.status === PaymentAttemptStatus.EXPIRED);
