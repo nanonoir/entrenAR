@@ -4,6 +4,7 @@ import {
   CHECKOUT_DELIVERY_TYPE,
   CHECKOUT_PAYMENT_METHOD_IDS,
 } from "../checkout.constants";
+import { PaymentCardDto } from "../../payments/payments.dto";
 import { CheckoutAddressDto, CheckoutCustomerDto } from "./checkout-common.dto";
 
 export class CheckoutLineItemRequestDto {
@@ -53,6 +54,26 @@ export class CheckoutQuoteRequestDto {
 
   @ApiPropertyOptional({ description: "Canonical shipping provider identifier." })
   shippingProviderId?: string;
+}
+
+export class CheckoutCardPaymentRequestDto extends CheckoutQuoteRequestDto {
+  @ApiProperty({ type: PaymentCardDto })
+  card!: PaymentCardDto;
+
+  @ApiProperty({ type: CheckoutCustomerDto })
+  customer!: CheckoutCustomerDto;
+
+  @ApiPropertyOptional({ description: "Mercado Pago device/session id for fraud prevention." })
+  deviceId?: string;
+
+  @ApiProperty({ minLength: 8, maxLength: 128, description: "Client retry key scoped to the authenticated or guest owner." })
+  idempotencyKey!: string;
+
+  @ApiPropertyOptional()
+  paymentOptionId?: string;
+
+  @ApiProperty({ description: "Opaque server-issued quote identifier." })
+  quoteId!: string;
 }
 
 export class CheckoutCompleteRequestDto extends CheckoutQuoteRequestDto {

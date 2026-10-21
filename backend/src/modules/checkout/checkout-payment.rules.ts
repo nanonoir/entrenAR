@@ -1,7 +1,9 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { ConflictException, Injectable, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
 import type { Prisma } from "../../generated/prisma/client";
+import type { AppConfig } from "../../config/app.config";
 import { CHECKOUT_PAYMENT_METHOD } from "./checkout.constants";
 import type {
   CheckoutBankTransferProjection,
@@ -32,7 +34,15 @@ export interface PaymentRulesCalculation {
 
 @Injectable()
 export class CheckoutPaymentRules {
-  constructor(private readonly commerceRepository: CommerceRepository) {}
+  constructor(
+    private readonly commerceRepository: CommerceRepository,
+    @Optional() private readonly config?: ConfigService<AppConfig, true>,
+  ) {}
+
+  /** Card payments are offered only when the Mercado Pago integration is fully configured. */
+  private mercadoPagoConfigured(): boolean {
+    return this.config?.get("mercadoPago", { infer: true }) !== undefined;
+  }
 
   async calculate(
     transaction: TransactionClient,
@@ -85,6 +95,7 @@ export class CheckoutPaymentRules {
     return records.flatMap((record) => {
       const projection = toPaymentMethodProjection(record);
       if (!isPublicPaymentMethod(projection.id)) return [];
+      if (projection.id === CHECKOUT_PAYMENT_METHOD.MERCADO_PAGO && !this.mercadoPagoConfigured()) return [];
       if (projection.id === CHECKOUT_PAYMENT_METHOD.BANK_TRANSFER && !projection.bankConfig) return [];
 
       const method: CheckoutPaymentMethodProjection = {

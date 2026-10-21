@@ -8,11 +8,14 @@ import {
 import { randomUUID } from "node:crypto";
 
 import { ERROR_CODE } from "../../common/errors/api-error.response";
-import { InventoryMovementKind, InventoryReferenceType, Role } from "../../generated/prisma/enums";
+import { InventoryMovementKind, InventoryReferenceType, PaymentProvider, Role } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
+import { cardTokenDigest } from "../payments/payment-card";
+import { CHECKOUT_PAYMENT_METHOD } from "./checkout.constants";
 import { toCheckoutCompleteResponse } from "./checkout.mapper";
 import {
   checkoutCompleteResponseSchema,
+  type CheckoutCardPaymentRequest,
   type CheckoutCompleteRequest,
 } from "./checkout.schemas";
 import {
@@ -42,6 +45,15 @@ export interface CheckoutCompletionSnapshotOperations {
     now: Date,
   ): Promise<CheckoutOrderCreateInput>;
 }
+
+export interface CardPlacement {
+  attemptId: string;
+  /** False when an idempotent replay returned an earlier placement: nothing must be dispatched again. */
+  created: boolean;
+  orderId: string;
+}
+
+const CARD_IDEMPOTENCY_PREFIX = "mp-card:";
 
 @Injectable()
 export class CheckoutCompletionService {
@@ -77,69 +89,7 @@ export class CheckoutCompletionService {
       );
       if (!claim.created) return this.replayOrReject(claim.record, requestHash);
 
-      const resolution = await this.quoteService.resolveCart(transaction, input, actor);
-      if (!resolution.merged) await this.quoteService.assertItemReferences(transaction, input.items);
-      const cart = resolution.merged
-        ? resolution.cart
-        : await this.checkoutRepository.replaceCartItems(transaction, resolution.cart.id, input.items);
-      const now = new Date();
-      const calculation = await this.quoteService.calculateQuote(transaction, cart, input, actor, now, true);
-      this.assertQuoteContinuity(resolution.session, input.quoteId, calculation, now);
-
-      if (calculation.couponCalculation) {
-        const usageApplied = await this.checkoutRepository.incrementCouponUsage(
-          transaction,
-          calculation.couponCalculation.record.id,
-        );
-        if (!usageApplied) throw this.discountRules.couponUsageLimitReached();
-      }
-
-      const orderInput = await snapshotOperations.createOrderInput(
-        transaction,
-        calculation,
-        resolution,
-        input,
-        actor,
-        now,
-      );
-      const order = await this.checkoutRepository.createPendingOrder(transaction, orderInput);
-      const inventoryEffectId = randomUUID();
-
-      try {
-        const movements = await this.checkoutRepository.deductStockForItems(
-          transaction,
-          calculation.lines.map((line) => ({
-            productId: line.product.id,
-            quantity: line.quantity,
-            ...(line.variant ? { variantId: line.variant.id } : {}),
-          })),
-          {
-            inventoryEffectId,
-            movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
-            operationId: randomUUID(),
-            origin: INVENTORY_ORIGIN.CHECKOUT,
-            reason: `Checkout order ${order.number} placement`,
-            referenceId: order.id,
-            referenceType: InventoryReferenceType.ORDER,
-          },
-        );
-        if (movements.length > 0) {
-          await this.checkoutRepository.assignInventoryOwnership(transaction, order.id, inventoryEffectId);
-        }
-      } catch {
-        throw this.outOfStock();
-      }
-
-      if (calculation.couponCalculation) {
-        await this.checkoutRepository.createCouponRedemption(transaction, {
-          couponCode: calculation.couponCalculation.record.code,
-          couponId: calculation.couponCalculation.record.id,
-          ...(actor?.userId ? {} : { customerKeyHash: hashCheckoutToken(input.customer.email) }),
-          discountAmount: calculation.couponCalculation.totalDiscount,
-          orderId: order.id,
-          ...(actor?.userId ? { userId: actor.userId } : {}),
-        });
-      }
+      const { now, order, resolution } = await this.placeOrder(transaction, input, actor, snapshotOperations, false);
 
       await this.checkoutRepository.clearCart(transaction, resolution.cart.id);
       await this.checkoutRepository.completeSession(transaction, resolution.session.id, now);
@@ -154,6 +104,161 @@ export class CheckoutCompletionService {
 
       return response;
     });
+  }
+
+  /**
+   * Places a Mercado Pago card order: the same atomic placement as `complete`, plus the first SUBMITTING payment
+   * attempt, but the cart and session stay untouched until the payment outcome finalizes them.
+   */
+  async placeCardOrder(
+    input: CheckoutCardPaymentRequest,
+    actor: CheckoutActorContext | undefined,
+    snapshotOperations: CheckoutCompletionSnapshotOperations,
+  ): Promise<CardPlacement> {
+    this.assertActor(actor);
+    if (!actor?.userId && !input.sessionToken) throw this.invalidSession();
+
+    const { card, deviceId: _deviceId, ...selection } = input;
+    const completeInput: CheckoutCompleteRequest = { ...selection, paymentMethodId: CHECKOUT_PAYMENT_METHOD.MERCADO_PAGO };
+    const { idempotencyKey, sessionToken: _sessionToken, ...intent } = selection;
+    const requestHash = hashCheckoutRequest({
+      card: { ...card, token: cardTokenDigest(card.token) },
+      intent,
+      op: "mp-card",
+    });
+    const storedKey = `${CARD_IDEMPOTENCY_PREFIX}${idempotencyKey}`;
+
+    return this.checkoutRepository.transaction(async (transaction) => {
+      const ownerKey = await this.ownerKeyForCompletion(transaction, completeInput, actor);
+      const existing = await this.checkoutRepository.idempotencyByOwnerAndKey(transaction, ownerKey, storedKey);
+      if (existing) return this.replayCard(existing, requestHash);
+
+      const claim = await this.checkoutRepository.claimIdempotency(transaction, ownerKey, storedKey, requestHash);
+      if (!claim.created) return this.replayCard(claim.record, requestHash);
+
+      const { now, order } = await this.placeOrder(transaction, completeInput, actor, snapshotOperations, true);
+      const attempt = await this.checkoutRepository.createPaymentAttempt(transaction, {
+        clientKey: idempotencyKey,
+        expectedAmount: Number(order.total),
+        orderId: order.id,
+        providerIdempotencyKey: randomUUID(),
+        requestHash,
+      });
+      await this.checkoutRepository.completeIdempotency(
+        transaction,
+        claim.record.id,
+        order.id,
+        { attemptId: attempt.id, orderId: order.id },
+        now,
+      );
+
+      return { attemptId: attempt.id, created: true, orderId: order.id };
+    });
+  }
+
+  private async placeOrder(
+    transaction: TransactionClient,
+    input: CheckoutCompleteRequest,
+    actor: CheckoutActorContext | undefined,
+    snapshotOperations: CheckoutCompletionSnapshotOperations,
+    card: boolean,
+  ) {
+    const resolution = await this.quoteService.resolveCart(transaction, input, actor);
+    if (await this.checkoutRepository.orderIdBySession(transaction, resolution.session.id)) throw this.sessionAlreadyBound();
+    if (!resolution.merged) await this.quoteService.assertItemReferences(transaction, input.items);
+    const cart = resolution.merged
+      ? resolution.cart
+      : await this.checkoutRepository.replaceCartItems(transaction, resolution.cart.id, input.items);
+    const now = new Date();
+    const calculation = await this.quoteService.calculateQuote(transaction, cart, input, actor, now, true);
+    this.assertQuoteContinuity(resolution.session, input.quoteId, calculation, now);
+    this.assertPaymentChannel(calculation, card);
+
+    if (calculation.couponCalculation) {
+      const usageApplied = await this.checkoutRepository.incrementCouponUsage(
+        transaction,
+        calculation.couponCalculation.record.id,
+      );
+      if (!usageApplied) throw this.discountRules.couponUsageLimitReached();
+    }
+
+    const builtInput = await snapshotOperations.createOrderInput(
+      transaction,
+      calculation,
+      resolution,
+      input,
+      actor,
+      now,
+    );
+    const orderInput: CheckoutOrderCreateInput = card
+      ? { ...builtInput, payment: { ...builtInput.payment, provider: PaymentProvider.MERCADOPAGO } }
+      : builtInput;
+    const order = await this.checkoutRepository.createPendingOrder(transaction, orderInput);
+    const inventoryEffectId = randomUUID();
+
+    try {
+      const movements = await this.checkoutRepository.deductStockForItems(
+        transaction,
+        calculation.lines.map((line) => ({
+          productId: line.product.id,
+          quantity: line.quantity,
+          ...(line.variant ? { variantId: line.variant.id } : {}),
+        })),
+        {
+          inventoryEffectId,
+          movementKind: InventoryMovementKind.CHECKOUT_DEDUCTION,
+          operationId: randomUUID(),
+          origin: INVENTORY_ORIGIN.CHECKOUT,
+          reason: `Checkout order ${order.number} placement`,
+          referenceId: order.id,
+          referenceType: InventoryReferenceType.ORDER,
+        },
+      );
+      if (movements.length > 0) {
+        await this.checkoutRepository.assignInventoryOwnership(transaction, order.id, inventoryEffectId);
+      }
+    } catch {
+      throw this.outOfStock();
+    }
+
+    if (calculation.couponCalculation) {
+      await this.checkoutRepository.createCouponRedemption(transaction, {
+        couponCode: calculation.couponCalculation.record.code,
+        couponId: calculation.couponCalculation.record.id,
+        ...(actor?.userId ? {} : { customerKeyHash: hashCheckoutToken(input.customer.email) }),
+        discountAmount: calculation.couponCalculation.totalDiscount,
+        orderId: order.id,
+        ...(actor?.userId ? { userId: actor.userId } : {}),
+      });
+    }
+
+    return { now, order, resolution };
+  }
+
+  /** Mercado Pago orders only exist through the card endpoint, and the card endpoint only creates Mercado Pago orders. */
+  private assertPaymentChannel(calculation: QuoteCalculation, card: boolean): void {
+    const isMercadoPago = calculation.selectedPayment?.method.id === CHECKOUT_PAYMENT_METHOD.MERCADO_PAGO;
+    if (isMercadoPago !== card) throw this.paymentMethodUnavailable();
+  }
+
+  private replayCard(record: CheckoutIdempotencyRecord, requestHash: string): CardPlacement {
+    if (record.requestHash !== requestHash) throw this.idempotencyKeyReused();
+    const stored = record.responseSnapshot;
+    if (record.status !== "COMPLETED" || !stored || typeof stored !== "object" || Array.isArray(stored)) {
+      throw this.completionInProgress();
+    }
+    const { attemptId, orderId } = stored as Record<string, unknown>;
+    if (typeof attemptId !== "string" || typeof orderId !== "string") throw new Error("Stored card checkout response is invalid.");
+
+    return { attemptId, created: false, orderId };
+  }
+
+  private sessionAlreadyBound(): ConflictException {
+    return new ConflictException({ code: ERROR_CODE.CONFLICT, message: "The checkout session is already bound to an order.", ok: false });
+  }
+
+  private paymentMethodUnavailable(): ConflictException {
+    return new ConflictException({ code: ERROR_CODE.PAYMENT_METHOD_UNAVAILABLE, message: "The selected payment method is unavailable.", ok: false });
   }
 
   private async ownerKeyForCompletion(
