@@ -48,7 +48,7 @@ Each stage is a chained branch off the previous one, with conventional commits a
 - [x] Stage 0 — PRD, design, specs, ExecPlan
 - [x] Stage 1 — Backend base
 - [x] Stage 2 — Payment flow (reviewed; findings fixed in `8e37b50`)
-- [ ] Stage 3 — Webhooks
+- [x] Stage 3 — Webhooks
 - [ ] Stage 4 — Expiry and reconciliation
 - [ ] Stage 5 — Admin
 - [ ] Stage 6 — Frontend
