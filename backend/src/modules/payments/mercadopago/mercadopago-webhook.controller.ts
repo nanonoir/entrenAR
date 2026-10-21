@@ -74,7 +74,7 @@ export class MercadoPagoWebhookController {
       throw new UnauthorizedException({ code: ERROR_CODE.UNAUTHORIZED, message: "Invalid webhook signature.", ok: false });
     }
 
-    const topic = resolveTopic(query["type"] ?? query["topic"], body);
+    const topic = asTopic(query["type"] ?? query["topic"]);
     if (!topic) {
       // Authenticated but not a topic this integration handles: acknowledge so the provider does not retry it.
       return { ok: true };
@@ -104,11 +104,7 @@ export class MercadoPagoWebhookController {
   }
 }
 
-function resolveTopic(queryType: unknown, body: unknown): ReturnType<typeof asTopic> {
-  const bodyType = typeof body === "object" && body !== null ? (body as Record<string, unknown>)["type"] : undefined;
-  return asTopic(queryType) ?? asTopic(bodyType);
-}
-
+/** Mercado Pago sends the topic in the query (`type=order`); the unsigned body is never consulted. */
 function asTopic(value: unknown) {
   return isWebhookTopic(value) ? value : undefined;
 }

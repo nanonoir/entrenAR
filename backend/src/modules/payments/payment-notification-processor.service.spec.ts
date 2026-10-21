@@ -122,31 +122,33 @@ describe("PaymentNotificationProcessorService", () => {
 
   describe("chargebacks and fraud alerts", () => {
     it("quarantines non-Orders resource ids without any provider call or hold", async () => {
-      for (const topic of ["topic_chargebacks_wh", "stop_delivery_op_wh"]) {
-        const h = harness({ resourceId: "1234567890", topic });
+      const h = harness({ resourceId: "1234567890", topic: "topic_chargebacks_wh" });
+      await expect(h.service.processById("n1")).resolves.toBe("quarantined");
+      expect(lastStatus(h.updateMany).quarantineReason).toBe("unverified_association");
+      expect(h.port.getOrder).not.toHaveBeenCalled();
+      expect(h.transactions.run).not.toHaveBeenCalled();
+    });
+
+    it("quarantines fraud alerts as unverified, even for a known provider order, with no provider call or hold", async () => {
+      for (const resourceId of ["1234567890", "ORD1"]) {
+        const h = harness({ resourceId, topic: "stop_delivery_op_wh" });
+        h.repository.attemptByProviderOrderId.mockResolvedValue({ id: "attempt-1", payment: { orderId: "order-1" } });
         await expect(h.service.processById("n1")).resolves.toBe("quarantined");
-        expect(lastStatus(h.updateMany).quarantineReason).toBe("unverified_association");
+        expect(lastStatus(h.updateMany).quarantineReason).toBe("unverified_fraud_association");
         expect(h.port.getOrder).not.toHaveBeenCalled();
+        expect(h.reducer.applyObservation).not.toHaveBeenCalled();
         expect(h.transactions.run).not.toHaveBeenCalled();
       }
     });
 
-    it("records a fraud hold only for a verified known provider order", async () => {
-      const h = harness({ topic: "stop_delivery_op_wh" });
-      h.repository.attemptByProviderOrderId.mockResolvedValue({ id: "attempt-1", payment: { orderId: "order-1" } });
-      await expect(h.service.processById("n1")).resolves.toBe("processed");
-      expect(h.transactions.run).toHaveBeenCalledTimes(1);
-      expect(h.reducer.applyObservation).not.toHaveBeenCalled();
-    });
-
-    it("retries a fraud alert whose provider order is not known locally and never invents an association", async () => {
-      const h = harness({ topic: "stop_delivery_op_wh" });
+    it("retries a chargeback whose provider order is not known locally and never invents an association", async () => {
+      const h = harness({ topic: "topic_chargebacks_wh" });
       await expect(h.service.processById("n1")).resolves.toBe("retry");
       expect(h.transactions.run).not.toHaveBeenCalled();
     });
 
     it("quarantines when the authoritative external reference does not match the attempt's order", async () => {
-      const h = harness({ topic: "stop_delivery_op_wh" });
+      const h = harness({ topic: "topic_chargebacks_wh" });
       h.repository.attemptByProviderOrderId.mockResolvedValue({ id: "attempt-1", payment: { orderId: "someone-else" } });
       await expect(h.service.processById("n1")).resolves.toBe("quarantined");
       expect(lastStatus(h.updateMany).quarantineReason).toBe("external_reference_mismatch");

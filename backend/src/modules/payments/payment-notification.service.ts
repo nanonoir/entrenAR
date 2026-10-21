@@ -36,7 +36,7 @@ export interface AcceptedNotification {
 
 /** Stable receipt key: the same order emits many states, so the resource id alone is never the key. */
 export function notificationDedupKey(input: Pick<AcceptNotificationInput, "environment" | "requestId" | "resourceId" | "timestampMs" | "topic"> & { eventId?: string }): string {
-  const event = input.eventId ?? `${input.requestId}|${input.timestampMs}`;
+  const event = `${input.requestId}|${input.timestampMs}${input.eventId ? `|${input.eventId}` : ""}`;
   return createHash("sha256")
     .update(`mercadopago|${input.environment}|${input.topic}|${input.resourceId}|${event}`)
     .digest("hex");

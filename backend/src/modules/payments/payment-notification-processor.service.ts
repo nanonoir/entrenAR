@@ -114,7 +114,13 @@ export class PaymentNotificationProcessorService {
         return this.finish(row, { attemptId, status: PaymentNotificationStatus.PROCESSED });
       }
 
-      if (row.topic === WEBHOOK_TOPIC.CHARGEBACK || row.topic === WEBHOOK_TOPIC.FRAUD_ALERT) {
+      if (row.topic === WEBHOOK_TOPIC.FRAUD_ALERT) {
+        // The signed manifest does not cover the topic, so a replayed signed notification could pose as a fraud alert.
+        // Keep the authenticated receipt (resource id included) as an unresolved risk alert; never hold an order from it.
+        return this.finish(row, { quarantineReason: "unverified_fraud_association", status: PaymentNotificationStatus.QUARANTINED });
+      }
+
+      if (row.topic === WEBHOOK_TOPIC.CHARGEBACK) {
         // Optional topics deliver ids that are not Orders ids: only an Orders-style signed id is verifiable here.
         if (!PROVIDER_ORDER_ID_PATTERN.test(row.resourceId)) throw new UnresolvedNotification("unverified_association", true);
 
@@ -123,15 +129,11 @@ export class PaymentNotificationProcessorService {
         if (!attempt) throw new UnresolvedNotification("unknown_provider_order");
         if (observation.externalReference !== attempt.payment.orderId) throw new UnresolvedNotification("external_reference_mismatch", true);
 
-        if (row.topic === WEBHOOK_TOPIC.CHARGEBACK) {
-          if (observation.chargebacks.length === 0 && observation.status !== "charged_back") {
-            throw new UnresolvedNotification("chargeback_not_confirmed");
-          }
-          await this.reducer.applyObservation(attempt.id, observation);
-          await this.recordRisk(attempt.id, attempt.payment.orderId, "dispute", observation);
-        } else {
-          await this.recordRisk(attempt.id, attempt.payment.orderId, "fraud_alert", observation);
+        if (observation.chargebacks.length === 0 && observation.status !== "charged_back") {
+          throw new UnresolvedNotification("chargeback_not_confirmed");
         }
+        await this.reducer.applyObservation(attempt.id, observation);
+        await this.recordRisk(attempt.id, attempt.payment.orderId, "dispute", observation);
         return this.finish(row, { attemptId: attempt.id, status: PaymentNotificationStatus.PROCESSED });
       }
 
@@ -161,11 +163,11 @@ export class PaymentNotificationProcessorService {
     return candidates[0]!.id;
   }
 
-  /** Records the dispute/fraud hold once per attempt under the shared order/payment lock. */
+  /** Records the dispute hold once per attempt under the shared order/payment lock. */
   private async recordRisk(
     attemptId: string,
     orderId: string,
-    hold: "dispute" | "fraud_alert",
+    hold: "dispute",
     observation: MercadoPagoOrder,
   ): Promise<void> {
     await this.transactions.run(async (transaction) => {
@@ -182,16 +184,14 @@ export class PaymentNotificationProcessorService {
       }
       await transaction.orderHistory.createMany({
         data: [{
-          description: hold === "fraud_alert"
-            ? "Mercado Pago raised a fraud alert: do not ship; inspect or refund from the Mercado Pago panel."
-            : "Mercado Pago reported a chargeback: fulfillment is on hold.",
+          description: "Mercado Pago reported a chargeback: fulfillment is on hold.",
           effectKey: `payment:${attemptId}:${hold}_notice`,
           metadata: {
             attemptId,
-            ...(hold === "dispute" ? { chargebackIds: observation.chargebacks.map((chargeback) => chargeback.id).slice(0, 10) } : {}),
+            chargebackIds: observation.chargebacks.map((chargeback) => chargeback.id).slice(0, 10),
           },
           orderId,
-          title: hold === "fraud_alert" ? "Fraud alert received" : "Chargeback received",
+          title: "Chargeback received",
           type: OrderHistoryEventType.PAYMENT_ATTENTION_REQUIRED,
         }],
         skipDuplicates: true,

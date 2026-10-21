@@ -18,11 +18,15 @@ describe("notificationDedupKey", () => {
     expect(notificationDedupKey({ ...base, eventId: "e1", resourceId: "ORD2" })).not.toBe(key);
   });
 
-  it("falls back to request id and timestamp, so later states of the same order are new notifications", () => {
+  it("always binds the signed request id and timestamp, with the unsigned event id only as an extra component", () => {
     const first = notificationDedupKey(base);
     expect(notificationDedupKey(base)).toBe(first);
     expect(notificationDedupKey({ ...base, timestampMs: 2_000 })).not.toBe(first);
     expect(notificationDedupKey({ ...base, requestId: "req-2" })).not.toBe(first);
+    const withEvent = notificationDedupKey({ ...base, eventId: "e1" });
+    expect(withEvent).not.toBe(first);
+    expect(notificationDedupKey({ ...base, eventId: "e1", timestampMs: 2_000 })).not.toBe(withEvent);
+    expect(notificationDedupKey({ ...base, eventId: "e1", requestId: "req-2" })).not.toBe(withEvent);
   });
 });
 
