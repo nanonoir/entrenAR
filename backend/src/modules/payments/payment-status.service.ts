@@ -87,8 +87,10 @@ export class PaymentStatusService {
     const sessionValid = session !== null && this.sessionUsable(session, owner);
     if (!owner.userId && !sessionValid) throw this.invalidSession();
 
-    let orderId = sessionValid ? await this.repository.orderIdBySession(session.id) : null;
-    if (!orderId && owner.userId) orderId = await this.repository.latestPendingOrderIdByUser(owner.userId);
+    // A valid session token resolves strictly through its bound order; only token-less customers use the latest pending order.
+    const orderId = sessionValid
+      ? await this.repository.orderIdBySession(session.id)
+      : await this.repository.latestPendingOrderIdByUser(owner.userId!);
     if (!orderId) return null;
 
     return this.viewOwnedOrder(orderId, owner);
@@ -114,8 +116,13 @@ export class PaymentStatusService {
     }
   }
 
-  async viewOwnedOrder(orderId: string, owner: PaymentOwner): Promise<PaymentStatusView> {
+  /** `knownChallengeUrl` is the sanitized URL just returned by the provider create call; it avoids a redundant GET. */
+  async viewOwnedOrder(orderId: string, owner: PaymentOwner, knownChallengeUrl?: string): Promise<PaymentStatusView> {
     let order = await this.assertOwnedOrder(orderId, owner);
+    const latest = order.payment?.attempts[0];
+    if (knownChallengeUrl && latest?.status === PaymentAttemptStatus.ACTION_REQUIRED) {
+      this.remember(latest.id, { at: Date.now(), challengeUrl: knownChallengeUrl });
+    }
     const refresh = await this.refreshIfDue(order);
     if (refresh.refreshed) order = (await this.repository.orderById(orderId)) ?? order;
 
@@ -226,7 +233,12 @@ export class PaymentStatusService {
       ? sanitizeChallengeUrl(observation.transactions[0]?.transactionSecurityUrl)
       : undefined;
     const result: RefreshResult = { at: Date.now(), ...(challengeUrl ? { challengeUrl } : {}) };
+    this.remember(attemptId, result);
 
+    return result;
+  }
+
+  private remember(attemptId: string, result: RefreshResult): void {
     if (this.recent.size >= REFRESH_CACHE_MAX_ENTRIES) {
       for (const [key, value] of this.recent) {
         if (Date.now() - value.at >= PAYMENT_REFRESH_CACHE_MS) this.recent.delete(key);
@@ -234,8 +246,6 @@ export class PaymentStatusService {
       if (this.recent.size >= REFRESH_CACHE_MAX_ENTRIES) this.recent.clear();
     }
     this.recent.set(attemptId, result);
-
-    return result;
   }
 
   private invalidSession(): UnauthorizedException {

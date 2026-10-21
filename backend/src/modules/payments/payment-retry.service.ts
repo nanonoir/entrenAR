@@ -9,6 +9,7 @@ import {
   PaymentStatus,
 } from "../../generated/prisma/enums";
 import { cardTokenDigest, type PaymentCardInput } from "./payment-card";
+import { PaymentCircuitService } from "./payment-circuit.service";
 import { PaymentDispatchService } from "./payment-dispatch.service";
 import { isUnsettledAttempt } from "./payment-reducer";
 import { PaymentStatusService, type PaymentOwner, type PaymentStatusView } from "./payment-status.service";
@@ -30,10 +31,18 @@ export class PaymentRetryService {
     private readonly transactions: PaymentsTransaction,
     private readonly status: PaymentStatusService,
     private readonly dispatcher: PaymentDispatchService,
+    private readonly circuit: PaymentCircuitService,
   ) {}
 
   async retry(input: PaymentRetryInput): Promise<PaymentStatusView> {
     await this.status.assertOwnedOrder(input.orderId, input.owner);
+    if (this.circuit.isOpen()) {
+      throw new ConflictException({
+        code: ERROR_CODE.PAYMENT_METHOD_UNAVAILABLE,
+        message: "Card payments are temporarily unavailable.",
+        ok: false,
+      });
+    }
 
     const requestHash = retryRequestHash(input);
     const placed = await this.transactions.run(async (transaction) => {
@@ -87,15 +96,15 @@ export class PaymentRetryService {
       return { attemptId: attempt.id, created: true };
     });
 
-    if (placed.created) {
-      await this.dispatcher.dispatch({
-        attemptId: placed.attemptId,
-        card: input.card,
-        ...(input.deviceId ? { deviceId: input.deviceId } : {}),
-      });
-    }
+    const outcome = placed.created
+      ? await this.dispatcher.dispatch({
+          attemptId: placed.attemptId,
+          card: input.card,
+          ...(input.deviceId ? { deviceId: input.deviceId } : {}),
+        })
+      : null;
 
-    return this.status.viewOwnedOrder(input.orderId, input.owner);
+    return this.status.viewOwnedOrder(input.orderId, input.owner, outcome?.challengeUrl);
   }
 
   private unavailable(): ConflictException {

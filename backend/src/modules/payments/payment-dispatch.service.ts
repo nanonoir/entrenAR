@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 
 import { PaymentAttemptStatus } from "../../generated/prisma/enums";
 import {
@@ -8,14 +8,16 @@ import {
   type MercadoPagoOrder,
   type MercadoPagoOrdersPort,
 } from "./mercadopago/mercadopago-orders.port";
-import type { PaymentCardInput } from "./payment-card";
+import { sanitizeChallengeUrl, type PaymentCardInput } from "./payment-card";
+import { PaymentCircuitService } from "./payment-circuit.service";
 import { PaymentReducerService, type PaymentApplyResult } from "./payment-reducer.service";
 import { buildCreateOrderRequest, moneyString } from "./payment-request.builder";
 import { normalizeProviderStatus } from "./payment-status.normalizer";
 import { PaymentsRepository } from "./payments.repository";
 
 export const PAYMENT_DISPATCH_SLEEP = Symbol("PAYMENT_DISPATCH_SLEEP");
-export const PAYMENT_CREATE_MAX_CALLS = 2;
+/** Kept at 1 until provider idempotency retention is verified in the sandbox (Stage 7); raise it afterwards. */
+export const PAYMENT_CREATE_MAX_CALLS = 1;
 export const PAYMENT_CREATE_BUDGET_MS = 25_000;
 const RETRY_JITTER_MIN_MS = 500;
 const RETRY_JITTER_SPREAD_MS = 500;
@@ -27,6 +29,9 @@ export interface PaymentDispatchInput {
   card: PaymentCardInput;
   deviceId?: string;
 }
+
+/** Applied outcome plus the sanitized 3DS challenge URL from the create response, so callers can skip a redundant GET. */
+export type PaymentDispatchOutcome = PaymentApplyResult & { challengeUrl?: string };
 
 /** Statuses that must be confirmed with an authoritative GET before they are applied. */
 const SELF_APPLIED_STATUSES: ReadonlySet<PaymentAttemptStatus> = new Set([
@@ -42,19 +47,21 @@ const SELF_APPLIED_STATUSES: ReadonlySet<PaymentAttemptStatus> = new Set([
  */
 @Injectable()
 export class PaymentDispatchService {
+  private readonly logger = new Logger(PaymentDispatchService.name);
   private readonly sleep: PaymentSleeper;
 
   constructor(
     @Inject(MERCADOPAGO_ORDERS_PORT) private readonly port: MercadoPagoOrdersPort,
     private readonly reducer: PaymentReducerService,
     private readonly repository: PaymentsRepository,
+    private readonly circuit: PaymentCircuitService,
     @Optional() @Inject(PAYMENT_DISPATCH_SLEEP) sleeper?: PaymentSleeper,
   ) {
     this.sleep = sleeper ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   }
 
   /** Returns the applied outcome; `null` when the attempt was no longer waiting to be submitted. */
-  async dispatch(input: PaymentDispatchInput): Promise<PaymentApplyResult | null> {
+  async dispatch(input: PaymentDispatchInput): Promise<PaymentDispatchOutcome | null> {
     const context = await this.repository.dispatchContext(input.attemptId);
     if (!context || context.status !== PaymentAttemptStatus.SUBMITTING) return null;
 
@@ -80,7 +87,11 @@ export class PaymentDispatchService {
       return this.resolveCreateFailure(input.attemptId, error);
     }
 
-    return this.applyCreated(input.attemptId, created, expectedAmount);
+    const applied = await this.applyCreated(input.attemptId, created, expectedAmount);
+    const challengeUrl = applied.attemptStatus === PaymentAttemptStatus.ACTION_REQUIRED
+      ? sanitizeChallengeUrl(created.transactions[0]?.transactionSecurityUrl)
+      : undefined;
+    return challengeUrl ? { ...applied, challengeUrl } : applied;
   }
 
   private async createWithRetry(
@@ -115,8 +126,18 @@ export class PaymentDispatchService {
     if (error instanceof MercadoPagoOrdersError && !error.outcomeUncertain) {
       switch (error.category) {
         case MERCADOPAGO_ERROR_CATEGORY.VALIDATION:
-        case MERCADOPAGO_ERROR_CATEGORY.AUTH:
           return this.reducer.rejectWithoutCharge(attemptId, `provider_${error.category}`);
+        case MERCADOPAGO_ERROR_CATEGORY.AUTH:
+          // Our credentials/configuration failed: not a card rejection. No order exists at the provider.
+          this.circuit.open();
+          this.logger.error(JSON.stringify({
+            attemptId,
+            category: error.category,
+            event: "mercadopago_auth_failure",
+            httpStatus: error.httpStatus ?? null,
+            providerCode: error.providerCode ?? null,
+          }));
+          return this.reducer.cancelUncreated(attemptId, `provider_${error.category}`);
         case MERCADOPAGO_ERROR_CATEGORY.RATE_LIMIT:
           return this.reducer.rejectWithoutCharge(attemptId, "rate_limited");
         case MERCADOPAGO_ERROR_CATEGORY.CONFLICT:

@@ -180,6 +180,57 @@ export class PaymentReducerService {
     });
   }
 
+  /**
+   * The provider definitively did not create the order and the failure is ours (credentials/configuration), not the
+   * card's: close the attempt and cancel the order without a retry window. Stock returns through the same
+   * idempotent compensation as any other cancellation, so it is returned exactly once.
+   */
+  async cancelUncreated(attemptId: string, reason: string): Promise<PaymentApplyResult> {
+    return this.transactions.run(async (transaction) => {
+      const context = await this.load(transaction, attemptId);
+      const now = await databaseNow(transaction);
+      const { attempt, order, payment } = context;
+      if (!isUnsettledAttempt(attempt.status) || attempt.providerOrderId) return this.result(context, "ignore");
+
+      const cancellable = order.status === OrderStatus.PENDING
+        && payment.status === PaymentStatus.PENDING
+        && !context.otherSuccessExists;
+      if (cancellable) await this.cancelOrder(transaction, context, "Payment unavailable", now);
+
+      await transaction.paymentAttempt.update({
+        data: {
+          lastError: reason,
+          localVersion: { increment: 1 },
+          nextReconcileAt: null,
+          outcomeAt: now,
+          status: PaymentAttemptStatus.CANCELLED,
+        },
+        where: { id: attempt.id },
+      });
+      await transaction.orderPayment.update({
+        data: { activeAttemptId: null, retryUntil: null, rowVersion: { increment: 1 } },
+        where: { id: payment.id },
+      });
+      if (cancellable) {
+        await this.appendHistory(transaction, order.id, [{
+          description: `Attempt ${attempt.attemptNumber} was not created at the provider.`,
+          effectKey: `payment:${attempt.id}:order_cancelled`,
+          metadata: { attemptNumber: attempt.attemptNumber },
+          title: "Order cancelled",
+          type: OrderHistoryEventType.ORDER_CANCELLED,
+        }]);
+      }
+
+      return {
+        attemptStatus: PaymentAttemptStatus.CANCELLED,
+        decision: "apply",
+        orderCancelled: cancellable || order.status === OrderStatus.CANCELLED,
+        orderStatus: cancellable ? OrderStatus.CANCELLED : order.status,
+        paymentStatus: payment.status,
+      };
+    });
+  }
+
   async load(transaction: Prisma.TransactionClient, attemptId: string) {
     const head = await transaction.paymentAttempt.findUnique({
       select: { payment: { select: { orderId: true } } },
@@ -452,14 +503,19 @@ export class PaymentReducerService {
     if (completed.count === 0 || !order.cartId) return;
 
     for (const item of order.items) {
-      await transaction.cartItem.deleteMany({
+      const rows = await transaction.cartItem.findMany({
+        select: { id: true, quantity: true },
         where: {
           cartId: order.cartId,
           productId: item.productId,
-          quantity: item.quantity,
           ...(item.variantId ? { variantId: item.variantId } : {}),
         },
       });
+      for (const row of rows) {
+        const left = row.quantity - item.quantity;
+        if (left > 0) await transaction.cartItem.update({ data: { quantity: left }, where: { id: row.id } });
+        else await transaction.cartItem.delete({ where: { id: row.id } });
+      }
     }
     const remaining = await transaction.cartItem.count({ where: { cartId: order.cartId } });
     if (remaining === 0) {

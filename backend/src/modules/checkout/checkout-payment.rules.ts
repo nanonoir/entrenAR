@@ -16,6 +16,7 @@ import {
   toPaymentMethodProjection,
 } from "../commerce/commerce.mapper";
 import { CommerceRepository } from "../commerce/commerce.repository";
+import { PaymentCircuitService } from "../payments/payment-circuit.service";
 
 export interface CheckoutPaymentInput {
   paymentMethodId?: string;
@@ -37,11 +38,12 @@ export class CheckoutPaymentRules {
   constructor(
     private readonly commerceRepository: CommerceRepository,
     @Optional() private readonly config?: ConfigService<AppConfig, true>,
+    @Optional() private readonly circuit?: PaymentCircuitService,
   ) {}
 
-  /** Card payments are offered only when the Mercado Pago integration is fully configured. */
+  /** Card payments are offered only when the Mercado Pago integration is configured and its circuit is closed. */
   private mercadoPagoConfigured(): boolean {
-    return this.config?.get("mercadoPago", { infer: true }) !== undefined;
+    return this.config?.get("mercadoPago", { infer: true }) !== undefined && !this.circuit?.isOpen();
   }
 
   async calculate(

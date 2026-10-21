@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { PaymentAttemptStatus } from "../../generated/prisma/enums";
 import {
   failedOrder,
@@ -12,7 +14,9 @@ import {
   type MercadoPagoOrdersPort,
 } from "./mercadopago/mercadopago-orders.port";
 import { toMercadoPagoOrder } from "./mercadopago/mercadopago-orders.schemas";
-import { PaymentDispatchService } from "./payment-dispatch.service";
+import { sanitizeChallengeUrl } from "./payment-card";
+import { PaymentCircuitService } from "./payment-circuit.service";
+import { PAYMENT_CREATE_MAX_CALLS, PaymentDispatchService } from "./payment-dispatch.service";
 import type { PaymentReducerService } from "./payment-reducer.service";
 import type { PaymentsRepository } from "./payments.repository";
 
@@ -29,6 +33,7 @@ function harness(status: PaymentAttemptStatus = PaymentAttemptStatus.SUBMITTING)
   const reducer = {
     applyObservation: jest.fn().mockResolvedValue({ decision: "apply" }),
     markUnknown: jest.fn().mockResolvedValue({ decision: "apply" }),
+    cancelUncreated: jest.fn().mockResolvedValue({ decision: "apply" }),
     rejectWithoutCharge: jest.fn().mockResolvedValue({ decision: "apply" }),
   };
   const repository = {
@@ -49,14 +54,16 @@ function harness(status: PaymentAttemptStatus = PaymentAttemptStatus.SUBMITTING)
     }),
   };
   const sleep = jest.fn().mockResolvedValue(undefined);
+  const circuit = new PaymentCircuitService();
   const service = new PaymentDispatchService(
     port,
     reducer as unknown as PaymentReducerService,
     repository as unknown as PaymentsRepository,
+    circuit,
     sleep,
   );
 
-  return { port, reducer, repository, service, sleep };
+  return { circuit, port, reducer, repository, service, sleep };
 }
 
 const transientError = (category: MercadoPagoErrorCategory = MERCADOPAGO_ERROR_CATEGORY.TRANSIENT, uncertain = true) =>
@@ -132,17 +139,16 @@ describe("PaymentDispatchService", () => {
     }));
   });
 
-  it("retries a transient failure once with the same key and body", async () => {
+  it("does not retry a transient failure while the in-request CREATE limit is 1", async () => {
     const { port, reducer, service, sleep } = harness();
-    port.createOrder.mockRejectedValueOnce(transientError()).mockResolvedValueOnce(toMercadoPagoOrder(processingOrder));
+    port.createOrder.mockRejectedValue(transientError());
 
     await service.dispatch({ attemptId: "attempt-1", card });
 
-    expect(port.createOrder).toHaveBeenCalledTimes(2);
-    expect(port.createOrder.mock.calls[1]).toEqual(port.createOrder.mock.calls[0]);
-    expect(sleep).toHaveBeenCalledTimes(1);
-    expect(sleep.mock.calls[0]?.[0]).toBeGreaterThanOrEqual(500);
-    expect(reducer.applyObservation).toHaveBeenCalled();
+    expect(PAYMENT_CREATE_MAX_CALLS).toBe(1);
+    expect(port.createOrder).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+    expect(reducer.markUnknown).toHaveBeenCalledWith("attempt-1", { lastError: "provider_transient" });
   });
 
   it("marks the outcome unknown, holding stock, when transient failures persist", async () => {
@@ -151,7 +157,7 @@ describe("PaymentDispatchService", () => {
 
     await service.dispatch({ attemptId: "attempt-1", card });
 
-    expect(port.createOrder).toHaveBeenCalledTimes(2);
+    expect(port.createOrder).toHaveBeenCalledTimes(PAYMENT_CREATE_MAX_CALLS);
     expect(reducer.markUnknown).toHaveBeenCalledWith("attempt-1", { lastError: "provider_transient" });
     expect(reducer.rejectWithoutCharge).not.toHaveBeenCalled();
   });
@@ -169,18 +175,48 @@ describe("PaymentDispatchService", () => {
     expect(reducer.rejectWithoutCharge).toHaveBeenCalledWith("attempt-1", "rate_limited");
   });
 
-  it.each([MERCADOPAGO_ERROR_CATEGORY.VALIDATION, MERCADOPAGO_ERROR_CATEGORY.AUTH])(
-    "opens a retry window without retrying on %s failures",
-    async (category) => {
-      const { port, reducer, service } = harness();
-      port.createOrder.mockRejectedValue(transientError(category, false));
+  it("opens a retry window without retrying on VALIDATION failures", async () => {
+    const { circuit, port, reducer, service } = harness();
+    port.createOrder.mockRejectedValue(transientError(MERCADOPAGO_ERROR_CATEGORY.VALIDATION, false));
 
-      await service.dispatch({ attemptId: "attempt-1", card });
+    await service.dispatch({ attemptId: "attempt-1", card });
 
-      expect(port.createOrder).toHaveBeenCalledTimes(1);
-      expect(reducer.rejectWithoutCharge).toHaveBeenCalledWith("attempt-1", `provider_${category}`);
-    },
-  );
+    expect(port.createOrder).toHaveBeenCalledTimes(1);
+    expect(reducer.rejectWithoutCharge).toHaveBeenCalledWith("attempt-1", "provider_validation");
+    expect(circuit.isOpen()).toBe(false);
+  });
+
+  it("treats AUTH failures as unavailability: no retry window, order cancelled, circuit open, safe log", async () => {
+    const { circuit, port, reducer, service } = harness();
+    const logged = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    port.createOrder.mockRejectedValue(
+      new MercadoPagoOrdersError("Bearer secret-token", { category: MERCADOPAGO_ERROR_CATEGORY.AUTH, httpStatus: 401 }),
+    );
+
+    await service.dispatch({ attemptId: "attempt-1", card });
+
+    expect(port.createOrder).toHaveBeenCalledTimes(1);
+    expect(reducer.rejectWithoutCharge).not.toHaveBeenCalled();
+    expect(reducer.cancelUncreated).toHaveBeenCalledWith("attempt-1", "provider_auth");
+    expect(circuit.isOpen()).toBe(true);
+    expect(logged).toHaveBeenCalledTimes(1);
+    const line = String(logged.mock.calls[0]?.[0]);
+    expect(JSON.parse(line)).toMatchObject({ category: "auth", event: "mercadopago_auth_failure", httpStatus: 401 });
+    expect(line).not.toContain("secret-token");
+    logged.mockRestore();
+  });
+
+  it("passes the 3DS challenge URL of a pending create response through the outcome", async () => {
+    const { port, reducer, service } = harness();
+    reducer.applyObservation.mockResolvedValue({ attemptStatus: PaymentAttemptStatus.ACTION_REQUIRED, decision: "apply" });
+    const created = toMercadoPagoOrder(pendingChallengeOrder);
+    port.createOrder.mockResolvedValue(created);
+
+    const outcome = await service.dispatch({ attemptId: "attempt-1", card });
+
+    expect(port.getOrder).not.toHaveBeenCalled();
+    expect(outcome?.challengeUrl).toBe(sanitizeChallengeUrl(created.transactions[0]?.transactionSecurityUrl));
+  });
 
   it("flags provider idempotency conflicts for attention while keeping the outcome unknown", async () => {
     const { port, reducer, service } = harness();
