@@ -8,7 +8,7 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { Role } from "../../generated/prisma/enums";
 import { Roles } from "../auth/decorators/roles.decorator";
-import { AddSaleNoteRequestDto, AdminSaleDetailResponseDto, AdminSaleListResponseDto, CancelSaleRequestDto, ConvertOrderToSaleRequestDto, CreateManualSaleRequestDto, ShipSaleRequestDto } from "./dto/sales-openapi.dto";
+import { AddSaleNoteRequestDto, AdminPaymentRiskAlertListResponseDto, AdminSaleDetailResponseDto, AdminSaleListResponseDto, CancelSaleRequestDto, ConvertOrderToSaleRequestDto, CreateManualSaleRequestDto, ShipSaleRequestDto } from "./dto/sales-openapi.dto";
 import { addSaleNoteSchema, archiveSaleSchema, cancelSaleSchema, confirmSaleSchema, convertOrderToSaleSchema, createManualSaleSchema, deliverSaleSchema, packSaleSchema, reopenSaleSchema, salesIdentifierSchema, salesListQuerySchema, shipSaleSchema, unarchiveSaleSchema, unpackSaleSchema, type AddSaleNote, type CancelSale, type ConvertOrderToSale, type CreateManualSale, type SalesListQuery, type ShipSale } from "./sales.schemas";
 import { SalesService } from "./sales.service";
 
@@ -29,6 +29,11 @@ export class AdminSalesController {
   @ApiOperation({ summary: "List sales for administration" })
   @ApiOkResponse({ type: AdminSaleListResponseDto })
   list(@Query(new ZodValidationPipe(salesListQuerySchema)) query: SalesListQuery) { return this.salesService.list(query); }
+
+  @Get("payment-risk-alerts")
+  @ApiOperation({ summary: "List unresolved Mercado Pago fraud/chargeback alerts that are not tied to an order" })
+  @ApiOkResponse({ type: AdminPaymentRiskAlertListResponseDto })
+  riskAlerts() { return this.salesService.listRiskAlerts(); }
 
   @Get(":id")
   @ApiOperation({ summary: "Get an immutable sale detail and timeline" })
