@@ -81,6 +81,7 @@ async function runApiScenario(): Promise<void> {
   await repository.archiveSale("sale-api");
   await repository.unarchiveSale("sale-api");
   await repository.addNote("sale-api", "Harness note");
+  assert((await repository.resolveUnknownPayment("sale-api")).id === "sale-api", "Resolve-unknown response was not mapped to the sale detail.");
   const alerts = await repository.getPaymentRiskAlerts();
   assert(alerts[0]?.topic === "fraud_alert" && alerts[0].resourceId === "mp-resource-1", "API payment risk alert mapping failed.");
 
@@ -104,6 +105,7 @@ async function runApiScenario(): Promise<void> {
     "/admin/sales/convert-order",
     "/admin/sales/sale-api/confirm",
     "/admin/sales/sale-api/notes",
+    "/admin/sales/sale-api/payment/resolve-unknown",
     "/admin/suppliers/supplier-api/status",
     "/admin/purchase-orders/po-api/receive",
   ]) {

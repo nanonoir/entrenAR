@@ -122,6 +122,11 @@ export class ApiSalesRepository implements SalesRepository {
     return mapAdminSaleDetail(response);
   }
 
+  async resolveUnknownPayment(id: string): Promise<AdminSaleDetail> {
+    const response = await this.client.post<unknown>(`${saleCommandPath(id, "payment")}/resolve-unknown`, {});
+    return mapAdminSaleDetail(response);
+  }
+
   async getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]> {
     const response = await this.client.get<unknown>("/admin/sales/payment-risk-alerts");
     return mapPaymentRiskAlertsResponse(response);
@@ -197,7 +202,7 @@ export const getAdminSalesRepository = (client?: SalesApiClient): ApiSalesReposi
 type SaleCommand = "archive" | "confirm" | "deliver" | "reopen" | "unarchive" | "unpack" | "pack";
 type PurchaseOrderCommand = "cancel" | "receive" | "submit";
 
-function saleCommandPath(id: string, command: SaleCommand | "cancel" | "notes" | "ship"): string {
+function saleCommandPath(id: string, command: SaleCommand | "cancel" | "notes" | "payment" | "ship"): string {
   return `/admin/sales/${encodeURIComponent(id)}/${command}`;
 }
 

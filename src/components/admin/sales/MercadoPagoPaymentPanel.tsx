@@ -1,8 +1,12 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { useAdminSalesStore } from "@/stores/admin-sales-store";
 import { formatARS, formatShortDate } from "@/lib/data/admin/sales-flow/helpers";
 import type { AdminSale, SalePaymentAttempt, SaleProviderPaymentDetail } from "@/lib/data/admin/sales-flow/types";
 
@@ -96,11 +100,59 @@ function Details({ detail }: { detail: SaleProviderPaymentDetail }) {
   );
 }
 
+function ResolveUnknownModal({ onClose, onConfirm, open }: { onClose: () => void; onConfirm: () => Promise<void>; open: boolean }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleConfirm() {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal className="max-w-md" onClose={onClose} open={open} title="Verificar y resolver pago">
+      <div className="grid gap-5 p-5 text-center sm:p-6">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <AlertTriangle aria-hidden size={24} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-text">Verificar y resolver pago</h2>
+          <p className="mt-2 text-sm leading-6 text-text-muted">
+            Vamos a consultar a Mercado Pago. Si el pago existe, se actualiza el estado del pedido. Si Mercado Pago confirma que no existe ningún pago, el pedido se cancela y el stock se devuelve. Si no se puede consultar, no se cambia nada.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button disabled={isSubmitting} onClick={onClose} type="button" variant="secondary">Cancelar</Button>
+          <Button disabled={isSubmitting} onClick={handleConfirm} type="button" variant="danger">{isSubmitting ? "Verificando…" : "Verificar y resolver"}</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function MercadoPagoPaymentPanel({ sale }: { sale: AdminSale }) {
   const [renderedAt] = useState(() => Date.now());
+  const [confirming, setConfirming] = useState(false);
+  const [resolution, setResolution] = useState<string | null>(null);
+  const resolveUnknownPayment = useAdminSalesStore((state) => state.resolveUnknownPayment);
   const provider = sale.providerPayment;
   if (!provider) return null;
   const detail = provider.detail;
+  const canResolveUnknown = Boolean(detail?.attentionRequiredAt) && detail?.attempts.some((attempt) => attempt.status === "UNKNOWN") === true;
+
+  async function handleResolve() {
+    const result = await resolveUnknownPayment(sale.id);
+    setConfirming(false);
+    if (result) {
+      setResolution(result.status === "cancelled"
+        ? "Mercado Pago confirmó que el pago no existe: el pedido se canceló y el stock se devolvió."
+        : "Se encontró el pago en Mercado Pago y el estado del pedido se actualizó.");
+    }
+  }
   const refunded = detail?.refundedAmount ?? provider.refundedAmount ?? 0;
   const fullRefund = detail?.fullRefund ?? sale.paymentStatus === "refunded";
   const partialRefund = !fullRefund && refunded > 0;
@@ -133,6 +185,12 @@ export function MercadoPagoPaymentPanel({ sale }: { sale: AdminSale }) {
         {detail?.attentionReason && (
           <Warning>Requiere atención: {detail.attentionReason}{detail.attentionRequiredAt ? ` (${formatShortDate(detail.attentionRequiredAt)})` : ""}</Warning>
         )}
+        {resolution && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{resolution}</p>}
+        {canResolveUnknown && (
+          <div>
+            <Button onClick={() => setConfirming(true)} type="button" variant="secondary">Verificar y resolver pago</Button>
+          </div>
+        )}
         {holdsLabel.length > 0 && (
           <p className="text-xs text-zinc-600">Retenciones activas: {holdsLabel.join(", ")}.</p>
         )}
@@ -141,6 +199,7 @@ export function MercadoPagoPaymentPanel({ sale }: { sale: AdminSale }) {
           Los pagos de Mercado Pago no se marcan como recibidos a mano y los reembolsos se gestionan desde el panel de Mercado Pago, no desde EntrenAR.
         </p>
       </div>
+      <ResolveUnknownModal onClose={() => setConfirming(false)} onConfirm={handleResolve} open={confirming} />
     </AdminCard>
   );
 }

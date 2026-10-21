@@ -57,6 +57,18 @@ async function run(): Promise<void> {
   assert(conflictStore.getState().sales.find((sale) => sale.id === "101")?.archived === beforeArchive, "The failed mutation did not roll back.");
   assert(conflictStore.getState().error?.code === "CONFLICT", "The failed mutation did not expose a controlled error.");
 
+  const resolveBacking = new MockSalesRepository();
+  const resolveStore = createAdminSalesStore({
+    repository: asApiRepository(resolveBacking, [], {
+      resolveUnknownPayment: async () => ({ ...(await resolveBacking.getSaleById("101")), shippingStatus: "cancelled" as const, status: "cancelled" as const }),
+    }),
+    fallbackRepository: new MockSalesRepository(),
+  });
+  await resolveStore.getState().fetchSales({ limit: 100 });
+  const resolved = await resolveStore.getState().resolveUnknownPayment("101");
+  assert(resolved?.status === "cancelled" && resolveStore.getState().sales.find((sale) => sale.id === "101")?.shippingStatus === "cancelled", "Resolving an unknown payment did not synchronize the cancelled sale.");
+  assert(await conflictStore.getState().resolveUnknownPayment("101") === null && conflictStore.getState().error !== null, "A rejected unknown-payment resolution did not expose a controlled error.");
+
   const unavailableRepository = asApiRepository(new MockSalesRepository(), [], {
     getSales: async () => {
       throw new SalesApiError({ code: "SALES_API_UNAVAILABLE", message: "Offline.", status: 503 });

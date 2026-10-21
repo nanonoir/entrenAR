@@ -186,6 +186,11 @@ export class MockSalesRepository implements SalesRepository {
     });
   }
 
+  async resolveUnknownPayment(id: string): Promise<AdminSaleDetail> {
+    await this.getSaleById(id);
+    throw conflictError("Only Mercado Pago payments with an unknown outcome can be resolved.");
+  }
+
   async reopenSale(id: string): Promise<AdminSaleDetail> {
     return this.updateSale(id, (sale) => {
       if (sale.backendStatus !== "CANCELLED") throw conflictError("Only cancelled sales can be reopened.");

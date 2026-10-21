@@ -307,6 +307,8 @@ export interface SalesRepository {
   archiveSale(id: string): Promise<AdminSaleDetail>;
   unarchiveSale(id: string): Promise<AdminSaleDetail>;
   addNote(id: string, note: string): Promise<AdminSaleDetail>;
+  /** Re-checks an UNKNOWN Mercado Pago attempt with the provider; the backend applies its state or cancels the order. */
+  resolveUnknownPayment(id: string): Promise<AdminSaleDetail>;
   getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]>;
 
   getSuppliers(query?: SupplierFilterQuery): Promise<Supplier[]>;

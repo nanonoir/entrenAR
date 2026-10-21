@@ -125,6 +125,7 @@ export type AdminSalesState = {
   shipSale: (id: string, payload?: ShipSalePayload) => Promise<AdminSaleDetail | null>;
   deliverSale: (id: string) => Promise<AdminSaleDetail | null>;
   cancelSale: (id: string, input: CancelSaleInput, options?: CancelSaleOptions) => Promise<AdminSaleDetail | null>;
+  resolveUnknownPayment: (id: string) => Promise<AdminSaleDetail | null>;
   reopenSale: (id: string) => Promise<AdminSaleDetail | null>;
   archiveSale: (id: string) => Promise<AdminSaleDetail | null>;
   unarchiveSale: (id: string) => Promise<AdminSaleDetail | null>;
@@ -391,6 +392,13 @@ export function createAdminSalesStore(options: AdminSalesStoreOptions = {}) {
           history: [...sale.history, makeEvent("sale_cancelled", `Motivo: ${payload.cancellationReason}`)],
         }), "Venta cancelada", (result) => withCancellationEvents(result, payload, sendEmail));
       },
+
+      resolveUnknownPayment: (id) => run(`sale-resolve-unknown-${id}`, (repository) => repository.resolveUnknownPayment(id), {
+        commit: (result) => replaceSale(set, result),
+      }).then((result) => {
+        if (result) addAdminToast(result.status === "cancelled" ? "Pago no encontrado: pedido cancelado y stock devuelto" : "Pago encontrado y actualizado");
+        return result;
+      }),
 
       reopenSale: (id) => mutateSale("reopen", id, (repository) => repository.reopenSale(id), (sale) => ({
         ...sale,
