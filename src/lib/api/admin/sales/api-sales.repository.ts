@@ -4,6 +4,7 @@ import {
 } from "./client";
 import {
   mapAdminSaleDetail,
+  mapPaymentRiskAlertsResponse,
   mapPurchaseOrderResponse,
   mapPurchaseOrdersListResponse,
   mapSalesListResponse,
@@ -31,6 +32,7 @@ import type {
   CreateManualSalePayload,
   CreatePurchaseOrderPayload,
   CreateSupplierPayload,
+  PaymentRiskAlert,
   PurchaseOrder,
   PurchaseOrderDetail,
   PurchaseOrderFilterQuery,
@@ -118,6 +120,11 @@ export class ApiSalesRepository implements SalesRepository {
       toAddSaleNotePayload(note),
     );
     return mapAdminSaleDetail(response);
+  }
+
+  async getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]> {
+    const response = await this.client.get<unknown>("/admin/sales/payment-risk-alerts");
+    return mapPaymentRiskAlertsResponse(response);
   }
 
   async getSuppliers(query: SupplierFilterQuery = {}): Promise<Supplier[]> {

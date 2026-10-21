@@ -32,6 +32,12 @@ const EVENT_LABELS: Record<SaleHistoryEventType, string> = {
   stock_restored: "Stock restaurado",
   shipping_address_updated: "Dirección de envío actualizada",
   order_converted: "Orden convertida",
+  payment_rejected: "Pago rechazado",
+  payment_expired: "Pago vencido",
+  payment_partially_refunded: "Pago reembolsado parcialmente",
+  payment_refunded: "Pago reembolsado",
+  payment_charged_back: "Pago con contracargo",
+  payment_attention_required: "Pago requiere atención",
 };
 
 export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {

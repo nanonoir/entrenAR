@@ -1,6 +1,6 @@
 // Admin-specific DTO types — independent from customer-facing order types.
 
-export const SALE_PAYMENT_STATUS = { PENDING: "pending", RECEIVED: "received", CANCELLED: "cancelled", REFUNDED: "refunded" } as const;
+export const SALE_PAYMENT_STATUS = { PENDING: "pending", RECEIVED: "received", CANCELLED: "cancelled", REFUNDED: "refunded", PARTIALLY_REFUNDED: "partially_refunded", CHARGED_BACK: "charged_back" } as const;
 export type SalePaymentStatus = (typeof SALE_PAYMENT_STATUS)[keyof typeof SALE_PAYMENT_STATUS];
 
 export const SALE_SHIPPING_STATUS = { TO_PACK: "to_pack", TO_SHIP: "to_ship", SHIPPED: "shipped", DELIVERED: "delivered", PICKUP: "pickup", CANCELLED: "cancelled" } as const;
@@ -29,6 +29,12 @@ export const SALE_HISTORY_EVENT_TYPE = {
   STOCK_RESTORED: "stock_restored",
   SHIPPING_ADDRESS_UPDATED: "shipping_address_updated",
   ORDER_CONVERTED: "order_converted",
+  PAYMENT_REJECTED: "payment_rejected",
+  PAYMENT_EXPIRED: "payment_expired",
+  PAYMENT_PARTIALLY_REFUNDED: "payment_partially_refunded",
+  PAYMENT_REFUNDED: "payment_refunded",
+  PAYMENT_CHARGED_BACK: "payment_charged_back",
+  PAYMENT_ATTENTION_REQUIRED: "payment_attention_required",
 } as const;
 export type SaleHistoryEventType = (typeof SALE_HISTORY_EVENT_TYPE)[keyof typeof SALE_HISTORY_EVENT_TYPE];
 
@@ -69,6 +75,52 @@ export interface SaleProduct {
   unitPrice: number;
 }
 
+export interface SalePaymentAttempt {
+  attemptNumber: number;
+  challengeCreatedAt?: string;
+  outcomeAt?: string;
+  providerOrderId?: string;
+  providerReferenceId?: string;
+  providerTransactionId?: string;
+  providerUpdatedAt?: string;
+  rawOrderStatus?: string;
+  rawOrderStatusDetail?: string;
+  rawTransactionStatus?: string;
+  rawTransactionStatusDetail?: string;
+  refundedAmount: number;
+  status: string;
+  submittedAt: string;
+}
+
+export interface SaleProviderPaymentDetail {
+  attemptCount: number;
+  attempts: SalePaymentAttempt[];
+  attentionReason?: string;
+  attentionRequiredAt?: string;
+  chargedBack: boolean;
+  dispute: boolean;
+  fraudAlert: boolean;
+  fullRefund: boolean;
+  holds: string[];
+  lastVerifiedAt?: string;
+  provider: "MERCADOPAGO";
+  rawStatus?: string;
+  rawStatusDetail?: string;
+  refundedAmount: number;
+  retryUntil?: string;
+  reviewStartedAt?: string;
+  unresolvedReconciliation: boolean;
+}
+
+/** Provider-managed (Mercado Pago) payment flags; `detail` is only present on loaded sale details. */
+export interface SaleProviderPaymentSummary {
+  attention: boolean;
+  detail?: SaleProviderPaymentDetail;
+  dispute: boolean;
+  provider: "MERCADOPAGO";
+  refundedAmount?: number;
+}
+
 export interface AdminSale {
   id: string; // e.g. "101"
   number: string; // e.g. "#101"
@@ -94,6 +146,7 @@ export interface AdminSale {
   history: SaleHistoryEvent[];
   sourceOrderId?: string; // set when converted from a purchase order
   trackingCode?: string;
+  providerPayment?: SaleProviderPaymentSummary;
 }
 
 export interface AdminPurchaseOrder {

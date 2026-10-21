@@ -8,6 +8,7 @@ import {
   formatARS,
   formatShortDate,
   getActiveSalesCount,
+  getPaymentFlags,
   getPaymentStatusLabel,
   getPaymentStatusTone,
   getQuickFilterCounts,
@@ -48,9 +49,16 @@ export default function SalesListPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
 
+  const riskAlerts = useAdminSalesStore((s) => s.riskAlerts);
+  const fetchRiskAlerts = useAdminSalesStore((s) => s.fetchRiskAlerts);
+
   useEffect(() => {
     if (source === "api" || !hasLoaded) void fetchSales({ limit: 100 });
   }, [fetchSales, hasLoaded, source]);
+
+  useEffect(() => {
+    if (source === "api") void fetchRiskAlerts();
+  }, [fetchRiskAlerts, source]);
 
   // Only non-archived sales in the main list
   const baseSales = sales.filter((s) => !s.archived);
@@ -143,6 +151,16 @@ export default function SalesListPage() {
       {/* Search + Quick filters */}
       <div className="flex flex-col gap-3">
         {fallbackMessage ? <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{fallbackMessage}</p> : null}
+        {riskAlerts.length > 0 ? (
+          <div role="alert" className="rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm text-sale">
+            <p className="font-semibold">
+              {riskAlerts.length === 1 ? "Hay 1 alerta de Mercado Pago sin resolver" : `Hay ${riskAlerts.length} alertas de Mercado Pago sin resolver`}
+            </p>
+            <p className="mt-0.5 text-xs">
+              Alertas de fraude o contracargos que no se pudieron asociar a una venta. Revisalas en el panel de Mercado Pago.
+            </p>
+          </div>
+        ) : null}
         <label className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 h-11 text-sm text-zinc-600 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition">
           <Search aria-hidden size={16} className="shrink-0 text-zinc-400" />
           <input
@@ -250,6 +268,11 @@ export default function SalesListPage() {
                         <Badge tone={getPaymentStatusTone(sale.paymentStatus)}>
                           {getPaymentStatusLabel(sale.paymentStatus)}
                         </Badge>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {getPaymentFlags(sale).map((flag) => (
+                            <Badge key={flag.label} tone={flag.tone} className="text-[10px]">{flag.label}</Badge>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <Badge tone={getShippingStatusTone(sale.shippingStatus)}>
@@ -330,6 +353,9 @@ export default function SalesListPage() {
                   <Badge tone={getShippingStatusTone(sale.shippingStatus)} className="text-[10px]">
                     {getShippingStatusLabel(sale.shippingStatus)}
                   </Badge>
+                  {getPaymentFlags(sale).map((flag) => (
+                    <Badge key={flag.label} tone={flag.tone} className="text-[10px]">{flag.label}</Badge>
+                  ))}
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">{sale.itemCount ?? sale.products.reduce((s, p) => s + p.quantity, 0)} productos</span>

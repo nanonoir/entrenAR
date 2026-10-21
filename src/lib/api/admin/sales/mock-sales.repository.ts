@@ -17,6 +17,7 @@ import type {
   CreateSupplierPayload,
   PurchaseOrder,
   PurchaseOrderDetail,
+  PaymentRiskAlert,
   PurchaseOrderFilterQuery,
   PaginatedSalesResult,
   SalesFilterQuery,
@@ -221,6 +222,10 @@ export class MockSalesRepository implements SalesRepository {
       sale.internalNotes = sale.notes;
       sale.history.push(makeEvent("sale_updated", input.note));
     });
+  }
+
+  async getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]> {
+    return [];
   }
 
   async getSuppliers(query: SupplierFilterQuery = {}): Promise<Supplier[]> {

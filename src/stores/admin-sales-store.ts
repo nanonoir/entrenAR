@@ -8,6 +8,7 @@ import type {
   CancelSalePayload,
   CreateManualSalePayload,
   CreatePurchaseOrderPayload,
+  PaymentRiskAlert,
   PurchaseOrderDetail,
   PurchaseOrderFilterQuery,
   SalesFilterQuery,
@@ -106,10 +107,12 @@ export type AdminSalesState = {
   isInitializing: boolean;
   isLoading: boolean;
   loadingOperations: string[];
+  riskAlerts: PaymentRiskAlert[];
   source: SalesRepository["source"];
   status: SalesAsyncStatus;
 
   fetchSales: (query?: SalesFilterQuery) => Promise<boolean>;
+  fetchRiskAlerts: () => Promise<boolean>;
   fetchSale: (id: string) => Promise<boolean>;
   fetchPurchaseOrders: (query?: PurchaseOrderFilterQuery) => Promise<boolean>;
   fetchPurchaseOrder: (id: string) => Promise<boolean>;
@@ -290,12 +293,17 @@ export function createAdminSalesStore(options: AdminSalesStoreOptions = {}) {
       isInitializing: configuredRepository.source === "api",
       isLoading: false,
       loadingOperations: [],
+      riskAlerts: [],
       source: configuredRepository.source,
       status: configuredRepository.source === "mock" ? SALES_ASYNC_STATUS.SUCCESS : SALES_ASYNC_STATUS.IDLE,
 
       fetchSales: (query: SalesFilterQuery = {}) => run("sales", (repository) => repository.getSales(query), {
         commit: (result) => set((state) => ({ sales: result.items.map((sale) => mergeSale(state.sales.find((currentSale) => currentSale.id === sale.id), sale)) })),
         initialize: true,
+      }).then((result) => result !== null).catch(() => false),
+
+      fetchRiskAlerts: () => run("risk-alerts", (repository) => repository.getPaymentRiskAlerts(), {
+        commit: (result) => set({ riskAlerts: result }),
       }).then((result) => result !== null).catch(() => false),
 
       fetchSale: (id: string) => run("sale-detail", (repository) => repository.getSaleById(id), {

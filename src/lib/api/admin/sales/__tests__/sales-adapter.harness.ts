@@ -81,6 +81,8 @@ async function runApiScenario(): Promise<void> {
   await repository.archiveSale("sale-api");
   await repository.unarchiveSale("sale-api");
   await repository.addNote("sale-api", "Harness note");
+  const alerts = await repository.getPaymentRiskAlerts();
+  assert(alerts[0]?.topic === "fraud_alert" && alerts[0].resourceId === "mp-resource-1", "API payment risk alert mapping failed.");
 
   const suppliers = await repository.getSuppliers();
   assert(suppliers[0]?.status === "active", "API supplier list mapping failed.");
@@ -155,6 +157,22 @@ async function runSchemaScenario(): Promise<void> {
     assert(error instanceof SalesApiError && error.code === "VALIDATION_ERROR", "Invalid sales date range was not controlled.");
   }
 
+  const mercadoPago = mapAdminSaleDetail(rawMercadoPagoSaleDetail());
+  assert(mercadoPago.paymentStatus === "partially_refunded", "PARTIALLY_REFUNDED payment status was not mapped.");
+  assert(mercadoPago.providerPayment?.refundedAmount === 40 && mercadoPago.providerPayment.attention && !mercadoPago.providerPayment.dispute, "Mercado Pago summary flags were not mapped.");
+  assert(mercadoPago.providerPayment?.detail?.attempts[0]?.status === "APPROVED" && mercadoPago.payment?.providerPayment?.lastVerifiedAt === "2026-09-03T10:05:00.000Z", "Mercado Pago provider detail was not mapped.");
+  assert(mercadoPago.history.map((event) => event.type).join(",") === "payment_partially_refunded,payment_attention_required", "Mercado Pago history events were not mapped.");
+  const chargedBack = mapAdminSaleDetail({ ...rawMercadoPagoSaleDetail(), paymentStatus: "CHARGED_BACK" });
+  assert(chargedBack.paymentStatus === "charged_back", "CHARGED_BACK payment status was not mapped.");
+  const manual = mapAdminSaleDetail(rawSaleDetail());
+  assert(manual.providerPayment === undefined, "Manual sales must not expose provider payment data.");
+  try {
+    mapAdminSaleDetail({ ...rawMercadoPagoSaleDetail(), payment: { ...rawMercadoPagoPayment(), clientSecret: "leak" } });
+    throw new Error("Expected unknown payment field to fail.");
+  } catch (error) {
+    assert(error instanceof SalesApiError && error.code === "SALES_API_INVALID_RESPONSE", "Provider payment schema strictness was relaxed.");
+  }
+
   const purchaseOrder = mapPurchaseOrderResponse({ ok: true, data: rawPurchaseOrder() });
   assert(purchaseOrder.backendStatus === "ORDERED" && purchaseOrder.products[0]?.unitPrice === 25, "Purchase-order response schema mapping failed.");
 }
@@ -225,6 +243,7 @@ async function runSourceScenario(): Promise<void> {
 
 function responseFor(call: ClientCall): unknown {
   if (call.method === "GET" && call.path.startsWith("/admin/sales?")) return { items: [rawSaleSummary()], limit: 5, page: 2, total: 1 };
+  if (call.method === "GET" && call.path === "/admin/sales/payment-risk-alerts") return { items: [rawRiskAlert()] };
   if (call.method === "GET" && call.path === "/admin/sales/sale-api") return rawSaleDetail();
   if (call.path.startsWith("/admin/suppliers")) return call.method === "GET" && (call.path === "/admin/suppliers" || call.path.startsWith("/admin/suppliers?"))
     ? { items: [rawSupplier()], limit: 20, page: 1, total: 1 }
@@ -308,6 +327,59 @@ function rawSaleDetail(): Record<string, unknown> {
     payment: { amount: 125, currency: "ARS", paymentMethodId: "manual", paymentMethodSnapshot: {}, status: "PAID" },
     shippingCost: 25,
     subtotal: 100,
+  };
+}
+
+function rawRiskAlert(): Record<string, unknown> {
+  return { id: "alert-1", reason: "fraud", receivedAt: "2026-09-03T10:00:00.000Z", resourceId: "mp-resource-1", topic: "fraud_alert" };
+}
+
+function rawMercadoPagoPayment(): Record<string, unknown> {
+  return {
+    amount: 125,
+    currency: "ARS",
+    paymentMethodId: "mercadopago",
+    paymentMethodSnapshot: {},
+    providerPayment: {
+      attemptCount: 1,
+      attempts: [{
+        attemptNumber: 1,
+        providerOrderId: "ORD-1",
+        providerUpdatedAt: "2026-09-03T10:05:00.000Z",
+        rawOrderStatus: "processed",
+        refundedAmount: 40,
+        status: "APPROVED",
+        submittedAt: "2026-09-03T10:00:00.000Z",
+      }],
+      attentionReason: "partial_refund",
+      attentionRequiredAt: "2026-09-03T10:06:00.000Z",
+      chargedBack: false,
+      dispute: false,
+      fraudAlert: false,
+      fullRefund: false,
+      holds: [],
+      lastVerifiedAt: "2026-09-03T10:05:00.000Z",
+      provider: "MERCADOPAGO",
+      refundedAmount: 40,
+      unresolvedReconciliation: false,
+    },
+    status: "PARTIALLY_REFUNDED",
+  };
+}
+
+function rawMercadoPagoSaleDetail(): Record<string, unknown> {
+  return {
+    ...rawSaleDetail(),
+    history: [
+      { createdAt: "2026-09-03T10:06:00.000Z", id: "h-1", title: "Partial refund", type: "PAYMENT_PARTIALLY_REFUNDED" },
+      { createdAt: "2026-09-03T10:06:01.000Z", id: "h-2", title: "Attention", type: "PAYMENT_ATTENTION_REQUIRED" },
+    ],
+    payment: rawMercadoPagoPayment(),
+    paymentAttention: true,
+    paymentDispute: false,
+    paymentProvider: "MERCADOPAGO",
+    paymentRefundedAmount: 40,
+    paymentStatus: "PARTIALLY_REFUNDED",
   };
 }
 

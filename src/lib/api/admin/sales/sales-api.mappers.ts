@@ -9,6 +9,7 @@ import {
   adminSaleDetailResponseSchema,
   adminSaleListResponseSchema,
   adminSaleSummaryResponseSchema,
+  paymentRiskAlertListResponseSchema,
   purchaseOrderListResponseSchema,
   purchaseOrderResponseSchema,
   supplierListResponseSchema,
@@ -24,6 +25,7 @@ import {
   SUPPLIER_STATUS,
   type AdminSaleDetail,
   type PaginatedSalesResult,
+  type PaymentRiskAlert,
   type PurchaseOrder,
   type Supplier,
 } from "./sales.repository";
@@ -76,6 +78,9 @@ export function mapAdminSaleDetail(response: unknown): AdminSaleDetail {
     items: parsed.items.map(mapSaleItem),
     packedAt: parsed.packedAt,
     payment: parsed.payment ? mapPayment(parsed.payment) : null,
+    ...(summary.providerPayment && parsed.payment?.providerPayment
+      ? { providerPayment: { ...summary.providerPayment, detail: parsed.payment.providerPayment } }
+      : {}),
     previousPaymentStatus: parsed.previousPaymentStatus
       ? toPaymentStatus(parsed.previousPaymentStatus)
       : undefined,
@@ -91,6 +96,16 @@ export function mapAdminSaleDetail(response: unknown): AdminSaleDetail {
     status: toSaleStatus(parsed.status),
     updatedAt: parsed.updatedAt,
   };
+}
+
+export function mapPaymentRiskAlertsResponse(response: unknown): PaymentRiskAlert[] {
+  return parseResponse(response, paymentRiskAlertListResponseSchema).items.map((item) => ({
+    id: item.id,
+    ...(item.reason ? { reason: item.reason } : {}),
+    receivedAt: item.receivedAt,
+    resourceId: item.resourceId,
+    topic: item.topic,
+  }));
 }
 
 export function mapSupplierResponse(response: unknown): Supplier {
@@ -200,6 +215,16 @@ function mapParsedSaleSummary(parsed: AdminSaleSummaryResponseDto): AdminSale {
     shippingCost: 0,
     total: parsed.total,
     archived: parsed.isArchived,
+    ...(parsed.paymentProvider
+      ? {
+          providerPayment: {
+            attention: parsed.paymentAttention ?? false,
+            dispute: parsed.paymentDispute ?? false,
+            provider: parsed.paymentProvider,
+            ...(parsed.paymentRefundedAmount ? { refundedAmount: parsed.paymentRefundedAmount } : {}),
+          },
+        }
+      : {}),
     ...(parsed.trackingCode ? { trackingCode: parsed.trackingCode } : {}),
     history: [],
   };
@@ -223,6 +248,7 @@ function mapPayment(payment: NonNullable<AdminSaleDetailResponseDto["payment"]>)
     paymentMethodId: payment.paymentMethodId,
     paymentMethodSnapshot: cloneSnapshot(payment.paymentMethodSnapshot),
     ...(payment.paymentOptionId ? { paymentOptionId: payment.paymentOptionId } : {}),
+    ...(payment.providerPayment ? { providerPayment: payment.providerPayment } : {}),
     status: toPaymentStatus(payment.status),
   };
 }
@@ -251,7 +277,13 @@ function historyType(type: (typeof API_HISTORY_EVENT_TYPE)[number]): SaleHistory
     PACKAGE_PACKED: "package_packed",
     PACKAGE_SHIPPED: "package_shipped",
     PACKAGE_UNPACKED: "package_unpacked",
+    PAYMENT_ATTENTION_REQUIRED: "payment_attention_required",
+    PAYMENT_CHARGED_BACK: "payment_charged_back",
+    PAYMENT_EXPIRED: "payment_expired",
+    PAYMENT_PARTIALLY_REFUNDED: "payment_partially_refunded",
     PAYMENT_RECEIVED: "payment_received",
+    PAYMENT_REFUNDED: "payment_refunded",
+    PAYMENT_REJECTED: "payment_rejected",
   };
   return mapped[type];
 }
@@ -294,6 +326,8 @@ function toPaymentStatus(
   if (saleStatus === SALE_ORDER_STATUS.CANCELLED) return "cancelled";
   if (status === "PAID") return "received";
   if (status === "REFUNDED") return "refunded";
+  if (status === "PARTIALLY_REFUNDED") return "partially_refunded";
+  if (status === "CHARGED_BACK") return "charged_back";
   return "pending";
 }
 

@@ -12,7 +12,10 @@ export type {
   SaleCustomer,
   SaleHistoryEvent,
   SaleHistoryEventType,
+  SalePaymentAttempt,
   SalePaymentStatus,
   SaleProduct,
+  SaleProviderPaymentDetail,
+  SaleProviderPaymentSummary,
   SaleShippingStatus,
 } from "@/types/sales";

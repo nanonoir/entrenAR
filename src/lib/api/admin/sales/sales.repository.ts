@@ -7,6 +7,7 @@ import type {
   SaleHistoryEvent,
   SalePaymentStatus,
   SaleProduct,
+  SaleProviderPaymentDetail,
   SaleShippingStatus,
 } from "@/lib/data/admin/sales-flow/types";
 
@@ -88,7 +89,16 @@ export interface AdminSalePayment {
   paymentMethodId: string;
   paymentMethodSnapshot: SaleSnapshot;
   paymentOptionId?: string;
+  providerPayment?: SaleProviderPaymentDetail;
   status: SalePaymentStatus;
+}
+
+export interface PaymentRiskAlert {
+  id: string;
+  reason?: string;
+  receivedAt: string;
+  resourceId: string;
+  topic: string;
 }
 
 export interface AdminSaleDetail extends AdminSale {
@@ -297,6 +307,7 @@ export interface SalesRepository {
   archiveSale(id: string): Promise<AdminSaleDetail>;
   unarchiveSale(id: string): Promise<AdminSaleDetail>;
   addNote(id: string, note: string): Promise<AdminSaleDetail>;
+  getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]>;
 
   getSuppliers(query?: SupplierFilterQuery): Promise<Supplier[]>;
   createSupplier(payload: CreateSupplierPayload): Promise<Supplier>;

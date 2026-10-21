@@ -21,6 +21,7 @@ import {
   formatARS,
   formatShortDate,
   getPaymentStatusLabel,
+  getFulfillmentBlockReason,
   getPaymentStatusTone,
   getShippingStatusLabel,
   getShippingStatusTone,
@@ -34,6 +35,7 @@ import { Input } from "@/components/ui/Input";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { MercadoPagoPaymentPanel } from "@/components/admin/sales/MercadoPagoPaymentPanel";
 import { cn } from "@/lib/utils";
 import { decodeRouteParam } from "@/lib/admin-route-params";
 import type { SaleAddress } from "@/lib/data/admin/sales-flow/types";
@@ -64,6 +66,12 @@ const HISTORY_EVENT_LABELS: Record<string, { label: string; tone: "success" | "e
   stock_restored: { label: "Stock restaurado (simulación)", tone: "neutral" },
   shipping_address_updated: { label: "Dirección de envío actualizada", tone: "neutral" },
   order_converted: { label: "Convertida desde orden de compra", tone: "success" },
+  payment_rejected: { label: "Pago rechazado", tone: "error" },
+  payment_expired: { label: "Pago vencido", tone: "warning" },
+  payment_partially_refunded: { label: "Pago reembolsado parcialmente", tone: "warning" },
+  payment_refunded: { label: "Pago reembolsado", tone: "error" },
+  payment_charged_back: { label: "Pago con contracargo", tone: "error" },
+  payment_attention_required: { label: "El pago requiere atención", tone: "warning" },
 };
 
 function getArchivedFinalStatus(sale: AdminSale) {
@@ -135,6 +143,8 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const isCancelled = sale.paymentStatus === "cancelled";
+  const isProviderManaged = Boolean(sale.providerPayment);
+  const fulfillmentBlockReason = getFulfillmentBlockReason(sale);
   const isReadOnly = sale.archived;
   const editable = isSaleEditable(sale);
   const archivedFinalStatus = isReadOnly ? getArchivedFinalStatus(sale) : null;
@@ -236,7 +246,13 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
               <Printer aria-hidden size={16} />
             </Button>
           ) : isCancelled ? (
-            <Button variant="secondary" size="sm" onClick={() => void handleReopen()} disabled={isLoading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleReopen()}
+              disabled={isLoading || isProviderManaged}
+              title={isProviderManaged ? "Las ventas pagadas con Mercado Pago no se pueden re-abrir." : undefined}
+            >
               <RefreshCw aria-hidden size={14} />
               Re-Abrir
             </Button>
@@ -370,13 +386,20 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                   <p className="mt-1 text-xs text-zinc-500">Motivo: {sale.cancellationReason}</p>
                 )}
               </div>
-              {sale.paymentStatus === "pending" && !isReadOnly && (
+              {sale.paymentStatus === "pending" && !isReadOnly && !isProviderManaged && (
                  <Button variant="primary" size="sm" onClick={() => void confirmSale(sale.id)} disabled={isLoading}>
                   Marcar como recibido
                 </Button>
               )}
             </div>
+            {sale.paymentStatus === "pending" && !isReadOnly && isProviderManaged && (
+              <p className="mt-2 text-xs text-zinc-500">
+                El pago lo confirma Mercado Pago automáticamente; no se puede marcar como recibido a mano.
+              </p>
+            )}
           </AdminCard>
+
+          <MercadoPagoPaymentPanel sale={sale} />
 
           {/* Logistics card */}
           <AdminCard>
@@ -392,7 +415,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                     <Printer aria-hidden size={14} />
                     Imprimir
                   </Button>
-                   <Button variant="primary" size="sm" onClick={() => void packSale(sale.id)} disabled={isLoading}>
+                   <Button variant="primary" size="sm" onClick={() => void packSale(sale.id)} disabled={isLoading || Boolean(fulfillmentBlockReason)} title={fulfillmentBlockReason ?? undefined}>
                     <Package aria-hidden size={14} />
                     Marcar como empaquetado
                   </Button>
@@ -405,7 +428,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                     <Printer aria-hidden size={14} />
                     Imprimir
                   </Button>
-                   <Button variant="primary" size="sm" onClick={() => void shipSale(sale.id)} disabled={isLoading}>
+                   <Button variant="primary" size="sm" onClick={() => void shipSale(sale.id)} disabled={isLoading || Boolean(fulfillmentBlockReason)} title={fulfillmentBlockReason ?? undefined}>
                     <Truck aria-hidden size={14} />
                     Notificar envío
                   </Button>
@@ -415,6 +438,9 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                 </>
               )}
             </div>
+            {fulfillmentBlockReason && !isReadOnly && (
+              <p role="status" className="mt-3 text-xs font-medium text-amber-700">{fulfillmentBlockReason}</p>
+            )}
             {sale.trackingCode && (
               <p className="mt-3 text-xs text-zinc-500">
                 Tracking: <span className="font-mono font-semibold">{sale.trackingCode}</span>
@@ -554,6 +580,12 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
               className="rounded-2xl border border-sale/20 bg-red-50 px-4 py-3 text-sm font-medium text-sale"
             >
               Debés seleccionar un motivo de cancelación para continuar.
+            </div>
+          )}
+
+          {isProviderManaged && sale.paymentStatus !== "pending" && (
+            <div role="note" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Los pagos de Mercado Pago solo se pueden cancelar después de un reembolso total. Reembolsá el pago desde el panel de Mercado Pago y, cuando se refleje acá, cancelá la venta. La opción de restaurar stock se aplica recién en ese momento.
             </div>
           )}
 
