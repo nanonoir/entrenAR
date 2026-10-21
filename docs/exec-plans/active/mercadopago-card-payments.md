@@ -49,7 +49,7 @@ Each stage is a chained branch off the previous one, with conventional commits a
 - [x] Stage 1 — Backend base
 - [x] Stage 2 — Payment flow (reviewed; findings fixed in `8e37b50`)
 - [x] Stage 3 — Webhooks
-- [ ] Stage 4 — Expiry and reconciliation
+- [x] Stage 4 — Expiry and reconciliation (implemented; independent review pending)
 - [ ] Stage 5 — Admin
 - [ ] Stage 6 — Frontend
 - [ ] Stage 7 — Sandbox E2E, docs, review, archive
@@ -65,6 +65,7 @@ Evidence log:
 - Stage 1: migration `20261021180000_mercadopago_payments_foundation` applied with `prisma migrate deploy`; build, `tsc`, unit (610) pass; `migrate status` up to date.
 - Stage 2: build, `tsc`, unit (665), e2e (15 suites) and `payments-card.integration-spec.ts` pass. Independent review PASS WITH FINDINGS; fixed: active endpoint scoped to session, provider AUTH → order cancelled without charge + 5-min circuit breaker, cart trimmed by purchased quantity, no redundant GET on challenge, CREATE limited to 1 call until Stage 7 verifies idempotency retention.
 - Stage 3: build, `tsc`, unit (707), e2e (16 suites incl. webhook) pass. Independent review PASS WITH FINDINGS; fixed in `a0bcd5f`: fraud alerts always quarantined (`unverified_fraud_association`, topic is unsigned), dedup key bound to signed request id + ts, topic read only from query. Note: the local test webhook secret was printed once in a debug terminal session (never committed); owner advised to rotate it.
+- Stage 4: `@nestjs/schedule` 6.1.3; workers enabled unless `NODE_ENV=test` or `PAYMENT_WORKERS_ENABLED=false` (timers registered only when enabled). Cadences: inbox 5 s, expiry 15 s, pending reconcile 15 s tick with per-attempt due cadence (30 s → 2 min → 5 min, 15 min for reviews > 24 h), financial fallback 60 s tick over attempts due every 24 h, attention sweep 60 s. No migration (lease owner is represented by the fence). Build, `tsc`, unit (727), e2e (16 suites) and `payments-reconciliation` + `payments-card` integration specs pass. Test fixtures leave the unique-per-run product, variants and append-only ledger rows (the ledger forbids deletion).
 - Deferred (tech debt): guest cart items added during payment become unreachable after the guest session completes; `cancelUncreated` and cart trim lack DB-level integration tests.
 
 ## 8. Final Implementation Outcome
