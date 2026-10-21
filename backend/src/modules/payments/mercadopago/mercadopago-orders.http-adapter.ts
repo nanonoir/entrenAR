@@ -38,7 +38,12 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
   }
 
   async createOrder(request: CreateMercadoPagoOrderRequest, idempotencyKey: string): Promise<MercadoPagoOrder> {
-    const body = await this.send("POST", "/v1/orders", { body: buildCreateBody(request), idempotencyKey, uncertainOnFailure: true });
+    const body = await this.send("POST", "/v1/orders", {
+      body: buildCreateBody(request),
+      ...(request.deviceId ? { deviceId: request.deviceId } : {}),
+      idempotencyKey,
+      uncertainOnFailure: true,
+    });
     return parseOrder(body, true);
   }
 
@@ -63,7 +68,7 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
   private async send(
     method: "GET" | "POST",
     path: string,
-    options: { body?: unknown; idempotencyKey?: string; uncertainOnFailure?: boolean },
+    options: { body?: unknown; deviceId?: string; idempotencyKey?: string; uncertainOnFailure?: boolean },
   ): Promise<unknown> {
     const config = this.requireConfig();
     const controller = new AbortController();
@@ -76,6 +81,7 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
 
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
     if (options.idempotencyKey !== undefined) headers["X-Idempotency-Key"] = options.idempotencyKey;
+    if (options.deviceId !== undefined) headers["X-meli-session-id"] = options.deviceId;
 
     let response: Response;
     try {

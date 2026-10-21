@@ -21,6 +21,7 @@ const optionalString = z.string().optional();
 const paymentMethodSchema = z.object({
   id: optionalString,
   installments: z.coerce.number().int().optional(),
+  transaction_security: z.object({ url: optionalString }).optional(),
   type: optionalString,
 });
 
@@ -120,6 +121,7 @@ export function toMercadoPagoOrder(input: unknown): MercadoPagoOrder {
       refundedAmount: payment.refunded_amount,
       status: payment.status,
       statusDetail: payment.status_detail,
+      transactionSecurityUrl: payment.payment_method?.transaction_security?.url,
     })),
     userId: raw.user_id,
   };
