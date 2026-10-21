@@ -29,6 +29,7 @@ interface WorkerDefinition {
 export class PaymentWorkersService implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger(PaymentWorkersService.name);
   private readonly running = new Map<string, Promise<unknown>>();
+  private readonly registeredIntervals: string[] = [];
   private stopping = false;
 
   constructor(
@@ -53,12 +54,14 @@ export class PaymentWorkersService implements OnApplicationBootstrap, BeforeAppl
       const timer = setInterval(() => void this.tick(worker), worker.intervalMs);
       timer.unref();
       this.registry.addInterval(worker.name, timer);
+      this.registeredIntervals.push(worker.name);
     }
   }
 
   async beforeApplicationShutdown(): Promise<void> {
     this.stopping = true;
-    for (const name of this.registry.getIntervals()) this.registry.deleteInterval(name);
+    for (const name of this.registeredIntervals) this.registry.deleteInterval(name);
+    this.registeredIntervals.length = 0;
     await Promise.allSettled([...this.running.values()]);
   }
 
