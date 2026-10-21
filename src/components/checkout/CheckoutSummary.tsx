@@ -17,6 +17,8 @@ type CheckoutSummaryProps = {
   actionHelpText?: string;
   actionHref?: string;
   discountTotal?: number;
+  /** Card mode: the payment form is the only pay action, so the summary keeps totals and help text only. */
+  hideAction?: boolean;
   subtotal?: number;
   actionLabel?: string;
   items?: CartPreviewItem[];
@@ -34,6 +36,7 @@ export function CheckoutSummary({
   actionHref = checkoutRoutes.checkout,
   actionLabel = "Iniciar Pago",
   discountTotal = 0,
+  hideAction = false,
   items,
   onAction,
   onApplyCoupon,
@@ -141,7 +144,7 @@ export function CheckoutSummary({
         <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><dt className="font-subtitle text-base font-bold uppercase text-text">{shippingFinal ? "Total" : "Total provisorio"}</dt><dd className="font-subtitle text-xl font-bold tabular-nums text-text">{shippingRefreshing ? "Calculando…" : formatCurrency(total)}</dd></div>
       </dl>
       {shippingFinal ? null : <p className="mt-3 text-xs text-text-muted">El envío se suma cuando elegís un servicio de entrega.</p>}
-      {onAction ? <Button aria-busy={quoteLoading || completionLoading} className="mt-5 w-full" disabled={effectiveActionDisabled} onClick={() => { if (!effectiveActionDisabled) void onAction(); }} size="lg">{quoteLoading || completionLoading ? <LoaderCircle aria-hidden className="mr-2 inline animate-spin" size={16} /> : null}{completionLoading ? "Procesando..." : quoteLoading ? "Calculando..." : actionLabel}</Button> : actionDisabled ? <Button className="mt-5 w-full" disabled size="lg">{actionLabel}</Button> : <LinkButton className="mt-5 w-full" href={actionHref} size="lg">{actionLabel}</LinkButton>}
+      {hideAction ? null : onAction ? <Button aria-busy={quoteLoading || completionLoading} className="mt-5 w-full" disabled={effectiveActionDisabled} onClick={() => { if (!effectiveActionDisabled) void onAction(); }} size="lg">{quoteLoading || completionLoading ? <LoaderCircle aria-hidden className="mr-2 inline animate-spin" size={16} /> : null}{completionLoading ? "Procesando..." : quoteLoading ? "Calculando..." : actionLabel}</Button> : actionDisabled ? <Button className="mt-5 w-full" disabled size="lg">{actionLabel}</Button> : <LinkButton className="mt-5 w-full" href={actionHref} size="lg">{actionLabel}</LinkButton>}
       {actionHelpText ? <p className="mt-3 text-center text-xs font-medium text-text-muted">{actionHelpText}</p> : null}
     </aside>
   );

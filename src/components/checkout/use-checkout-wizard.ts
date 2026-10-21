@@ -28,6 +28,10 @@ import {
   type CheckoutAsyncStatus,
 } from "@/stores/cart-store";
 import type { CartPreviewItem } from "@/types/cart";
+import {
+  useCheckoutCardPayment,
+  type CheckoutCardPaymentModel,
+} from "@/components/checkout/use-checkout-card-payment";
 import { useCheckoutCompletion } from "@/components/checkout/use-checkout-completion";
 import { useCheckoutFormState } from "@/components/checkout/use-checkout-form-state";
 import { useCheckoutQuoteLifecycle } from "@/components/checkout/use-checkout-quote-lifecycle";
@@ -40,6 +44,7 @@ export interface CheckoutWizardModel {
   actionHelpText: string;
   applyCoupon: (couponCode: string) => Promise<CheckoutQuote | null>;
   canFinalize: boolean;
+  card: CheckoutCardPaymentModel;
   canOpenStep: (step: CheckoutStep) => boolean;
   completedSteps: Record<CheckoutStep, boolean>;
   completion: CheckoutCompletion | null;
@@ -131,6 +136,7 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     form,
     refreshQuote: quoteLifecycle.refreshQuote,
   });
+  const card = useCheckoutCardPayment({ configurationIssue, form, quote, quoteStatus });
   const canFinalize = form.completedSteps.identification
     && form.completedSteps.delivery
     && items.length > 0
@@ -157,6 +163,7 @@ export function useCheckoutWizard(): CheckoutWizardModel {
     actionHelpText,
     applyCoupon: quoteLifecycle.applyCoupon,
     canFinalize,
+    card,
     blurDeliveryField: form.blurDeliveryField,
     blurIdentificationField: form.blurIdentificationField,
     canOpenStep: form.canOpenStep,

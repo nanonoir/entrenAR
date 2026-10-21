@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { CheckCircle2, CreditCard, Pencil } from "lucide-react";
 import { BankTransferPanel } from "@/components/checkout/BankTransferPanel";
+import { CardPaymentBoundary } from "@/components/checkout/CardPaymentBoundary";
+import { PaymentErrorNotice } from "@/components/checkout/PaymentErrorNotice";
 import { PaymentOptions } from "@/components/checkout/PaymentOptions";
+import type { CheckoutCardPaymentModel } from "@/components/checkout/use-checkout-card-payment";
 import { Alert } from "@/components/ui/Alert";
 import { Container } from "@/components/ui/Container";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -20,10 +23,14 @@ export type CheckoutPaymentProps = {
   onOpen: () => void;
   onSelectPayment: (id: CheckoutPaymentMethodId) => void;
   selectedPaymentId: CheckoutPaymentMethodId;
+  card?: CheckoutCardPaymentModel;
+  onRefreshQuote?: () => void | Promise<unknown>;
 };
 
 export function CheckoutPayment({
   canOpen,
+  card,
+  onRefreshQuote,
   completed,
   completion,
   isActive,
@@ -89,6 +96,18 @@ export function CheckoutPayment({
         <div className="border-t border-border p-5" id={`${sectionId}-content`}>
           <PaymentOptions onSelectPayment={handleSelectPayment} selectedPaymentId={selectedPaymentId} />
           <BankTransferPanel open={showTransferPanel || selectedPaymentId === "bank-transfer"} />
+          {card?.active ? (
+            <div className="mt-4 grid gap-3">
+              <PaymentErrorNotice onRefreshQuote={onRefreshQuote} />
+              {card.mountQuote ? (
+                <CardPaymentBoundary amount={card.mountQuote.total} onSubmit={card.submit} quoteId={card.mountQuote.quoteId} />
+              ) : (
+                <p className="rounded-card border border-border bg-background p-3 text-sm text-text-muted" role="status">
+                  Completá tus datos y la entrega, y esperá la cotización final para pagar con tarjeta.
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </article>

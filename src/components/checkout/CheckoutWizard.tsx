@@ -1,6 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
+import { CheckoutBoundPayment } from "@/components/checkout/CheckoutBoundPayment";
+import { DATA_SOURCE, getCheckoutDataSource } from "@/lib/api/config";
+import { BOUND_ORDER_MODE, resolveBoundOrderMode } from "@/lib/api/payments/payment-result";
+import { checkoutRoutes } from "@/lib/routes";
+import { useCheckoutPaymentStore } from "@/stores/checkout-payment-store";
 import { Alert } from "@/components/ui/Alert";
 import { Container } from "@/components/ui/Container";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,17 +20,44 @@ import { useCheckoutWizard } from "@/components/checkout/use-checkout-wizard";
 
 export function CheckoutWizard() {
   const wizard = useCheckoutWizard();
+  const router = useRouter();
+  const view = useCheckoutPaymentStore((state) => state.view);
+  const recovery = useCheckoutPaymentStore((state) => state.recovery);
+  const recover = useCheckoutPaymentStore((state) => state.recover);
+  const recoveryEnabled = getCheckoutDataSource() === DATA_SOURCE.API;
+  const boundMode = view ? resolveBoundOrderMode(view) : null;
+  const bound = boundMode === BOUND_ORDER_MODE.CHALLENGE || boundMode === BOUND_ORDER_MODE.RETRY;
+  const [wasBound, setWasBound] = useState(false);
+  const recoveryPending = recoveryEnabled && recovery !== "done";
+  const redirectToResult = Boolean(
+    view && boundMode === BOUND_ORDER_MODE.RESULT && !recoveryPending && (wasBound || wizard.items.length === 0),
+  );
 
-  if (!wizard.hydrated) {
+  if (bound && !wasBound) setWasBound(true);
+
+  useEffect(() => {
+    // The active order is recovered before the empty-cart branch can render.
+    if (wizard.hydrated && recoveryEnabled && recovery === "idle") void recover();
+  }, [recover, recovery, recoveryEnabled, wizard.hydrated]);
+
+  useEffect(() => {
+    if (redirectToResult && view) router.replace(checkoutRoutes.result(view.orderId));
+  }, [redirectToResult, router, view]);
+
+  if (!wizard.hydrated || recoveryPending || redirectToResult) {
     return (
       <Container className="py-10" size="wide">
-        <div className="h-60 rounded-card border border-border bg-surface" />
+        <div aria-busy className="h-60 rounded-card border border-border bg-surface" />
       </Container>
     );
   }
 
+  if (view && bound) return <CheckoutBoundPayment view={view} />;
+
   const paymentStep = (
     <CheckoutPayment
+      card={wizard.card}
+      onRefreshQuote={wizard.refreshQuote}
       canOpen={wizard.canOpenStep("payment")}
       completed={wizard.completedSteps.payment}
       completion={wizard.completion}
@@ -111,6 +145,7 @@ export function CheckoutWizard() {
             <CheckoutSummary
               actionLabel="Finalizar Compra"
               discountTotal={wizard.discountTotal}
+              hideAction={wizard.card.active}
               items={wizard.items}
               onAction={wizard.handleFinalize}
               actionDisabled={!wizard.canFinalize}
