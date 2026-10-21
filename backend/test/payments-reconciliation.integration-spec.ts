@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { AppModule } from "../src/app.module";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import {
+  CatalogVisibility,
   InventoryOperation,
   OrderDeliveryType,
   OrderInventoryPolicy,
@@ -77,6 +78,7 @@ describe("Mercado Pago expiry and reconciliation (PostgreSQL integration, mocked
         price: 100,
         publicSlug: `reconcile-${suffix}`,
         slug: `reconcile-${suffix}`,
+        visibility: CatalogVisibility.HIDDEN,
         variants: { create: { name: "Base", quantity: 0, sku: `REC-BASE-${suffix}`, stockMode: StockMode.TRACKED } },
       },
     });
