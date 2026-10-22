@@ -13,6 +13,7 @@ import {
   OrderShippingStatus,
   OrderStatus,
   PaymentAttemptStatus,
+  PaymentProvider,
   PaymentStatus,
 } from "../../generated/prisma/enums";
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
@@ -47,6 +48,8 @@ export interface PaymentApplyResult {
   orderCancelled: boolean;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
+  /** Set when a reconciliation fence was supplied and no longer matches: nothing was committed. */
+  stale?: true;
 }
 
 export interface UnknownOutcomeDetails {
@@ -78,9 +81,13 @@ export class PaymentReducerService {
     private readonly inventoryRepository: InventoryRepository,
   ) {}
 
-  async applyObservation(attemptId: string, observation: MercadoPagoOrder): Promise<PaymentApplyResult> {
+  /** `fence` (reconciliation claims) makes a superseded worker's result a no-op: it is checked under the order lock. */
+  async applyObservation(attemptId: string, observation: MercadoPagoOrder, fence?: number): Promise<PaymentApplyResult> {
     return this.transactions.run(async (transaction) => {
       const context = await this.load(transaction, attemptId);
+      if (fence !== undefined && context.attempt.reconcileFence !== fence) {
+        return { ...this.result(context, "ignore"), stale: true };
+      }
       const now = await databaseNow(transaction);
       const decision = decideTransition({
         attempt: {
@@ -228,6 +235,75 @@ export class PaymentReducerService {
         orderStatus: cancellable ? OrderStatus.CANCELLED : order.status,
         paymentStatus: payment.status,
       };
+    });
+  }
+
+  /**
+   * Retry-window expiry: cancels an unpaid order and returns its stock exactly once. Every precondition is
+   * re-checked under the order/payment lock against the database clock, so a customer retry, a webhook or an
+   * admin action that won the lock first makes this a no-op. Returns whether the order was released.
+   */
+  async expireUnpaid(orderId: string): Promise<boolean> {
+    return this.transactions.run(async (transaction) => {
+      await lockOrderAndPayment(transaction, orderId);
+      const now = await databaseNow(transaction);
+      const payment = await transaction.orderPayment.findUnique({
+        include: { attempts: { select: { status: true } } },
+        where: { orderId },
+      });
+      const order = await transaction.order.findUnique({ include: { items: true }, where: { id: orderId } });
+      if (!payment || !order || payment.provider !== PaymentProvider.MERCADOPAGO) return false;
+
+      const dueForRelease = order.status === OrderStatus.PENDING
+        && payment.status === PaymentStatus.PENDING
+        && payment.retryUntil !== null
+        && payment.retryUntil.getTime() <= now.getTime()
+        && payment.attempts.length > 0
+        && payment.attempts.every((attempt) => attempt.status === PaymentAttemptStatus.REJECTED
+          || attempt.status === PaymentAttemptStatus.CANCELLED
+          || attempt.status === PaymentAttemptStatus.EXPIRED);
+      if (!dueForRelease) return false;
+
+      const attempt = await transaction.paymentAttempt.findFirstOrThrow({
+        orderBy: { attemptNumber: "desc" },
+        where: { paymentId: payment.id },
+      });
+      const context = { attempt, order, otherSuccessExists: false, payment } as ReductionContext;
+      await this.cancelOrder(transaction, context, "Payment expired", now);
+      await transaction.orderPayment.update({
+        data: { activeAttemptId: null, retryUntil: null, rowVersion: { increment: 1 } },
+        where: { id: payment.id },
+      });
+      await this.appendHistory(transaction, orderId, [{
+        description: "The payment retry window ended without a successful payment.",
+        effectKey: `payment:${payment.id}:retry_expired_cancelled`,
+        metadata: { attemptNumber: attempt.attemptNumber },
+        title: "Order cancelled",
+        type: OrderHistoryEventType.ORDER_CANCELLED,
+      }]);
+      return true;
+    });
+  }
+
+  /**
+   * Raises the payment attention flag without changing attempt state or fulfillment holds (stock stays held).
+   * Idempotent: the first reason wins and the history entry is keyed by reason.
+   */
+  async flagAttention(attemptId: string, reason: string): Promise<boolean> {
+    return this.transactions.run(async (transaction) => {
+      const context = await this.load(transaction, attemptId);
+      const now = await databaseNow(transaction);
+      const { attempt, payment } = context;
+      if (payment.attentionRequiredAt && payment.attentionReason === reason) return false;
+
+      if (!payment.attentionRequiredAt) {
+        await transaction.orderPayment.update({
+          data: { attentionReason: reason, attentionRequiredAt: now, rowVersion: { increment: 1 } },
+          where: { id: payment.id },
+        });
+      }
+      await this.appendHistory(transaction, context.order.id, [attentionEntry(attempt.id, reason)]);
+      return true;
     });
   }
 

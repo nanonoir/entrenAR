@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { Prisma } from "../../generated/prisma/client";
-import { OrderStatus, PaymentProvider } from "../../generated/prisma/enums";
+import { OrderStatus, PaymentAttemptStatus, PaymentProvider } from "../../generated/prisma/enums";
 
 export const paymentOrderInclude = {
   items: { orderBy: [{ productId: "asc" }, { id: "asc" }] },
@@ -43,6 +43,26 @@ export class PaymentsRepository {
       where: { id: attemptId },
     });
     return attempt;
+  }
+
+  async attemptByProviderOrderId(providerOrderId: string) {
+    return this.prisma.paymentAttempt.findUnique({
+      select: { id: true, payment: { select: { orderId: true, provider: true } } },
+      where: { providerOrderId },
+    });
+  }
+
+  /** Unresolved attempts of a Mercado Pago order that never persisted a provider order id. */
+  async unresolvedAttemptsWithoutProviderOrder(orderId: string) {
+    return this.prisma.paymentAttempt.findMany({
+      select: { id: true },
+      where: {
+        payment: { is: { orderId, provider: PaymentProvider.MERCADOPAGO } },
+        providerOrderId: null,
+        status: { in: [PaymentAttemptStatus.SUBMITTING, PaymentAttemptStatus.UNKNOWN] },
+      },
+      take: 2,
+    });
   }
 
   async sessionByToken(rawToken: string): Promise<PaymentSessionRecord | null> {
