@@ -57,6 +57,8 @@ export interface MercadoPagoOrderItem {
 }
 
 export interface CreateMercadoPagoOrderRequest {
+  /** Mercado Pago device/session id for fraud prevention; sent as X-meli-session-id. */
+  deviceId?: string;
   externalReference: string;
   items?: readonly MercadoPagoOrderItem[];
   payer: MercadoPagoPayer;
@@ -84,6 +86,8 @@ export interface MercadoPagoTransaction {
   refundedAmount?: string;
   status: string;
   statusDetail: string;
+  /** 3DS challenge URL (`payment_method.transaction_security.url`). Never persisted; callers must validate it before exposing it. */
+  transactionSecurityUrl?: string;
 }
 
 export interface MercadoPagoChargeback {

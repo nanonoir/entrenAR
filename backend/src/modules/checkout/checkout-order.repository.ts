@@ -1,7 +1,16 @@
 import { Injectable } from "@nestjs/common";
 
 import { Prisma } from "../../generated/prisma/client";
-import { CartStatus, OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import {
+  CartStatus,
+  OrderDeliveryType,
+  OrderInventoryPolicy,
+  OrderShippingStatus,
+  OrderStatus,
+  PaymentAttemptStatus,
+  PaymentProvider,
+  PaymentStatus,
+} from "../../generated/prisma/enums";
 import type { TransactionClient } from "./checkout-cart.repository";
 
 export const checkoutOrderInclude = {
@@ -33,7 +42,16 @@ export interface CheckoutOrderPaymentCreateInput {
   paymentMethodId: string;
   paymentMethodSnapshot: Prisma.InputJsonValue;
   paymentOptionId?: string | null;
+  provider?: PaymentProvider;
   status: PaymentStatus;
+}
+
+export interface CheckoutPaymentAttemptCreateInput {
+  clientKey: string;
+  expectedAmount: number;
+  orderId: string;
+  providerIdempotencyKey: string;
+  requestHash: string;
 }
 
 export interface CheckoutOrderCreateInput {
@@ -152,11 +170,39 @@ export class CheckoutOrderRepository {
         paymentMethodId: input.payment.paymentMethodId,
         paymentMethodSnapshot: input.payment.paymentMethodSnapshot,
         paymentOptionId: input.payment.paymentOptionId ?? null,
+        ...(input.payment.provider ? { provider: input.payment.provider } : {}),
         status: input.payment.status,
       },
     });
 
     return this.orderById(transaction, order.id);
+  }
+
+  /** Creates the first (SUBMITTING) attempt of an order's payment and marks it as the active one. */
+  async createPaymentAttempt(
+    transaction: TransactionClient,
+    input: CheckoutPaymentAttemptCreateInput,
+  ): Promise<{ id: string }> {
+    const payment = await transaction.orderPayment.findUniqueOrThrow({
+      select: { currency: true, id: true },
+      where: { orderId: input.orderId },
+    });
+    const attempt = await transaction.paymentAttempt.create({
+      data: {
+        attemptNumber: 1,
+        clientKey: input.clientKey,
+        currency: payment.currency,
+        expectedAmount: input.expectedAmount,
+        paymentId: payment.id,
+        providerIdempotencyKey: input.providerIdempotencyKey,
+        requestHash: input.requestHash,
+        status: PaymentAttemptStatus.SUBMITTING,
+      },
+      select: { id: true },
+    });
+    await transaction.orderPayment.update({ data: { activeAttemptId: attempt.id }, where: { id: payment.id } });
+
+    return attempt;
   }
 
   async orderById(transaction: TransactionClient, orderId: string): Promise<CheckoutOrderRecord> {

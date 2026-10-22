@@ -4,6 +4,7 @@ export {
 } from "./checkout-common.dto";
 
 export {
+  CheckoutCardPaymentRequestDto,
   CheckoutCompleteRequestDto,
   CheckoutLineItemRequestDto,
   CheckoutQuoteRequestDto,

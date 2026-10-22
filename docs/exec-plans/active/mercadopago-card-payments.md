@@ -46,8 +46,8 @@ Each stage is a chained branch off the previous one, with conventional commits a
 ## 6. Progress Tracking
 
 - [x] Stage 0 — PRD, design, specs, ExecPlan
-- [ ] Stage 1 — Backend base
-- [ ] Stage 2 — Payment flow
+- [x] Stage 1 — Backend base
+- [x] Stage 2 — Payment flow (reviewed; findings fixed in `8e37b50`)
 - [ ] Stage 3 — Webhooks
 - [ ] Stage 4 — Expiry and reconciliation
 - [ ] Stage 5 — Admin
@@ -61,6 +61,10 @@ Per stage, as applicable: `npm run build:backend`, `npm run test:backend`, `npm 
 Evidence log:
 
 - Stage 0: documentation link checks and `git diff --check` passed.
+- Pre-existing: 5 integration suites (`showcase-reset`, `checkout-quote`, `checkout-completion`, `commerce`, `catalog-persistence`) fail on the local dev DB with `Product p-whey-pro must have at least one ProductVariant`, independent of this work.
+- Stage 1: migration `20261021180000_mercadopago_payments_foundation` applied with `prisma migrate deploy`; build, `tsc`, unit (610) pass; `migrate status` up to date.
+- Stage 2: build, `tsc`, unit (665), e2e (15 suites) and `payments-card.integration-spec.ts` pass. Independent review PASS WITH FINDINGS; fixed: active endpoint scoped to session, provider AUTH → order cancelled without charge + 5-min circuit breaker, cart trimmed by purchased quantity, no redundant GET on challenge, CREATE limited to 1 call until Stage 7 verifies idempotency retention.
+- Deferred (tech debt): guest cart items added during payment become unreachable after the guest session completes; `cancelUncreated` and cart trim lack DB-level integration tests.
 
 ## 8. Final Implementation Outcome
 

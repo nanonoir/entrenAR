@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { isSupportedShippingMethodId, normalizeShippingMethodId } from "../../commerce/commerce.constants";
 import {
+  paymentCardSchema,
+  paymentDeviceIdSchema,
+  paymentIdempotencyKeySchema,
+} from "../../payments/payments.schemas";
+import {
   CHECKOUT_DELIVERY_TYPE,
   CHECKOUT_IDEMPOTENCY_KEY_MAX_LENGTH,
   CHECKOUT_IDEMPOTENCY_KEY_MIN_LENGTH,
@@ -84,6 +89,18 @@ export const checkoutCompleteRequestSchema = z.object({
   quoteId: opaqueTokenSchema.optional(),
 }).strict().superRefine(validateDeliverySelection);
 
+/** Card payment placement: same selection as completion, a required quote and tokenized card data, no payment method choice. */
+export const checkoutCardPaymentRequestSchema = z.object({
+  ...checkoutSelectionShape,
+  card: paymentCardSchema,
+  customer: checkoutCustomerSchema,
+  deviceId: paymentDeviceIdSchema.optional(),
+  idempotencyKey: paymentIdempotencyKeySchema,
+  paymentOptionId: identifierSchema.optional(),
+  quoteId: opaqueTokenSchema,
+}).strict().superRefine(validateDeliverySelection);
+
+export type CheckoutCardPaymentRequest = z.output<typeof checkoutCardPaymentRequestSchema>;
 export type CheckoutCompleteRequest = z.output<typeof checkoutCompleteRequestSchema>;
 export type CheckoutLineItem = z.output<typeof checkoutLineItemSchema>;
 export type CheckoutQuoteRequest = z.output<typeof checkoutQuoteRequestSchema>;

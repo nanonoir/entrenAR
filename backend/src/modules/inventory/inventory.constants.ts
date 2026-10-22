@@ -15,6 +15,7 @@ export const INVENTORY_ORIGIN = {
   ADMIN_SALES_REOPEN: "admin_sales_reopen",
   ABANDONED_CART_RECOVERY: "abandoned_cart_recovery",
   CHECKOUT: "checkout",
+  PAYMENT_EXPIRY: "payment_expiry",
   PURCHASE_ORDER: "purchase_order",
   SHOWCASE_RESET: "showcase-reset",
 } as const;

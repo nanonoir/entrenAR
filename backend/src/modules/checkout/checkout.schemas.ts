@@ -8,6 +8,7 @@ export type {
 } from "./contracts/checkout-common.schemas";
 
 export {
+  checkoutCardPaymentRequestSchema,
   checkoutCompleteRequestSchema,
   checkoutCompleteSchema,
   checkoutItemsSchema,
@@ -18,6 +19,7 @@ export {
   quoteRequestSchema,
 } from "./contracts/checkout-request.schemas";
 export type {
+  CheckoutCardPaymentRequest,
   CheckoutCompleteRequest,
   CheckoutLineItem,
   CheckoutQuoteRequest,

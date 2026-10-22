@@ -3,7 +3,9 @@ import { Module } from "@nestjs/common";
 import { CatalogModule } from "../catalog/catalog.module";
 import { CommerceModule } from "../commerce/commerce.module";
 import { InventoryModule } from "../inventory/inventory.module";
+import { PaymentsModule } from "../payments/payments.module";
 import { CheckoutController } from "./checkout.controller";
+import { CheckoutCardPaymentService } from "./checkout-card-payment.service";
 import { CheckoutCartRepository } from "./checkout-cart.repository";
 import { CheckoutCompletionService } from "./checkout-completion.service";
 import { CheckoutDeliveryRules } from "./checkout-delivery.rules";
@@ -22,8 +24,9 @@ import { CheckoutTransaction } from "./checkout-transaction";
 @Module({
   controllers: [CheckoutController],
   exports: [CheckoutService],
-  imports: [CatalogModule, CommerceModule, InventoryModule],
+  imports: [CatalogModule, CommerceModule, InventoryModule, PaymentsModule],
   providers: [
+    CheckoutCardPaymentService,
     CheckoutCartRepository,
     CheckoutCompletionService,
     CheckoutDeliveryRules,

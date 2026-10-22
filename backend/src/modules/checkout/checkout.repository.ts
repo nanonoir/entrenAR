@@ -33,6 +33,7 @@ import {
   type CheckoutCouponRedemptionIdentity,
   type CheckoutOrderCreateInput,
   type CheckoutOrderRecord,
+  type CheckoutPaymentAttemptCreateInput,
 } from "./checkout-order.repository";
 import { CheckoutTransaction } from "./checkout-transaction";
 
@@ -50,6 +51,7 @@ export type {
   CheckoutOrderItemCreateInput,
   CheckoutOrderPaymentCreateInput,
   CheckoutOrderRecord,
+  CheckoutPaymentAttemptCreateInput,
 } from "./checkout-order.repository";
 
 export const checkoutAddressSelect = {
@@ -258,6 +260,18 @@ export class CheckoutRepository {
     input: CheckoutOrderCreateInput,
   ): Promise<CheckoutOrderRecord> {
     return this.orderRepository.createPendingOrder(transaction, input);
+  }
+
+  async createPaymentAttempt(
+    transaction: TransactionClient,
+    input: CheckoutPaymentAttemptCreateInput,
+  ): Promise<{ id: string }> {
+    return this.orderRepository.createPaymentAttempt(transaction, input);
+  }
+
+  async orderIdBySession(transaction: TransactionClient, sessionId: string): Promise<string | null> {
+    const order = await transaction.order.findUnique({ select: { id: true }, where: { checkoutSessionId: sessionId } });
+    return order?.id ?? null;
   }
 
   async assignInventoryOwnership(
