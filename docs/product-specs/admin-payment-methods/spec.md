@@ -4,6 +4,8 @@
 
 Defines CRM behavior for visually managing local payment provider availability and configuration before backend persistence exists.
 
+For integrated Mercado Pago, commerce configuration follows [commerce payments](../commerce-payments/spec.md) and real payment behavior follows [Mercado Pago card payments](../mercadopago-card-payments/spec.md). The local readiness scenarios below MUST NOT override persisted gateway availability or imply that activation alone configures the integration. Bank-transfer behavior is unchanged by the card integration.
+
 ## Requirements
 
 ### Requirement: Payment Methods Page
@@ -43,6 +45,8 @@ The system MUST provide tabs for All, Active, and Inactive providers, and MUST s
 ### Requirement: Provider Cards
 
 Each provider card MUST show the real provider logo, name, status badge, accepted methods, clearance time, fees, and visible actions. Actions MUST NOT be hidden in overflow or three-dot menus.
+
+Mercado Pago accepted methods MUST describe the delivered cards-only scope, not promise wallet, cash tickets or Cuotas sin Tarjeta. Settlement-term options MUST NOT be presented as gateway credentials or as enabling unsupported payment types. Access tokens and webhook secrets MUST NOT be displayed, accepted or stored through this page; integration credentials are environment-only.
 
 #### Scenario: Inactive provider actions
 

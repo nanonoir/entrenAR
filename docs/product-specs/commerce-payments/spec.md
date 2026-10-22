@@ -2,13 +2,20 @@
 
 ## Purpose
 
-Manage available payment-method configuration. This capability excludes provider integrations, webhooks, refunds, reconciliation, checkout, orders, sales, CRM, and email.
+Manage available payment-method configuration. [Mercado Pago card payments](../mercadopago-card-payments/spec.md) separately owns gateway integration, notifications, refunds and reconciliation; configuration itself does not process payments.
 
 ## Requirements
 
 ### Requirement: Persistent Payment Method Configuration
 
 The system MUST persist configured payment methods and their availability. A bank-transfer method MAY contain bank instructions; all other methods MUST NOT expose or accept bank instructions. Configuration MUST NOT initiate or process a real payment.
+
+Mercado Pago activation MUST express commerce availability only; checkout eligibility additionally requires configured backend integration and the storefront public key. Credentials MUST NOT be accepted or stored through payment-method configuration. Disabling commerce availability MUST NOT stop existing payment recovery/reconciliation. Bank-transfer configuration and checkout behavior remain unchanged.
+
+#### Scenario: Deactivate with an unsettled card payment
+- GIVEN an existing provider-managed payment and active Mercado Pago configuration
+- WHEN an administrator deactivates the method
+- THEN new card submissions MUST become unavailable while the existing payment continues to be verified and recoverable
 
 #### Scenario: Configure bank transfer
 

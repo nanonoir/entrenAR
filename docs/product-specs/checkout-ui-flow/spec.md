@@ -2,14 +2,14 @@
 
 ## Purpose and authority
 
-Define the cart and checkout presentation, input validation, draft recovery, destination selection and delivery interaction. [Checkout quote](../checkout-quote/spec.md) owns authoritative quoting; [checkout complete](../checkout-complete/spec.md) owns order placement and its no-real-payment boundary. [Commerce shipping](../commerce-shipping/spec.md) owns provider tariffs and pickup configuration. This UI is not a mock-only order flow.
+Define the cart and checkout presentation, input validation, draft recovery, destination selection and delivery interaction. [Checkout quote](../checkout-quote/spec.md) owns authoritative quoting; [checkout complete](../checkout-complete/spec.md) owns order placement. [Mercado Pago card payments](../mercadopago-card-payments/spec.md) owns embedded real card payment and result recovery; bank transfer retains manual completion. [Commerce shipping](../commerce-shipping/spec.md) owns provider tariffs and pickup configuration. This UI is not a mock-only order flow.
 
 ## Checkout shell and cart
 
 - `/carrito` and `/checkout` MUST use a distraction-free shell without shop promo bars, category navigation, drawers or shop footer. The checkout header, background surface and black storefront-style footer remain visible and primary actions remain reachable on small screens.
 - Cart and checkout headings MUST use the established Bebas heading typography consistently; this does not change typography elsewhere in the storefront.
 - `/carrito` MUST show “Mi Carrito”, cart items, free-shipping progress, suggestions, continue-shopping action, coupon entry, summary and `Iniciar Pago` navigation to `/checkout`.
-- An empty cart MUST show a continue-shopping path and MUST NOT expose payment progression as ready. Direct `/checkout` access with an empty cart MUST show the empty state instead of the form.
+- An empty cart MUST show a continue-shopping path and MUST NOT expose new payment progression as ready. Direct `/checkout` access with an empty cart MUST show the empty state instead of the form unless an authorized bound Mercado Pago order is being recovered; active-order/result recovery MUST run before the empty-cart branch.
 - Free-shipping progress expresses eligibility, not a confirmed shipping price; summary rules below apply even when a threshold is reached.
 
 ## Steps and validation
@@ -44,7 +44,7 @@ Restoration MUST preserve the latest input before refresh, MUST NOT overwrite a 
 
 Expired, malformed or incompatible drafts MUST NOT restore. Unavailable browser storage MUST leave checkout usable in memory. Closing a tab MUST NOT be described as a guaranteed privacy cleanup mechanism.
 
-Clear the draft on confirmed order success, explicit cart clearing, logout or account-identity switch, including when checkout is not open. Pending saves MUST NOT recreate a cleared draft. Failed submission, quote reconciliation, checkout invalidation or a temporarily empty cart during initial restoration MUST NOT clear a valid draft.
+Clear the draft on successful manual order completion, explicit cart clearing, logout or account-identity switch, including when checkout is not open. For Mercado Pago, clear only the submitted generation upon verified approval or accepted processing/review; preserve it through submission uncertainty, challenge and rejection, following the payment specification. Pending saves MUST NOT recreate a cleared draft. Failed submission, quote reconciliation, checkout invalidation or a temporarily empty cart during initial restoration MUST NOT clear a valid draft.
 
 ## Argentine destination selection
 
@@ -94,10 +94,10 @@ The summary MUST distinguish:
 
 Subtotal, discounts, shipping and total MUST come from the same accepted quote. With unresolved shipping, any subtotal-derived amount shown MUST be explicitly provisional, not a confirmed final total. Free-shipping eligibility alone MUST NOT turn pending delivery into “Gratis.”
 
-The summary MUST retain scrollable items, coupon area, totals, final action and secure-purchase copy, usable on mobile as well as desktop.
+The summary MUST retain scrollable items, coupon area, totals, final action and secure-purchase copy, usable on mobile as well as desktop. In Mercado Pago card mode, suppress the summary final action so the embedded card submit is the only primary pay action; retain totals/help. Transfer keeps its existing CTA.
 
 ## Payment and scope boundaries
 
-Payment choices and bank instructions MUST reflect eligible current configuration, not a fixed promise of mock providers. This specification does not authorize real payment processing or transfer-proof persistence. Order creation and failure handling follow [checkout complete](../checkout-complete/spec.md); the final action is not a static no-order preview.
+Payment choices and bank instructions MUST reflect eligible current configuration, not a fixed promise of mock providers. Real card behavior follows [Mercado Pago card payments](../mercadopago-card-payments/spec.md); transfer-proof persistence remains outside scope. Order creation and failure handling follow [checkout complete](../checkout-complete/spec.md); the final action is not a static no-order preview.
 
 Merchant tariff amounts are owned by [commerce shipping](../commerce-shipping/spec.md). This specification does not itself authorize runtime data changes.

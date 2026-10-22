@@ -24,6 +24,8 @@ Quotes.
 
 The quote MUST reconcile guest and account carts without duplicates, derive session ownership, and validate public items, variants, price, stock, payment/transfer, shipping/pickup, coupons, and discounts. It MUST use server values, not client totals, price, stock, or foreign cart.
 
+Quoting MUST NOT create an order or reserve inventory. Mercado Pago availability and the server-authoritative ARS card amount MUST follow [Mercado Pago card payments](../mercadopago-card-payments/spec.md); commerce activation alone MUST NOT advertise an unconfigured integration as payable. Transfer eligibility remains unchanged.
+
 #### Scenario: Reconcile guest cart on sign-in
 - GIVEN guest and account carts with overlapping items
 - WHEN the customer requests a quote
