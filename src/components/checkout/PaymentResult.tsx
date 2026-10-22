@@ -29,6 +29,8 @@ interface PaymentResultProps {
 
 type Tone = "danger" | "info" | "success" | "warning";
 
+let pendingFinalReset: ReturnType<typeof setTimeout> | null = null;
+
 const COPY: Record<PaymentResultKind, { body: string; title: string; tone: Tone }> = {
   [PAYMENT_RESULT_KIND.ACTION_REQUIRED]: {
     body: "Tu banco necesita confirmar el pago. Volvé al checkout para completar la verificación.",
@@ -104,9 +106,20 @@ export function PaymentResult({ orderId }: PaymentResultProps) {
   }, [acceptView, attempt, orderId]);
 
   useEffect(() => {
-    // A finished order must not keep resurrecting the result when the customer returns to checkout.
+    // A remount (Strict Mode or a quick re-render of the route) cancels the reset scheduled by the last unmount.
+    if (pendingFinalReset !== null) {
+      clearTimeout(pendingFinalReset);
+      pendingFinalReset = null;
+    }
+    // A finished order must not keep resurrecting the result when the customer returns to checkout. The reset is
+    // deferred so a simulated unmount does not wipe the binding the remounted page still needs.
     return () => {
-      if (finalRef.current) reset();
+      if (finalRef.current) {
+        pendingFinalReset = setTimeout(() => {
+          pendingFinalReset = null;
+          reset();
+        }, 0);
+      }
     };
   }, [reset]);
 
