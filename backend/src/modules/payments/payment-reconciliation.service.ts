@@ -99,7 +99,7 @@ export class PaymentReconciliationService {
       }
     } catch (error) {
       retryAfterMs = (error instanceof MercadoPagoOrdersError ? error.retryAfterSeconds ?? 0 : 0) * 1_000;
-      this.logger.warn(JSON.stringify({ attemptId: claim.id, error: describe(error), event: "payment_reconcile_failed" }));
+      this.logger.warn(JSON.stringify({ attemptId: claim.id, error: describe(error), event: "payment_reconcile_failed", ...providerFailure(error) }));
     }
 
     if (outcome !== "stale") await this.release(claim, retryAfterMs);
@@ -119,13 +119,13 @@ export class PaymentReconciliationService {
    */
   async locateProviderOrder(attemptId: string): Promise<ProviderOrderLocation> {
     const attempt = await this.prisma.paymentAttempt.findUnique({
-      select: { payment: { select: { orderId: true } } },
+      select: { payment: { select: { orderId: true } }, submittedAt: true },
       where: { id: attemptId },
     });
     if (!attempt) return { kind: "unresolved" };
 
     const { orderId } = attempt.payment;
-    const found = (await this.port.searchOrders({ externalReference: orderId })).filter((order) => order.externalReference === orderId);
+    const found = (await this.port.searchOrders({ externalReference: orderId, submittedAt: attempt.submittedAt })).filter((order) => order.externalReference === orderId);
     if (found.length === 0) return { kind: "absent" };
 
     const known = await this.prisma.paymentAttempt.findMany({
@@ -208,6 +208,11 @@ export class PaymentReconciliationService {
       }
     });
   }
+}
+
+function providerFailure(error: unknown): { httpStatus: number | null; providerCode: string | null; providerDetail: string | null } | undefined {
+  if (!(error instanceof MercadoPagoOrdersError)) return undefined;
+  return { httpStatus: error.httpStatus ?? null, providerCode: error.providerCode ?? null, providerDetail: error.providerDetail ?? null };
 }
 
 function describe(error: unknown): string {

@@ -15,6 +15,7 @@ import {
 import {
   mercadoPagoErrorResponseSchema,
   mercadoPagoSearchResponseSchema,
+  toCents,
   toMercadoPagoOrder,
 } from "./mercadopago-orders.schemas";
 
@@ -54,7 +55,14 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
 
   async searchOrders(query: SearchMercadoPagoOrdersQuery): Promise<MercadoPagoOrder[]> {
     const limit = Math.min(Math.max(Math.trunc(query.limit ?? MERCADOPAGO_MAX_SEARCH_LIMIT), 1), MERCADOPAGO_MAX_SEARCH_LIMIT);
-    const search = new URLSearchParams({ external_reference: query.externalReference, limit: String(limit) });
+    const { beginDate, endDate } = searchWindow(query.submittedAt, new Date());
+    const search = new URLSearchParams({
+      begin_date: beginDate,
+      end_date: endDate,
+      external_reference: query.externalReference,
+      page_size: String(limit),
+      type: "online",
+    });
     const body = await this.send("GET", `/v1/orders?${search.toString()}`, {});
     const items = mercadoPagoSearchResponseSchema.safeParse(body);
 
@@ -105,6 +113,9 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
     const payload = await readJson(response);
 
     if (!response.ok) {
+      // Failed card payments answer 4xx with the full order (status "failed") in `data`: that is an outcome, not an HTTP error.
+      const failedOrder = extractOrderBody(payload);
+      if (failedOrder !== undefined) return failedOrder;
       throw toProviderError(response, payload, uncertain);
     }
 
@@ -125,6 +136,24 @@ export class MercadoPagoHttpOrdersAdapter implements MercadoPagoOrdersPort {
   }
 }
 
+const SEARCH_LOOKBACK_MS = 60 * 60 * 1_000;
+const SEARCH_LOOKAHEAD_MS = 24 * 60 * 60 * 1_000;
+const SEARCH_NOW_MARGIN_MS = 5 * 60 * 1_000;
+
+/** Creation-date window (RFC 3339) bounded around the attempt: submittedAt - 1h to min(submittedAt + 24h, now + 5m). */
+export function searchWindow(submittedAt: Date, now: Date): { beginDate: string; endDate: string } {
+  const begin = submittedAt.getTime() - SEARCH_LOOKBACK_MS;
+  const end = Math.max(Math.min(submittedAt.getTime() + SEARCH_LOOKAHEAD_MS, now.getTime() + SEARCH_NOW_MARGIN_MS), begin + 1_000);
+  return { beginDate: new Date(begin).toISOString(), endDate: new Date(end).toISOString() };
+}
+
+/** Items are sent only when they add up to the total exactly (cents); otherwise the provider rejects the order. */
+function itemsMatchTotal(request: CreateMercadoPagoOrderRequest): boolean {
+  if (!request.items || request.items.length === 0) return false;
+  const sum = request.items.reduce((total, item) => total + item.quantity * toCents(item.unitPrice), 0);
+  return sum === toCents(request.totalAmount);
+}
+
 function buildCreateBody(request: CreateMercadoPagoOrderRequest): Record<string, unknown> {
   const { payer, payment } = request;
 
@@ -132,7 +161,7 @@ function buildCreateBody(request: CreateMercadoPagoOrderRequest): Record<string,
     capture_mode: "automatic",
     config: { online: { transaction_security: { liability_shift: "required", validation: "on_fraud_risk" } } },
     external_reference: request.externalReference,
-    ...(request.items && request.items.length > 0
+    ...(request.items && itemsMatchTotal(request)
       ? {
           items: request.items.map((item) => ({
             ...(item.categoryId ? { category_id: item.categoryId } : {}),
@@ -194,6 +223,7 @@ function toProviderError(response: Response, payload: unknown, uncertain: boolea
   const status = response.status;
   const parsed = mercadoPagoErrorResponseSchema.safeParse(payload);
   const providerCode = sanitizeCode(parsed.success ? parsed.data.errors?.[0]?.code ?? parsed.data.code ?? parsed.data.error : undefined);
+  const providerDetail = parsed.success ? describeDetails(parsed.data.errors) : undefined;
   const category = categorize(status);
   const retryAfter = Number(response.headers.get("retry-after"));
 
@@ -202,6 +232,7 @@ function toProviderError(response: Response, payload: unknown, uncertain: boolea
     httpStatus: status,
     outcomeUncertain: uncertain && (category === MERCADOPAGO_ERROR_CATEGORY.TRANSIENT || category === MERCADOPAGO_ERROR_CATEGORY.UNKNOWN),
     providerCode,
+    ...(providerDetail ? { providerDetail } : {}),
     retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
   });
 }
@@ -213,6 +244,32 @@ function categorize(status: number): MercadoPagoErrorCategory {
   if (status === 429) return MERCADOPAGO_ERROR_CATEGORY.RATE_LIMIT;
   if (status >= 500) return MERCADOPAGO_ERROR_CATEGORY.TRANSIENT;
   return MERCADOPAGO_ERROR_CATEGORY.UNKNOWN;
+}
+
+const DETAIL_MAX_LENGTH = 300;
+
+function extractOrderBody(payload: unknown): unknown {
+  const parsed = mercadoPagoErrorResponseSchema.safeParse(payload);
+  if (!parsed.success || parsed.data.data === undefined) return undefined;
+
+  try {
+    toMercadoPagoOrder(parsed.data.data);
+    return parsed.data.data;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Error codes and detail strings (property paths, transaction ids). Long alphanumeric runs are redacted in case a value is echoed. */
+function describeDetails(errors: ReadonlyArray<{ code?: string | undefined; details?: unknown[] | undefined }> | undefined): string | undefined {
+  if (!errors || errors.length === 0) return undefined;
+
+  const text = errors
+    .map((error) => [error.code, ...(error.details ?? []).filter((detail): detail is string => typeof detail === "string")].filter(Boolean).join(": "))
+    .join("; ")
+    .replace(/[A-Za-z0-9]{21,}/g, "[redacted]");
+
+  return text ? text.slice(0, DETAIL_MAX_LENGTH) : undefined;
 }
 
 function sanitizeCode(code: string | undefined): string | undefined {

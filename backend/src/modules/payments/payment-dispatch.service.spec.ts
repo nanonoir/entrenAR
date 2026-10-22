@@ -1,7 +1,10 @@
 import { Logger } from "@nestjs/common";
+import type { ConfigService } from "@nestjs/config";
 
+import type { AppConfig } from "../../config/app.config";
 import { PaymentAttemptStatus } from "../../generated/prisma/enums";
 import {
+  cardRejected402Body,
   failedOrder,
   pendingChallengeOrder,
   processedAccreditedOrder,
@@ -13,7 +16,9 @@ import {
   type MercadoPagoErrorCategory,
   type MercadoPagoOrdersPort,
 } from "./mercadopago/mercadopago-orders.port";
+import { MercadoPagoHttpOrdersAdapter } from "./mercadopago/mercadopago-orders.http-adapter";
 import { toMercadoPagoOrder } from "./mercadopago/mercadopago-orders.schemas";
+import { normalizeProviderStatus } from "./payment-status.normalizer";
 import { sanitizeChallengeUrl } from "./payment-card";
 import { PaymentCircuitService } from "./payment-circuit.service";
 import { PAYMENT_CREATE_MAX_CALLS, PaymentDispatchService } from "./payment-dispatch.service";
@@ -174,6 +179,39 @@ describe("PaymentDispatchService", () => {
     expect(port.createOrder).toHaveBeenCalledTimes(1);
     expect(reducer.rejectWithoutCharge).toHaveBeenCalledWith("attempt-1", "rate_limited");
   });
+
+  it("treats a 402 card rejection as a rejected outcome verified by GET, never UNKNOWN", async () => {
+    const { reducer, repository, circuit, sleep } = harness();
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(cardRejected402Body), { status: 402 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(cardRejected402Body.data), { status: 200 }));
+    const adapter = new MercadoPagoHttpOrdersAdapter(
+      { get: () => ({ accessToken: "TEST-token", environment: "test", webhookSecret: "s" }) } as unknown as ConfigService<AppConfig, true>,
+      fetchMock as unknown as typeof fetch,
+    );
+    const service = new PaymentDispatchService(
+      adapter,
+      reducer as unknown as PaymentReducerService,
+      repository as unknown as PaymentsRepository,
+      circuit,
+      sleep,
+    );
+
+    await service.dispatch({ attemptId: "attempt-1", card });
+
+    expect(normalizeProviderStatus({ order: toMercadoPagoOrder(cardRejected402Body.data), paidAmount: "12345.67" })).toMatchObject({ attemptStatus: PaymentAttemptStatus.REJECTED, opensRetryWindow: true });
+    expect(reducer.markUnknown).not.toHaveBeenCalled();
+    expect(reducer.applyObservation).toHaveBeenCalledWith("attempt-1", expect.objectContaining({ status: "failed" }));
+  });
+
+  it.each(["cc_rejected_other_reason", "rejected_by_issuer", "cc_rejected_insufficient_amount"])(
+    "normalizes a failed order with transaction detail %s to REJECTED",
+    (detail) => {
+      const order = toMercadoPagoOrder({ ...failedOrder, transactions: { payments: [{ ...failedOrder.transactions.payments[0], status_detail: detail }] } });
+
+      expect(normalizeProviderStatus({ order, paidAmount: "12345.67" }).attemptStatus).toBe(PaymentAttemptStatus.REJECTED);
+    },
+  );
 
   it("opens a retry window without retrying on VALIDATION failures", async () => {
     const { circuit, port, reducer, service } = harness();

@@ -69,18 +69,16 @@ export const mercadoPagoOrderResponseSchema = z.object({
   user_id: z.union([z.string(), z.number()]).transform(String).optional(),
 });
 
-/** Search responses are accepted as a bare array or wrapped in a common collection key. */
-export const mercadoPagoSearchResponseSchema = z.union([
-  z.array(z.unknown()),
-  z.object({ data: z.array(z.unknown()) }).transform((value) => value.data),
-  z.object({ elements: z.array(z.unknown()) }).transform((value) => value.elements),
-  z.object({ results: z.array(z.unknown()) }).transform((value) => value.results),
-]);
+/** Search responses are `{ data: [orders], paging }`; an empty `data` is valid. */
+export const mercadoPagoSearchResponseSchema = z
+  .object({ data: z.array(z.unknown()), paging: z.unknown().optional() })
+  .transform((value) => value.data);
 
 export const mercadoPagoErrorResponseSchema = z.object({
   code: optionalString,
+  data: z.unknown().optional(),
   error: optionalString,
-  errors: z.array(z.object({ code: optionalString })).optional(),
+  errors: z.array(z.object({ code: optionalString, details: z.array(z.unknown()).optional() })).optional(),
 });
 
 const COMPLETED_REFUND_STATUS = "processed";

@@ -34,6 +34,7 @@ import {
 } from "./support/checkout-http.helpers";
 import type { CheckoutFixtures, SessionFixture } from "./support/checkout-http.types";
 import { buildCardBody, orderIdOf, providerOrder } from "./support/payments-card.helpers";
+import { settleCheckoutPaymentFixtures } from "./support/payments-settle.helpers";
 
 process.env["MERCADOPAGO_ACCESS_TOKEN"] = "TEST-integration-access-token";
 process.env["MERCADOPAGO_WEBHOOK_SECRET"] = "integration-webhook-secret";
@@ -104,6 +105,7 @@ describe("Mercado Pago card payments (PostgreSQL integration, mocked provider po
     try {
       jest.restoreAllMocks();
       if (fixtures) {
+        await settleCheckoutPaymentFixtures(prisma, fixtures);
         const guestOrders = await prisma.order.findMany({ select: { id: true }, where: { customerEmail: fixtures.guestOwner.email } });
         const ids = guestOrders.map((order) => order.id);
         await prisma.checkoutIdempotencyKey.deleteMany({ where: { orderId: { in: ids } } });

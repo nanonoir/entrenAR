@@ -36,6 +36,17 @@ export const failedOrder = {
   transactions: { payments: [{ ...payment, status: "failed", status_detail: "rejected_by_issuer" }] },
 };
 
+/** HTTP 402 body observed in the sandbox for a rejected card: the failed order travels in `data`. */
+export const cardRejected402Body = {
+  data: {
+    ...base,
+    status: "failed",
+    status_detail: "failed",
+    transactions: { payments: [{ ...payment, status: "failed", status_detail: "invalid_card_token" }] },
+  },
+  errors: [{ code: "failed", details: ["PAY01TESTPAYMENT00000000001: invalid_card_token"], message: "The following transactions failed" }],
+};
+
 export const pendingChallengeOrder = {
   ...base,
   status: "action_required",

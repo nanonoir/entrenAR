@@ -17,6 +17,8 @@ export interface MercadoPagoOrdersErrorOptions {
   /** True when the provider may have processed the request even though no usable response was received. */
   outcomeUncertain?: boolean;
   providerCode?: string;
+  /** Sanitized, truncated provider error code and details; safe to log. */
+  providerDetail?: string;
   retryAfterSeconds?: number;
 }
 
@@ -26,6 +28,7 @@ export class MercadoPagoOrdersError extends Error {
   readonly httpStatus?: number;
   readonly outcomeUncertain: boolean;
   readonly providerCode?: string;
+  readonly providerDetail?: string;
   readonly retryAfterSeconds?: number;
 
   constructor(message: string, options: MercadoPagoOrdersErrorOptions) {
@@ -35,6 +38,7 @@ export class MercadoPagoOrdersError extends Error {
     this.httpStatus = options.httpStatus;
     this.outcomeUncertain = options.outcomeUncertain ?? false;
     this.providerCode = options.providerCode;
+    this.providerDetail = options.providerDetail;
     this.retryAfterSeconds = options.retryAfterSeconds;
   }
 }
@@ -117,8 +121,10 @@ export interface MercadoPagoOrder {
 
 export interface SearchMercadoPagoOrdersQuery {
   externalReference: string;
-  /** Bounded to 1..MAX_SEARCH_LIMIT; defaults to MAX_SEARCH_LIMIT. */
+  /** Bounded to 1..MAX_SEARCH_LIMIT; defaults to MAX_SEARCH_LIMIT. Sent as `page_size`. */
   limit?: number;
+  /** Attempt submission time; the provider requires a creation-date window, derived from it. */
+  submittedAt: Date;
 }
 
 export const MERCADOPAGO_MAX_SEARCH_LIMIT = 20;
