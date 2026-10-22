@@ -1,7 +1,8 @@
 # ExecPlan — Mercado Pago Card Payments (Orders API)
 
-**Status:** Active  
-**Started:** 2026-10-21
+**Status:** Completed<br>
+**Started:** 2026-10-21<br>
+**Completed:** 2026-10-22
 
 ## 1. Objective
 
@@ -52,7 +53,7 @@ Each stage is a chained branch off the previous one, with conventional commits a
 - [x] Stage 4 — Expiry and reconciliation (implemented; independent review pending)
 - [x] Stage 5 — Admin
 - [x] Stage 6 — Frontend (implemented; browser/sandbox verification pending in Stage 7)
-- [ ] Stage 7 — Sandbox E2E, docs, review, archive
+- [x] Stage 7 — Sandbox E2E, docs, review, archive
 
 ## 7. Validation
 
@@ -76,7 +77,78 @@ Evidence log:
 - Final chain review (stages 5–6 + integration): PASS WITH FINDINGS; fixed in `9919646`, `134403c`: cancelled sales keep financial payment status, archive rule allows delivered partial refunds and requires cancellation for refunded, resolve button mirrors backend 30-minute eligibility. Backend unit 773, e2e 78, acceptance 23 harnesses, `tsc`, both builds pass; lint only the 2 pre-existing `catalog-cutover.spec.ts` errors from `main`.
 - Deferred (tech debt): shared `createCheckoutFixtures` creates VISIBLE `checkout-api-product-*` products that are never deleted (pre-existing pattern, also used by card specs).
 - Deferred (tech debt): guest cart items added during payment become unreachable after the guest session completes; `cancelUncreated` and cart trim lack DB-level integration tests.
+- Stage 7: live sandbox verification (2026-10-22) using real Mercado Pago Orders API with test credentials, frontend driven through Playwright, backend in Docker, and real webhooks routed through Cloudflare tunnel `https://api-dev.entrenar.shop`.
+  - Verified: APRO approval: order CONFIRMED and payment PAID; amount equals server total (items + shipping).
+  - Verified: OTHE rejection arrives as HTTP 402 with order body; attempt is REJECTED with `rejected_by_issuer` and real provider order id; 10-minute retry window opens.
+  - Verified: Same-order retry was approved as attempt 2.
+  - Verified: 10-minute expiry: order CANCELLED, stock compensated from 14 to 15 exactly once through ledger with origin `payment_expiry`.
+  - Verified: Result page shows approval and survives browser reload.
+  - Verified: Card Brick stays mounted with zero re-initialisations while user fills the payment form.
+  - Verified: Real Orders webhook accepted with valid HMAC signature, stored in inbox and marked PROCESSED (order `ORDTST01M5JA8DZAPV5K41KZ8J1380MQ`).
+  - Verified: Webhook simulation from entrenAR panel validated (200 OK) and was stored in inbox (retry and quarantine path).
+  - Not reproducible in live sandbox (covered by unit/harness tests): CONT pending, 3DS challenge with APRO-CHOK (approved directly, no challenge prompted), chargebacks and fraud alerts.
+  - Bugs found live and fixed on `feat/mp-6-frontend`:
+    - `703597f`: Item total must equal `total_amount` (shipping line added as item; items omitted when a discount makes them differ). 402 with an order body parsed as order instead of UNKNOWN. Search requires `begin_date`/`end_date` (RFC 3339), `page_size`, and `{data, paging}` response. Provider error details logged in redacted form. Payment test fixtures settled.
+    - `fb8ef92`: `items[].external_code` limited to 30 characters; longer SKUs omitted.
+    - `f81d89e`: Retry Brick remounting every second fixed (unstable countdown re-rendering).
+    - `75532b6` + `d5e98c9`: Result page guest binding lost due to cleanup timing and React 19 Strict Mode unmount reset.
+    - `a88b135`: Webhook signature verification accepts `data.id` either as received (official SDK behavior) or lowercased (documented).
 
-## 8. Final Implementation Outcome
+## 8. Implementation Outcome
 
-_Pending._
+### Implemented
+
+Delivered embedded Mercado Pago card payments (Credit, Debit, Prepaid) using Card Payment Brick (`@mercadopago/sdk-react@1.0.7`) and the backend Orders API (`processing_mode: automatic`) across seven chained branches:
+- **Backend Base & Database Migration** (`feat/mp-1-backend-base`): Environment configuration via Zod (`MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `MERCADOPAGO_ENVIRONMENT`), `MercadoPagoOrdersPort` and HTTP adapter, status normalizer, and additive migration `20261021180000_mercadopago_payments_foundation` (`PaymentAttempt`, `PaymentNotification`, provider fields on `OrderPayment`).
+- **Payment Flow & State Machine** (`feat/mp-2-payment-flow`): Server-authoritative amount calculation, transactional placement at card submit (`POST /api/v1/checkout/payments/mercadopago`), stock reservation, in-request provider creation with UUID idempotency key, status reducer, sequential same-order retry (`POST /api/v1/payments/orders/:orderId/attempts`), active payment endpoint (`GET /api/v1/checkout/payments/active`), and AUTH circuit breaker.
+- **Signed Webhooks & Durable Inbox** (`feat/mp-3-webhooks`): Public throttle-exempt webhook receiver (`POST /api/v1/payments/mercadopago/webhooks`), HMAC-SHA256 signature and timestamp verification, durable inbox table, inbox processor with authoritative GET, and quarantined fraud alert handling.
+- **Scheduled Expiry & Reconciliation** (`feat/mp-4-expiry-reconciliation`): `@nestjs/schedule` background workers (`PaymentWorkersService`) with row locks and fencing tokens, 10-minute retry window expiry with exactly-once inventory ledger compensation, pending reconciliation cadence (30s → 2m → 5m → 15m), financial fallback sweep (every 24h), and 30-minute attention sweep.
+- **Admin CRM Controls & Guards** (`feat/mp-5-admin`): Sales lifecycle guards preventing manual confirmation or bypass of provider truth, fulfillment guards requiring verified payment without holds, refund requirement for paid cancellations, provider payment panel DTOs, quarantined risk alerts feed (`GET /admin/sales/payment-risk-alerts`), and admin UNKNOWN resolution action (`POST /admin/sales/:id/payment/resolve-unknown`).
+- **Storefront Checkout UX & Result** (`feat/mp-6-frontend`): Frontend CardPayment boundary, single pay action hiding sidebar CTA in card mode, 3DS iframe frame with origin verification, payment result page (`/checkout/resultado/[orderId]`) with polling and reload recovery, tab-scoped session binding, and cart-generation cleanup.
+- **Closure & Operational Reference** (`feat/mp-7-closure`): Sandbox E2E live verification, operational runbook (`docs/references/operations/mercadopago-runbook.md`), documentation reconciliation, technical debt tracking, and ExecPlan archival.
+
+### Deviations from Design
+
+- **No Card Token Persistence and No Outbox**: As agreed by owner decision, card tokens exist only in memory during the originating request and are never persisted in the database, even encrypted. Uncertain creation outcomes transition to `UNKNOWN` with stock held; background reconciliation recovers state via provider reads rather than replaying CREATE. Admins can resolve 30-minute escalated UNKNOWN orders via `POST /admin/sales/:id/payment/resolve-unknown` after live provider re-check.
+- **Guest Session Token in Tab-Scoped SessionStorage**: To survive browser reloads and React 19 Strict Mode remounts on the payment result page (`/checkout/resultado/[orderId]`), the opaque guest checkout session token is kept in tab-scoped `sessionStorage` with a 24-hour TTL (storing zero card data).
+- **Fraud Alerts Quarantined**: Fraud alert notifications are durably stored and quarantined (`unverified_fraud_association`) rather than automatically applied to orders, because the Mercado Pago fraud alert topic is unsigned and lacks an authenticated Orders resource mapping. Quarantined alerts are surfaced via `GET /admin/sales/payment-risk-alerts`.
+- **Single In-Request Creation Call (`PAYMENT_CREATE_MAX_CALLS = 1`)**: Because Mercado Pago Orders API idempotency retention under rapid replay could not be conclusively verified in the live sandbox, the optional second in-request CREATE call was disabled. Network uncertainties transition directly to `UNKNOWN` and rely on read reconciliation.
+- **Orders API Item Total & External Code Constraints**:
+  - Mercado Pago Orders API enforces `sum(items.unit_price * quantity) == total_amount`. When shipping costs or order-level discounts cause a mismatch, a dedicated shipping item line is included, and item details are omitted if discounts prevent exact balance.
+  - `items[].external_code` is truncated to 30 characters to comply with Orders API field constraints.
+- **Webhook Signature Acceptance**: Signature verification supports `data.id` either as received (official SDK behavior) or lowercased (documented specification).
+
+### Validation
+
+- **Independent Code Reviews**:
+  - Stages 2, 3, and 4 each underwent independent engineering reviews.
+  - A cross-cutting review evaluated stages 5–6 and overall integration.
+  - All reviews concluded with PASS WITH FINDINGS; all identified findings were remediated and verified in the commit history.
+- **Automated Verification**:
+  - Backend unit tests: 785+ passing tests.
+  - Backend E2E suites: 17 suites passing.
+  - Payments integration suites: `payments-card.integration-spec.ts` and `payments-reconciliation.integration-spec.ts` passing.
+  - Frontend acceptance: 23 harnesses passing (`npm run verify:frontend-acceptance`), including new payments harness.
+  - TypeScript compiler check (`npx tsc --noEmit`): clean across frontend and backend.
+  - Production builds (`npm run build`, `npm run build:backend`): successful.
+  - Linting: only two pre-existing errors in `catalog-cutover.spec.ts` from `main`.
+- **Live Sandbox Verification (2026-10-22)**:
+  - Real Mercado Pago Orders API with test credentials, Docker backend, Playwright frontend, and Cloudflare tunnel (`https://api-dev.entrenar.shop`).
+  - APRO approval (order `CONFIRMED`, payment `PAID`).
+  - OTHE rejection (HTTP 402, attempt `REJECTED`, 10-minute retry window).
+  - Same-order retry approved on attempt 2.
+  - 10-minute retry window expiry: order `CANCELLED`, inventory ledger compensated stock exactly once (`payment_expiry`).
+  - Webhook signed with test account secret accepted and processed (`ORDTST01M5JA8DZAPV5K41KZ8J1380MQ`).
+  - Payment result page persisted across full browser reloads.
+
+### Follow-up
+
+Recorded in `docs/exec-plans/tech-debt-tracker.md`:
+- Item 14: Shared database for backend integration and e2e test execution (`DATABASE_URL`).
+- Item 15: Visible dummy products left by `createCheckoutFixtures` in dev/test databases.
+- Item 16: Pre-existing `p-whey-pro` variant integration failures and `catalog-cutover.spec.ts` lint errors from `main`.
+- Item 17: Multi-tab guest cart additions during active payment session becoming unreachable.
+- Item 18: Database-level integration tests for `cancelUncreated`, cart trim, and admin resolve 30-minute eligibility.
+- Item 19: Fixed test vector for webhook signature verification.
+- Item 20: Future Content Security Policy (CSP) allowlist for Mercado Pago SDK, secure fields, and challenge frames.
+- Item 21: Sandbox verification for unproven edge flows (CONT pending, 3DS challenge frame, live chargebacks/fraud alerts, provider idempotency retention).
