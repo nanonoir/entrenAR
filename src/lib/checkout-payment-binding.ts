@@ -65,6 +65,19 @@ export function clearPaymentBinding(storage: BindingStorage | null = getStorage(
   }
 }
 
+/**
+ * Guest credential for reading `orderId`. The tab binding is authoritative once it points at that order, even
+ * after cart cleanup cleared the cart session; the cart session is only a fallback when no binding matches.
+ */
+export function resolveOrderSessionToken(
+  orderId: string,
+  binding: PaymentBinding | null,
+  cartSessionToken: string | null,
+): string | null {
+  if (binding && (binding.orderId === null || binding.orderId === orderId)) return binding.sessionToken;
+  return cartSessionToken;
+}
+
 /** Allowlist parse: unknown keys (for example anything card related) are dropped. */
 export function sanitizeBinding(raw: unknown): PaymentBinding | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;

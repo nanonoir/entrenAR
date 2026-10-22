@@ -4,7 +4,7 @@ import { payCheckoutWithCard, fetchActivePayment } from "@/lib/api/checkout/chec
 import { CheckoutApiError, type CheckoutApiClient, type CheckoutApiMethodOptions } from "@/lib/api/checkout/client";
 import { readDeviceId, toPaymentCardPayload } from "@/lib/api/payments/card-payload";
 import { isAllowedChallengeOrigin, isTrustedChallengeMessage, sanitizeChallengeUrl } from "@/lib/api/payments/challenge-url";
-import { isStaleQuotePaymentError, isUncertainPaymentError } from "@/lib/api/payments/payment-errors";
+import { getResultLoadErrorMessage, isStaleQuotePaymentError, isUncertainPaymentError } from "@/lib/api/payments/payment-errors";
 import {
   BOUND_ORDER_MODE,
   cardBrickKey,
@@ -20,7 +20,9 @@ import { fetchPaymentStatus, retryPayment } from "@/lib/api/payments/payments.ap
 import { mapActivePaymentResponse, mapPaymentView, type PaymentView } from "@/lib/api/payments/payments.mappers";
 import { resolveSubmissionKey } from "@/lib/api/payments/submission-key";
 import { captureCartGeneration, removeSubmittedGeneration } from "@/lib/cart-generation";
-import { sanitizeBinding } from "@/lib/checkout-payment-binding";
+import { resolveOrderSessionToken, sanitizeBinding } from "@/lib/checkout-payment-binding";
+import { useCartStore } from "@/stores/cart-store";
+import { useCheckoutPaymentStore } from "@/stores/checkout-payment-store";
 
 const CHALLENGE_URL = "https://www.mercadopago.com.ar/3ds/challenge?id=1";
 
@@ -241,6 +243,40 @@ function testCartGeneration(): void {
   assert.equal(sanitizeBinding(null), null);
 }
 
+async function testResultSessionToken(): Promise<void> {
+  const binding = { createdAt: Date.now(), finalized: false, generation: [], orderId: "ord-1", sessionToken: "guest-token-0123456789" };
+
+  assert.equal(resolveOrderSessionToken("ord-1", binding, null), "guest-token-0123456789", "binding token is used when the cart session was cleared");
+  assert.equal(resolveOrderSessionToken("ord-1", binding, "cart-token"), "guest-token-0123456789", "binding wins over the cart session");
+  assert.equal(resolveOrderSessionToken("ord-2", binding, "cart-token"), "cart-token", "a binding for another order is ignored");
+
+  // Verified approval cleans the cart session but must keep the credential in the binding.
+  useCartStore.setState({ checkoutSessionToken: "guest-token-0123456789" });
+  useCheckoutPaymentStore.setState({ binding: { ...binding, sessionToken: null } });
+  useCheckoutPaymentStore.getState().acceptView(view({ orderId: "ord-1", paymentStatus: "paid", status: "paid" }));
+  const after = useCheckoutPaymentStore.getState();
+  assert.equal(useCartStore.getState().checkoutSessionToken, null, "cart cleanup cleared the cart session");
+  assert.equal(after.binding?.finalized, true);
+  assert.equal(after.binding?.sessionToken, "guest-token-0123456789", "binding token survives cleanup");
+  assert.equal(
+    resolveOrderSessionToken("ord-1", after.binding, useCartStore.getState().checkoutSessionToken),
+    "guest-token-0123456789",
+    "result page sends the credential after cleanup",
+  );
+
+  // The status request carries the credential and a later success replaces the shown error.
+  const status = fakeClient([viewDto({ paymentStatus: "paid", status: "paid" })]);
+  await fetchPaymentStatus("ord-1", { sessionToken: after.binding?.sessionToken ?? null }, status.client);
+  assert.deepEqual(status.calls[0]?.options?.headers, { "x-checkout-session": "guest-token-0123456789" }, "no credential-less request");
+  useCheckoutPaymentStore.getState().acceptView(view({ orderId: "ord-1", paymentStatus: "paid", status: "paid" }));
+  assert.equal(resolvePaymentResult(useCheckoutPaymentStore.getState().view!), PAYMENT_RESULT_KIND.APPROVED);
+
+  const unauthorized = getResultLoadErrorMessage({ code: "CHECKOUT_SESSION_INVALID", status: 401 });
+  assert.match(unauthorized, /No pudimos verificar tu pedido en esta pestaña/);
+  assert.equal(unauthorized.includes("cotización"), false, "result copy never uses checkout quote wording");
+  useCheckoutPaymentStore.getState().reset();
+}
+
 function testSubmissionKey(): void {
   let counter = 0;
   const create = () => `key-${++counter}`;
@@ -258,6 +294,7 @@ async function run(): Promise<void> {
   testResultMapping();
   testCartGeneration();
   testSubmissionKey();
+  await testResultSessionToken();
   console.log("payments harness: card allowlist, adapters, error mapping, challenge guard, result mapping, polling, cart generation and submission key passed");
 }
 

@@ -85,6 +85,11 @@ export const useCheckoutPaymentStore = create<CheckoutPaymentState>()((set, get)
       binding = { ...binding, orderId: view.orderId };
     }
 
+    // Cart cleanup clears the cart session; the binding must already hold the guest credential by then.
+    if (binding.sessionToken === null) {
+      binding = { ...binding, sessionToken: fallback?.sessionToken ?? useCartStore.getState().checkoutSessionToken };
+    }
+
     if (shouldClearSubmittedCart(view) && !binding.finalized) {
       releaseSubmittedCart(binding.generation);
       binding = { ...binding, finalized: true };

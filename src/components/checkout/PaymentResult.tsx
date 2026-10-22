@@ -15,8 +15,9 @@ import {
   type PaymentResultKind,
 } from "@/lib/api/payments/payment-result";
 import type { PaymentView } from "@/lib/api/payments/payments.mappers";
-import { getPaymentErrorMessage } from "@/lib/api/payments/payment-errors";
+import { getResultLoadErrorMessage } from "@/lib/api/payments/payment-errors";
 import { toCheckoutApiError } from "@/lib/api/checkout/client";
+import { readPaymentBinding, resolveOrderSessionToken } from "@/lib/checkout-payment-binding";
 import { formatCurrency } from "@/lib/pricing";
 import { checkoutRoutes } from "@/lib/routes";
 import { useCartStore } from "@/stores/cart-store";
@@ -85,8 +86,9 @@ export function PaymentResult({ orderId }: PaymentResultProps) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const { binding } = useCheckoutPaymentStore.getState();
-    const sessionToken = binding?.sessionToken ?? useCartStore.getState().checkoutSessionToken;
+    // After a reload the in-memory store is empty; the tab binding still holds the guest credential.
+    const binding = useCheckoutPaymentStore.getState().binding ?? readPaymentBinding();
+    const sessionToken = resolveOrderSessionToken(orderId, binding, useCartStore.getState().checkoutSessionToken);
 
     fetchPaymentStatus(orderId, { sessionToken, signal: controller.signal })
       .then((loaded) => {
@@ -95,7 +97,7 @@ export function PaymentResult({ orderId }: PaymentResultProps) {
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setLoadError(getPaymentErrorMessage(toCheckoutApiError(error)));
+        setLoadError(getResultLoadErrorMessage(toCheckoutApiError(error)));
       });
 
     return () => controller.abort();

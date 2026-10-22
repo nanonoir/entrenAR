@@ -28,6 +28,16 @@ export function getPaymentErrorMessage(error: { code: string }): string {
   return PAYMENT_ERROR_MESSAGES[error.code] ?? "No pudimos procesar el pago. Intentá nuevamente en unos minutos.";
 }
 
+const RESULT_SESSION_MESSAGE = "No pudimos verificar tu pedido en esta pestaña. Revisá tu correo o contactanos con el número de pedido.";
+
+/** Result-page copy: quote/session wording from checkout never applies to an already placed order. */
+export function getResultLoadErrorMessage(error: { code: string; status?: number }): string {
+  if (error.status === 401 || error.code === "CHECKOUT_SESSION_INVALID" || error.code === "CHECKOUT_SESSION_EXPIRED") {
+    return RESULT_SESSION_MESSAGE;
+  }
+  return getPaymentErrorMessage(error);
+}
+
 /** The failed request may still have been accepted: the outcome must be verified, not retried blindly. */
 export function isUncertainPaymentError(error: { code: string; status?: number }): boolean {
   return error.code === "CHECKOUT_API_UNAVAILABLE"
