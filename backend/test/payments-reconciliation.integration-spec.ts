@@ -29,6 +29,7 @@ import { PaymentReconciliationService } from "../src/modules/payments/payment-re
 import { PaymentReducerService } from "../src/modules/payments/payment-reducer.service";
 import { lockOrderAndPayment } from "../src/modules/payments/payments-transaction";
 import { providerOrder } from "./support/payments-card.helpers";
+import { settlePaymentFixtures } from "./support/payments-settle.helpers";
 
 process.env["MERCADOPAGO_ACCESS_TOKEN"] = "TEST-integration-access-token";
 process.env["MERCADOPAGO_WEBHOOK_SECRET"] = "integration-webhook-secret";
@@ -94,7 +95,10 @@ describe("Mercado Pago expiry and reconciliation (PostgreSQL integration, mocked
     try {
       // Orders cascade to payments/attempts/history. The stock ledger is append-only and restricts its product and
       // variants, so those rows stay (unique per run, `Reconcile <suffix>`); no other fixture shares them.
-      if (prisma) await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
+      if (prisma) {
+        await settlePaymentFixtures(prisma, { id: { in: orderIds } });
+        await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
+      }
     } finally {
       await moduleFixture?.close();
     }

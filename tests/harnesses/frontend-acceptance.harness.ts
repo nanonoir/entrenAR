@@ -28,6 +28,7 @@ const HARNESS_PATHS = [
   "src/lib/api/account/account-adapter.harness.ts",
   "src/lib/api/checkout/checkout-adapter.harness.ts",
   "src/lib/api/commerce/commerce-adapter.harness.ts",
+  "src/lib/api/payments/payments.harness.ts",
   "src/lib/api/admin/sales/__tests__/sales-adapter.harness.ts",
   "src/lib/api/admin/customers/__tests__/customers-adapter.harness.ts",
   "src/lib/api/admin/categories/__tests__/categories-adapter.harness.ts",

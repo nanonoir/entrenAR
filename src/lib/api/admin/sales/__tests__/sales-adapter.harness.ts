@@ -10,6 +10,7 @@ import {
   type SalesApiMethodOptions,
   type SalesApiRequestOptions,
 } from "../client";
+import { isSaleArchivable } from "@/lib/data/admin/sales-flow/archive";
 import { ApiSalesRepository } from "../api-sales.repository";
 import { MockSalesRepository } from "../mock-sales.repository";
 import {
@@ -166,6 +167,14 @@ async function runSchemaScenario(): Promise<void> {
   assert(mercadoPago.history.map((event) => event.type).join(",") === "payment_partially_refunded,payment_attention_required", "Mercado Pago history events were not mapped.");
   const chargedBack = mapAdminSaleDetail({ ...rawMercadoPagoSaleDetail(), paymentStatus: "CHARGED_BACK" });
   assert(chargedBack.paymentStatus === "charged_back", "CHARGED_BACK payment status was not mapped.");
+  for (const [raw, expected] of [["REFUNDED", "refunded"], ["PARTIALLY_REFUNDED", "partially_refunded"], ["CHARGED_BACK", "charged_back"], ["PAID", "received"]] as const) {
+    const cancelledSale = mapAdminSaleDetail({ ...rawMercadoPagoSaleDetail(), paymentStatus: raw, status: "CANCELLED", shippingStatus: "CANCELLED" });
+    assert(cancelledSale.paymentStatus === expected && cancelledSale.status === "cancelled", `Cancellation hid the ${raw} payment status.`);
+    assert(isSaleArchivable(cancelledSale), `Cancelled ${raw} sale must be archivable.`);
+  }
+  assert(mapAdminSaleDetail({ ...rawMercadoPagoSaleDetail(), paymentStatus: "PENDING", status: "CANCELLED", shippingStatus: "CANCELLED" }).paymentStatus === "cancelled", "Cancelled pending sale was not mapped to cancelled.");
+  assert(!isSaleArchivable({ paymentStatus: "refunded", shippingStatus: "delivered", status: "confirmed" }), "Refunded non-cancelled sale must not be archivable.");
+  assert(isSaleArchivable({ paymentStatus: "partially_refunded", shippingStatus: "delivered", status: "confirmed" }), "Delivered partially refunded sale must be archivable.");
   const manual = mapAdminSaleDetail(rawSaleDetail());
   assert(manual.providerPayment === undefined, "Manual sales must not expose provider payment data.");
   try {

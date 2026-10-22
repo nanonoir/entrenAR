@@ -16,6 +16,7 @@ export const accountRoutes = {
 export const checkoutRoutes = {
   cart: "/carrito",
   checkout: "/checkout",
+  result: (orderId: string) => `/checkout/resultado/${encodeURIComponent(orderId)}`,
 } as const;
 
 export function getProductHref(slug: string) {

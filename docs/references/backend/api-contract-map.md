@@ -5,12 +5,13 @@ This document records the verified REST contracts for the standalone Backend Cor
 ## Phase 5 Outcome
 
 - ✅ `POST /api/v1/checkout/quote` returns server-authoritative ARS totals and eligible commerce configuration.
-- ✅ `POST /api/v1/checkout/complete` revalidates the quote and atomically creates a pending order, payment record, snapshots, stock history, coupon usage, cart cleanup, and session completion.
+- ✅ `POST /api/v1/checkout/complete` revalidates the quote and atomically creates a pending order, payment record, snapshots, stock history, coupon usage, cart cleanup, and session completion for bank transfer checkout.
+- ✅ `POST /api/v1/checkout/payments/mercadopago` provides atomic placement and immediate in-request card payment via Mercado Pago Orders API, with stock reservation and sequential retry support.
 - ✅ Guest sessions use opaque credentials; authenticated checkout derives ownership from the JWT and can merge the guest cart into the customer cart without duplicate lines.
 - ✅ `GET /api/v1/account/orders` returns the authenticated customer's immutable order-history projection backed by placement-time snapshots.
-- ✅ The frontend reaches checkout through `src/lib/api/checkout/`; static checkout mocks remain available as the explicit default/fallback source.
+- ✅ The frontend reaches checkout and payments through `src/lib/api/checkout/` and `src/lib/api/payments/`; static checkout mocks remain available as the explicit default/fallback source.
 
-Phase 5 does not call a real payment or shipping provider. A successful completion creates a pending payment/order intent only.
+Bank transfer checkout creates a pending payment/order intent. Mercado Pago card payment uses dedicated submission, retry, and active order endpoints under `/api/v1/checkout/payments/mercadopago`, `/api/v1/payments/orders/:orderId/attempts`, and `/api/v1/checkout/payments/active`.
 
 ## General Conventions
 
@@ -30,7 +31,7 @@ Phase 5 does not call a real payment or shipping provider. A successful completi
 
 - **Success:** A mapper DTO or `{ "ok": true, "data": DTO }` according to the consuming frontend repository. Command endpoints return the updated projection unless noted otherwise.
 - **Pagination:** Collection endpoints use `?page=1&limit=20` plus their documented filters.
-- **Scope boundary:** Provider/carrier calls, payment-gateway sessions, webhooks, labels, tracking, refunds, financial reconciliation, and external notifications are Post-Core and are not API contracts here.
+- **Scope boundary:** Carrier shipping labels/tracking and external email delivery are Post-Core. Mercado Pago Card Payments (Orders API) is implemented with signed webhooks, polling/status endpoints, and scheduled reconciliation.
 
 ---
 
@@ -90,8 +91,10 @@ Password recovery has a deliberately narrow error contract: `forgot-password` re
 |---|---|---|---|---|---|
 | POST | `/api/v1/checkout/quote` | Public or CUSTOMER | `CheckoutQuoteRequest` | `CheckoutQuoteResponse` | `VALIDATION_ERROR`, `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `OUT_OF_STOCK`, `COUPON_NOT_VALID`, `SHIPPING_OPTION_UNAVAILABLE`, `CHECKOUT_SESSION_INVALID`, `FORBIDDEN` |
 | POST | `/api/v1/checkout/complete` | Public or CUSTOMER | `CheckoutCompleteRequest` | `CheckoutCompleteResponse` (`ok`, `orderId`, `number`, `status`, `total`) | `VALIDATION_ERROR`, `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `OUT_OF_STOCK`, `COUPON_NOT_VALID`, `COUPON_USAGE_LIMIT_REACHED`, `PAYMENT_METHOD_UNAVAILABLE`, `SHIPPING_OPTION_UNAVAILABLE`, `PRICE_CHANGED`, `IDEMPOTENCY_KEY_REUSED`, `CHECKOUT_SESSION_INVALID`, `FORBIDDEN` |
+| POST | `/api/v1/checkout/payments/mercadopago` | Public or CUSTOMER | `CheckoutPaymentRequest` | `PaymentStatusResponseDto` | `VALIDATION_ERROR`, `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `OUT_OF_STOCK`, `COUPON_NOT_VALID`, `COUPON_USAGE_LIMIT_REACHED`, `PAYMENT_METHOD_UNAVAILABLE`, `SHIPPING_OPTION_UNAVAILABLE`, `PRICE_CHANGED`, `IDEMPOTENCY_KEY_REUSED`, `CHECKOUT_SESSION_INVALID`, `FORBIDDEN` |
+| GET | `/api/v1/checkout/payments/active` | Public or CUSTOMER | None (`x-checkout-session` header for guests) | `PaymentStatusResponseDto` | `UNAUTHORIZED`, `FORBIDDEN` |
 
-Both operations re-read product, variant, price, inventory, coupon, payment, and shipping configuration. Browser-provided totals, prices, stock, cart IDs, user IDs, payment state, and order status are never authoritative.
+Both quote and placement operations re-read product, variant, price, inventory, coupon, payment, and shipping configuration. Browser-provided totals, prices, stock, cart IDs, user IDs, payment state, and order status are never authoritative.
 
 ### 4.1 Request Contract
 
@@ -130,13 +133,20 @@ The backend calculates `subtotal`, product `discount`, final `shipping`, and `to
 
 Completion uses `201`; successful quote/history reads use `200`. Validation errors use `400`, ownership/authentication errors use `401`/`403`, missing catalog references use `404`, and stock/configuration/stale-quote/idempotency conflicts use `409`. Every failure uses the shared `{ ok: false, code, message, issues? }` envelope.
 
-### 4.4 Phase 5 Verification and Exclusions
+### 4.4 Payments API (`/api/v1/payments`)
+
+| Method | Path | Auth / role | Request DTO | Response DTO | Key errors |
+|---|---|---|---|---|---|
+| GET | `/api/v1/payments/orders/:orderId` | Public or CUSTOMER | None (`x-checkout-session` header for guests) | `PaymentStatusResponseDto` | `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND` |
+| POST | `/api/v1/payments/orders/:orderId/attempts` | Public or CUSTOMER | `PaymentRetryRequestDto` | `PaymentStatusResponseDto` | `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` |
+| POST | `/api/v1/payments/mercadopago/webhooks` | Public (HMAC `x-signature`) | Query: `data.id`, `type`/`topic`. Body: provider payload (max 16KB) | `{ ok: true }` | `UNAUTHORIZED`, `PAYLOAD_TOO_LARGE`, `SERVICE_UNAVAILABLE` |
+
+### 4.5 Checkout & Payments Verification
 
 - The adapter harness proves mock-default/API-opt-in selection, DTO authority, cart reconciliation, controlled errors, refresh retry, idempotency, and mock fallback.
-- The checkout unit suite proves quote authority, hidden-product rejection, atomic completion coordination, replay, race loss, stale quotes, commerce discounts, and ADMIN rejection.
-- Disposable-PostgreSQL integration and HTTP E2E suites prove persistence constraints, snapshots, cart cleanup, coupon usage, guest/customer ownership, replay, final-unit races, request IDs, and account history.
-- No real Mercado Pago/Stripe session, provider/carrier request, webhook, refund, financial reconciliation, email/notification, Phase 6 sales lifecycle, or Phase 8 abandoned-cart recovery contract is introduced.
-- The inherited shared-development catalog fixture failure involving residual `cmthk...` categories is unrelated to checkout; checkout verification is isolated with disposable PostgreSQL and does not modify that fixture.
+- The checkout and payments unit suites prove quote authority, hidden-product rejection, atomic placement coordination, replay, race loss, stale quotes, commerce discounts, and ADMIN rejection.
+- Payments integration and E2E suites prove Mercado Pago order creation, webhook HMAC verification, durable inbox storage, reconciliation workers, status reducer, 10-minute retry window expiry with exactly-once inventory compensation, and sales lifecycle guards.
+- Carrier shipping labels/tracking and external email delivery remain Post-Core.
 
 ---
 
@@ -174,8 +184,16 @@ Inventory writes create an immutable history entry in the same transaction. `Inv
 | POST | `/api/v1/admin/sales/:id/complete-pickup` | ADMIN | None | `AdminSale` | `INVALID_STATE_TRANSITION`, `NOT_FOUND` |
 | POST | `/api/v1/admin/sales/:id/archive` | ADMIN | None | `AdminSale` | `SALE_NOT_ARCHIVABLE`, `INVALID_STATE_TRANSITION`, `NOT_FOUND` |
 | POST | `/api/v1/admin/purchase-orders/:id/convert` | ADMIN | None | `AdminSale` | `INVALID_STATE_TRANSITION`, `OUT_OF_STOCK`, `NOT_FOUND` |
+| GET | `/api/v1/admin/sales/payment-risk-alerts` | ADMIN | None | `PaymentRiskAlert[]` | — |
+| POST | `/api/v1/admin/sales/:id/payment/resolve-unknown` | ADMIN | None | `AdminSale` | `PAYMENT_NOT_UNKNOWN`, `PAYMENT_ATTEMPT_ACTIVE`, `NOT_FOUND`, `CONFLICT` |
 
 Command transitions and audit events are fixed by PRD §§52–58: pack `to_pack → to_ship` / `package_packed`; unpack `to_ship → to_pack` / `package_unpacked`; ship `to_ship → shipped` / `package_shipped`; deliver `shipped → delivered` / `package_delivered`; ready for pickup `to_pack → pickup` / `pickup_ready`; complete pickup `pickup → delivered` / `pickup_completed`; and receive payment `pending → received` / `payment_received`. Receiving payment must not deduct inventory again. Cancellation, reopening, archiving, and purchase-order conversion remain explicit commands.
+
+For provider-managed sales (`MERCADOPAGO`):
+- `mark-payment-received`, `reopen`, and `convert` are rejected with `409 PAYMENT_PROVIDER_MANAGED`; payment truth is governed strictly by the provider.
+- `pack`, `ship`, `deliver` require verified `PAID` or `PARTIALLY_REFUNDED` status with zero open fulfillment holds (`409 PAYMENT_FULFILLMENT_BLOCKED`). Partial refund leaves the sale fulfillable; full refund or disputes/fraud holds block fulfillment.
+- `cancel` is rejected with `409 PAYMENT_REFUND_REQUIRED` while attempts are active or if payment was received and has not been fully refunded in the Mercado Pago panel. Cancellation of conclusively closed unpaid orders or verified full refunds allows ledger compensation through `restoreInventory`.
+- `resolve-unknown` is available after 30 minutes from attempt submission to resolve indeterminate outcomes after live provider re-check.
 
 ---
 

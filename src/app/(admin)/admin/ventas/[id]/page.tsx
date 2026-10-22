@@ -28,7 +28,7 @@ import {
   isSaleEditable,
 } from "@/lib/data/admin/sales-flow/helpers";
 import { AdminCard, AdminCardHeader } from "@/components/admin/ui/AdminCard";
-import { isSaleArchivable } from "@/lib/data/admin/sales-flow/archive";
+import { isSaleArchivable, isSaleCancelled } from "@/lib/data/admin/sales-flow/archive";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -75,11 +75,8 @@ const HISTORY_EVENT_LABELS: Record<string, { label: string; tone: "success" | "e
 };
 
 function getArchivedFinalStatus(sale: AdminSale) {
-  if (sale.paymentStatus === "cancelled" || sale.paymentStatus === "refunded") {
-    return {
-      label: getPaymentStatusLabel(sale.paymentStatus),
-      tone: getPaymentStatusTone(sale.paymentStatus),
-    };
+  if (isSaleCancelled(sale)) {
+    return { label: getPaymentStatusLabel("cancelled"), tone: getPaymentStatusTone("cancelled") };
   }
 
   return {
@@ -142,7 +139,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const isCancelled = sale.paymentStatus === "cancelled";
+  const isCancelled = isSaleCancelled(sale);
   const isProviderManaged = Boolean(sale.providerPayment);
   const fulfillmentBlockReason = getFulfillmentBlockReason(sale);
   const isReadOnly = sale.archived;
@@ -382,7 +379,7 @@ export default function SaleDetailPage({ params }: { params: Promise<{ id: strin
                 <Badge tone={getPaymentStatusTone(sale.paymentStatus)}>
                   {getPaymentStatusLabel(sale.paymentStatus)}
                 </Badge>
-                {sale.paymentStatus === "cancelled" && sale.cancellationReason && (
+                {isCancelled && sale.cancellationReason && (
                   <p className="mt-1 text-xs text-zinc-500">Motivo: {sale.cancellationReason}</p>
                 )}
               </div>

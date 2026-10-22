@@ -34,6 +34,12 @@ describe("verifyMercadoPagoWebhookSignature", () => {
     expect(verify()).toEqual({ ok: true, timestampMs: nowMs });
   });
 
+  it("also accepts a signature over data.id exactly as received, as the official SDK computes it", () => {
+    const ts = String(nowMs);
+    const v1 = createHmac("sha256", secret).update(`id:ORD01M28P44G5FG8RJPM579EH56FV;request-id:${requestId};ts:${ts};`).digest("hex");
+    expect(verify({ signatureHeader: `ts=${ts},v1=${v1}` })).toEqual({ ok: true, timestampMs: nowMs });
+  });
+
   it("accepts 10-digit seconds and signs the original timestamp text", () => {
     const ts = String(Math.floor(nowMs / 1_000));
     expect(verify({ signatureHeader: sign("ORD01M28P44G5FG8RJPM579EH56FV", ts) })).toEqual({ ok: true, timestampMs: Number(ts) * 1_000 });

@@ -24,7 +24,7 @@ PostgreSQL Database (`127.0.0.1:5432/entrenar`)
 - `(shop)`: Public storefront routes (`/`, `/[...segments]`, `/productos/[slug]`). Structured with horizontal ecommerce navigation, server-side data fetching, and progressive hydration.
 - `(admin)`: Management CRM surface (`/admin`, `/admin/productos`, `/admin/ventas`, `/admin/clientes`, `/admin/inventario`, `/admin/estadisticas`). Uses a responsive sidebar and header layout.
 - `(admin-auth)`: Dedicated administrator login flow (`/admin/login`). Independent session handling and cookie management.
-- `(checkout)`: Multi-step checkout experience (`/checkout`).
+- `(checkout)`: Multi-step checkout experience (`/checkout`) and payment result verification (`/checkout/resultado/[orderId]`).
 
 ### 2. Frontend Data Access & State
 - `src/lib/api`: Authoritative frontend repositories and HTTP adapters communicating with NestJS REST endpoints.
@@ -43,6 +43,7 @@ PostgreSQL Database (`127.0.0.1:5432/entrenar`)
   - `modules/orders`: Order creation, historical order snapshots, and order status transitions.
   - `modules/checkout`: Checkout session validation, price calculations, stock reservation, and idempotency.
   - `modules/customers`: CRM customer management, address tracking, and metrics.
+  - `modules/payments`: Mercado Pago Orders API integration, Card Payment Brick adapter, signature-verified webhooks with durable inbox, background reconciliation workers, payment retry lifecycle, fulfillment eligibility guards, and risk alerts quarantine.
   - `modules/sales`: Administrative sales pipeline, payment reconciliation, and dispatch tracking.
   - `modules/statistics`: Real-time and aggregated commercial metrics for the CRM dashboard.
   - `modules/catalog-scraper`: Automated scrapers, taxonomy synchronization, and Cloudflare R2 asset handoff.
@@ -55,7 +56,7 @@ PostgreSQL Database (`127.0.0.1:5432/entrenar`)
 - **Cloudflare R2**: Object storage for product media assets (`https://assets.entrenar.shop/...`).
 
 ### 5. Architectural Invariants
-- **Backend Authority**: The frontend expresses intent only; the NestJS backend authenticates, authorizes, validates calculations with Zod, and performs transactional mutations. Client-provided prices, totals, stock levels, or roles are never trusted.
+- **Backend Authority**: The frontend expresses intent only; the NestJS backend authenticates, authorizes, validates calculations with Zod, and performs transactional mutations. Client-provided prices, totals, stock levels, or roles are never trusted. Charged payment amounts are strictly server-authoritative, and payment status transitions are governed exclusively by provider verification and backend reconciliation workers.
 - **Prisma Isolation**: Prisma Client is strictly confined to `backend/`; it is never imported, referenced, or accessed in the Next.js frontend tree.
 - **Layered Flow**: Controllers validate transport input with Zod/DTOs -> Services execute business domain logic and coordinate transactions -> Repositories/Prisma interact with PostgreSQL.
 - **Direct API Adapters**: Storefront and admin client access REST through domain-facing frontend repositories/adapters under `src/lib/api`. Next.js Route Handlers are not used as redundant proxies for the NestJS API, and Server Actions do not act as a secondary business backend.

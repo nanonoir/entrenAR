@@ -1,5 +1,5 @@
 import type { AdminSale, SalePaymentStatus, SaleShippingStatus } from "@/lib/data/admin/sales-flow/types";
-import { isSaleArchivable } from "@/lib/data/admin/sales-flow/archive";
+import { isSaleArchivable, isSaleCancelled } from "@/lib/data/admin/sales-flow/archive";
 
 // ARS currency formatter
 export const arsFormatter = new Intl.NumberFormat("es-AR", {
@@ -62,7 +62,7 @@ export function getPaymentFlags(sale: AdminSale): { label: string; tone: "warnin
 /** Mirrors the backend fulfillment guard so the UI can explain why pack/ship are disabled. */
 export function getFulfillmentBlockReason(sale: AdminSale): string | null {
   const provider = sale.providerPayment;
-  if (!provider || sale.paymentStatus === "cancelled") return null;
+  if (!provider || isSaleCancelled(sale)) return null;
   const detail = provider.detail;
   if (sale.paymentStatus === "refunded") return "El pago fue reembolsado por completo: no se puede preparar ni enviar el pedido.";
   if (sale.paymentStatus === "charged_back") return "El pago tiene un contracargo: no se puede preparar ni enviar el pedido.";
@@ -115,14 +115,14 @@ export function calculateTotals(
 }
 
 export function getActiveSalesCount(sales: AdminSale[]): number {
-  return sales.filter((s) => !s.archived && s.paymentStatus !== "cancelled").length;
+  return sales.filter((s) => !s.archived && !isSaleCancelled(s)).length;
 }
 
 export function getQuickFilterCounts(sales: AdminSale[]) {
   const active = sales.filter((s) => !s.archived);
   return {
     porCobrar: active.filter((s) => s.paymentStatus === "pending").length,
-    porEmpaquetar: active.filter((s) => s.shippingStatus === "to_pack" && s.paymentStatus !== "cancelled").length,
+    porEmpaquetar: active.filter((s) => s.shippingStatus === "to_pack" && !isSaleCancelled(s)).length,
     porEnviar: active.filter((s) => s.shippingStatus === "to_ship").length,
     porRetirar: active.filter((s) => s.shippingStatus === "pickup").length,
     porArchivar: active.filter(isSaleArchivable).length,
@@ -148,7 +148,7 @@ export function generateEventId(): string {
 export function isSaleEditable(sale: AdminSale): boolean {
   const nonEditableShipping: AdminSale["shippingStatus"][] = ["to_ship", "shipped", "delivered", "cancelled"];
   if (nonEditableShipping.includes(sale.shippingStatus)) return false;
-  if (sale.paymentStatus === "cancelled") return false;
+  if (isSaleCancelled(sale)) return false;
   if (sale.archived) return false;
   return true;
 }

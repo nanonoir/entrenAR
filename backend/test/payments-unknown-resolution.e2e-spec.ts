@@ -29,6 +29,7 @@ import {
 } from "../src/modules/payments/mercadopago/mercadopago-orders.port";
 import { AuthService } from "../src/modules/auth/auth.service";
 import { providerOrder } from "./support/payments-card.helpers";
+import { settlePaymentFixtures } from "./support/payments-settle.helpers";
 
 process.env["MERCADOPAGO_ACCESS_TOKEN"] = "TEST-e2e-access-token";
 process.env["MERCADOPAGO_WEBHOOK_SECRET"] = "e2e-webhook-secret";
@@ -95,6 +96,7 @@ describe("admin resolution of UNKNOWN Mercado Pago attempts (e2e, mocked provide
     try {
       // The append-only stock ledger keeps its product/variants (unique per run, `Unknown <suffix>`).
       if (prisma) {
+        await settlePaymentFixtures(prisma, { id: { in: orderIds } });
         await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
         await prisma.user.deleteMany({ where: { id: { in: userIds } } });
       }

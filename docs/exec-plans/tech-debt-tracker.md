@@ -14,9 +14,9 @@ Concrete unresolved technical debt items tracked across the EntrenAR repository.
 - **Impact**: Maintenance overhead for duplicate mock structures alongside production REST adapters under `src/lib/api`.
 - **Reference**: `src/lib/data/` fallback harnesses.
 
-### 3. Payment Processing & Operator Bank Transfer Configuration (MercadoPago / Direct Acquirers)
-- **Context**: The checkout contract, order generation, and transactional inventory ledger are implemented, but real payment gateway processing (e.g. MercadoPago webhook processing and hosted checkout) remains mocked or pending. Furthermore, backend database seeds configure placeholder bank data (`EntrenAR Demo`, zeroed CBU/CUIT). While frontend checkout includes defensive guards (`bank-transfer-config.ts`) that block transfer completion and prevent displaying placeholder credentials, enabling production bank transfers requires an operator to configure authentic banking credentials in the backend environment.
-- **Impact**: Orders cannot complete automated online payment verification without manual intervention or test mocks; customer bank transfer orders remain defensively blocked in demo/seed environments.
+### 3. Operator Bank Transfer Configuration (Placeholder Demo Credentials)
+- **Context**: While real online card payment processing with Mercado Pago (Card Payment Brick + Orders API) is now fully delivered and verified, backend database seeds configure placeholder bank transfer data (`EntrenAR Demo`, zeroed CBU/CUIT). Frontend checkout includes defensive guards (`bank-transfer-config.ts`) that block transfer completion and prevent displaying placeholder credentials when placeholder data is detected. Enabling production bank transfers requires an operator to configure authentic banking credentials in the backend commerce settings or database environment.
+- **Impact**: Customer bank transfer orders remain defensively blocked in demo/seed environments until authentic credentials are provided.
 - **Reference**: `src/components/checkout/bank-transfer-config.ts`, `docs/product-specs/static-support-pages/spec.md`.
 
 ### 4. Media Asset Pipeline & Showcase Visuals
@@ -59,9 +59,54 @@ Concrete unresolved technical debt items tracked across the EntrenAR repository.
 - **Impact**: When saved account addresses (`addressId`) are eventually integrated into the checkout wizard, orders placed with pre-saved account addresses will not carry structured `floor` or `neighborhood` fields until `UserAddress` schema is migrated and customer profile endpoints are updated. This is non-blocking for the current inline wizard.
 - **Reference**: `docs/design-docs/2026-10-19-checkout-inputs-drafts-delivery.md`, `backend/prisma/schema.prisma` (`UserAddress`), `docs/design-docs/2026-09-04-backend-core-phase-7-customers-crm.md`.
 
+### 14. Shared Database for Backend Integration and E2E Tests
+- **Context**: Backend integration and e2e test suites run against the shared development database configured in `DATABASE_URL`. Running test suites leaves orders, payment attempts, and append-only ledger rows behind in the shared database. If background workers (`PaymentWorkersService`) are active on the development backend concurrently, they can process or expire test orders.
+- **Impact**: Shared dev database contamination and potential race conditions between running background workers and active test executions; requires manual or scripted cleanup.
+- **Reference**: `docs/exec-plans/completed/mercadopago-card-payments.md`, `backend/test/payments-reconciliation.integration-spec.ts`.
+
+### 15. Checkout Fixture Product Cleanup and Lifecycle (`createCheckoutFixtures`)
+- **Context**: The shared test fixture generator `createCheckoutFixtures` creates products with prefix `checkout-api-product-*` set to `isVisible: true`. Because the append-only inventory ledger forbids deleting records linked to inventory history, these test products remain permanently in the database and visible in catalog searches unless manually flagged as HIDDEN.
+- **Impact**: Accumulation of visible dummy products in local development and test database catalogs.
+- **Reference**: `backend/test/helpers/checkout-fixtures.ts`, `backend/test/payments-card.integration-spec.ts`.
+
+### 16. Pre-existing Variant Validation and Catalog Cutover Test Failures
+- **Context**: On the local development database, five integration test suites (`showcase-reset`, `checkout-quote`, `checkout-completion`, `commerce`, `catalog-persistence`) fail with the assertion error "Product p-whey-pro must have at least one ProductVariant". Additionally, two ESLint errors exist in `backend/src/modules/catalog-cutover/catalog-cutover.spec.ts` originating from historical `main`.
+- **Impact**: Obscures test suite signal when running comprehensive integration passes; requires targeting specific test suites during verification.
+- **Reference**: `backend/src/modules/catalog-cutover/catalog-cutover.spec.ts`, `docs/exec-plans/completed/mercadopago-card-payments.md`.
+
+### 17. Guest Cart Unreachable Items Added During Active Payment Session
+- **Context**: When a customer initiates a card payment, the current checkout session and cart generation are locked. If the guest adds new items to their cart in another tab while payment submission or retry is in flight, those additional items become unreachable in that session once the guest checkout session completes upon payment verification.
+- **Impact**: Minor edge-case cart desynchronization for multi-tab guest users during active payment processing.
+- **Reference**: `src/stores/useCheckoutPaymentStore.ts`, `src/lib/api/payments/checkout-payments.adapter.ts`.
+
+### 18. Database-Level Integration Tests for Edge Payment Operations
+- **Context**: Edge-case payment database operations—specifically `cancelUncreated` (compensating stock if process fails prior to attempt creation), cart trim upon placement, and the admin 30-minute eligibility rule on `POST /admin/sales/:id/payment/resolve-unknown`—are covered by unit and mock specs but lack isolated database-level integration tests.
+- **Impact**: Risk of undetected regressions in low-level transactional boundary logic for uncreated cancellations or cart trimming under concurrent database workloads.
+- **Reference**: `backend/src/modules/payments/payment-unknown-resolution.service.ts`, `backend/src/modules/checkout/checkout-completion.service.ts`.
+
+### 19. Webhook Signature Verification Fixed Test Vectors
+- **Context**: Automated webhook signature tests in `mercadopago-webhook.signature.spec.ts` generate signatures dynamically using the internal signer function rather than asserting against an immutable, fixed test vector captured from an authentic Mercado Pago webhook transmission (containing timestamp, v1 HMAC, x-request-id, and data.id).
+- **Impact**: Signature verification unit test suite is partially circular (testing the verification algorithm against its own generation logic); a verified fixed vector from production/sandbox telemetry is needed.
+- **Reference**: `backend/src/modules/payments/mercadopago/mercadopago-webhook.signature.ts`, `backend/src/modules/payments/mercadopago/mercadopago-webhook.signature.spec.ts`.
+
+### 20. Content Security Policy (CSP) Definition for Mercado Pago SDK and Challenge Origins
+- **Context**: Next.js frontend currently does not enforce a Content Security Policy (`next.config.ts`). When a CSP header is introduced in the future, it must explicitly allow the Mercado Pago JS SDK (`https://sdk.mercadopago.com`), secure iframe fields, API endpoints (`https://api.mercadopago.com`), and 3DS challenge frame origins.
+- **Impact**: If a strict CSP is deployed without configuring Mercado Pago rules, Card Payment Brick and 3DS challenge frames will fail to load or communicate.
+- **Reference**: `next.config.ts`, `docs/design-docs/2026-10-21-mercadopago-card-payments.md`.
+
+### 21. Live Sandbox Verification for Complex Scenarios (CONT Pending, 3DS Challenge, Chargeback/Fraud Signals, CREATE Idempotency Retention)
+- **Context**: In the live Mercado Pago Orders API sandbox environment, certain edge flows could not be reproduced: `CONT` (in process) resolves immediately in sandbox; 3DS challenge card (`APRO-CHOK`) approved directly without prompting a challenge iframe; chargebacks and fraud alerts are not triggerable via test cards; and provider idempotency retention under rapid retry could not be proven (leading to `PAYMENT_CREATE_MAX_CALLS = 1`). These paths are validated through comprehensive unit and e2e harness tests, but have not been exercised against live provider sandbox endpoints.
+- **Impact**: Behavior for 3DS challenges and risk alerts in production relies on published provider specifications and simulated harnesses rather than observed live sandbox executions.
+- **Reference**: `docs/exec-plans/completed/mercadopago-card-payments.md`, `backend/src/modules/payments/mercadopago/mercadopago-orders.http-adapter.ts`.
+
 ## Resolved Items
 
 ### 12. CRM Showcase Runtime Verification (Resolved: 2026-10-09)
 - **Context**: The initial isolated runtime verification was blocked due to pre-existing administrative authentication rows and unconfigured commerce prerequisites.
 - **Resolution**: Trusted owner explicitly authorized local execution on `127.0.0.1:5432/entrenar`. Verified with private backup (40 tables restored and validated on isolated port 55439), manual demo commerce options configured, real checkout (2/2) and persistence test suites (9/9) passed on isolated copies. Single-shot generation succeeded (80 orders, 20 customers, 3 suppliers, 4 purchases, 6 coupons, 8 abandoned carts) and rerun proved idempotent (`already-generated` with identical full-state digest). Preserved 42 ADMIN users and 127 refresh tokens. 21 real HTTP endpoints passed with 200 OK. Independent review concluded with PASS WITH FINDINGS (code and runtime accepted).
 - **Reference**: `docs/exec-plans/completed/crm-showcase-simulator.md`, `docs/exec-plans/completed/crm-showcase-simulator/local-owner-evidence.md`, `docs/exec-plans/completed/crm-showcase-simulator/backend-operator-guide.md`.
+
+### 13. Mercado Pago Payment Gateway Processing (Resolved: 2026-10-22)
+- **Context**: The repository lacked real online payment processing; checkout created pending order intents only, with no gateway integration, no webhook verification, and no automated reconciliation.
+- **Resolution**: Delivered end-to-end Mercado Pago Card Payments using Card Payment Brick (`@mercadopago/sdk-react@1.0.7`) and the backend Orders API (`processing_mode: automatic`) across chained branches (`feat/mp-1-backend-base` through `feat/mp-7-closure`). Features include: server-authoritative pricing and stock deduction at card submit; sequential attempts per order; 10-minute retry window on rejection; public HMAC-signed webhook receiver with durable inbox; scheduled `@nestjs/schedule` background workers for expiry, reconciliation, and risk sweeps; admin sales lifecycle guards blocking manual overrides; quarantined risk alerts feed; and UNKNOWN resolution flow. Verified against live Mercado Pago Orders API sandbox with test cards, Cloudflare tunnel webhooks, and Playwright.
+- **Reference**: `docs/exec-plans/completed/mercadopago-card-payments.md`, `docs/references/prds/entrenar-mercadopago-payment-prd.md`, `docs/design-docs/2026-10-21-mercadopago-card-payments.md`, `docs/references/operations/mercadopago-runbook.md`.

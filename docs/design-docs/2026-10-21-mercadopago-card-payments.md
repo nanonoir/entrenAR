@@ -1,8 +1,8 @@
 # Design: Mercado Pago Card Payments with Orders API
 
-**Status:** Designed; provider-contract validation gates remain below. No implementation is included.  
-**Authority:** [Refined PRD](../references/prds/entrenar-mercadopago-payment-prd.md), including D-1–D-6. This document defines technical rules for subsequent product specs; it does not reopen those decisions.  
-**Date:** 2026-10-21.
+**Status:** Implemented and Delivered (2026-10-22)<br>
+**Authority:** [Refined PRD](../references/prds/entrenar-mercadopago-payment-prd.md), including D-1–D-6. This document defines technical rules for subsequent product specs; it does not reopen those decisions.<br>
+**Date:** 2026-10-21 (Delivered: 2026-10-22).
 
 Use Card Payment Brick and automatic Orders API processing. Create the internal order, SUBMITTING attempt and stock deduction in one database transaction **at card submission**, then immediately call Mercado Pago in the same request outside that transaction. Card tokens exist only in memory and are never persisted, even encrypted; uncertain outcomes are recovered by provider reads, never background CREATE replay. A single backend payment reducer handles creation responses, verified webhooks, return/reload checks and scheduled reconciliation. One internal order can have several sequential attempts, but never two potentially payable attempts. Transfer checkout remains unchanged.
 
@@ -238,8 +238,8 @@ Production enablement is gated on signed Orders webhook fixtures, optional risk-
 
 ## Pending decisions and risks
 
-- **Pending technical contract — optional events:** a verified mapping from signed fraud/chargeback query resource to Orders ID is not established by the conflicting official examples. Automatic order-specific fraud stop and FR-13 validation depend on this; durable authenticated receipt/unmatched-event visibility are independently defined. This is a provider evidence gap, not authorization to trust unsigned body fields or use legacy payment creation.
-- **Pending technical contract — in-request idempotency:** the reviewed pages require a UUID and same body, but do not establish the retention guarantee for CREATE retries. Confirm that guarantee covers the bounded 25-second originating-request budget before enabling its second CREATE call; otherwise use one call and UNKNOWN/read reconciliation on uncertainty. This gate does not authorize background replay or token persistence.
+- **Resolved technical contract — optional events:** Fraud alerts are quarantined with reason `unverified_fraud_association` and surfaced in the admin risk-alerts feed (`GET /api/v1/admin/sales/payment-risk-alerts`) because the fraud alert topic is unsigned and does not authenticate an internal Orders association.
+- **Resolved technical contract — in-request idempotency:** `PAYMENT_CREATE_MAX_CALLS = 1` was adopted for the delivery. The provider idempotency retention guarantee under rapid retry could not be proven; uncertain outcomes transition to UNKNOWN and reconcile by authoritative reads.
 - **RISK — commit-to-CREATE crash gap:** without token persistence or an outbox, a crash can hold stock for an order never submitted to Mercado Pago. Provider reads cannot prove noncreation from search absence alone; unresolved missing-ID outcomes escalate at 30 minutes and may require admin/provider-panel investigation and explicit payment cancellation. They never automatically release stock or restart CREATE. Delayed provider visibility can prolong the hold, and incorrect manual resolution can be contradicted by a late approval; evidence/audit and incident handling remain necessary.
 - **RISK — no review time limit:** held inventory can remain unavailable indefinitely by binding D-2; attention thresholds/admin visibility do not release it. Fraud alerts can also be lost during ingress outages because Mercado Pago does not retry them.
 - **RISK — current official documentation differs from the earlier exploration:** the current migration guide now lists account money/credit as supported in Argentina, and optional-event examples have inconsistent query/body identities. Cards-only D-1 remains binding; no scope expansion is inferred. React 19 peer support is verified, Compiler behavior still needs runtime evidence.

@@ -133,6 +133,7 @@ export interface AdminSale {
   products: SaleProduct[];
   paymentStatus: SalePaymentStatus;
   shippingStatus: SaleShippingStatus;
+  status?: "pending" | "confirmed" | "cancelled";
   subtotal: number;
   discountType?: DiscountType;
   discountValue?: number;

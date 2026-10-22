@@ -107,25 +107,25 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - Guest sessions use opaque tokens; only token hashes are persisted. Customer ownership comes from the validated JWT and ADMIN actors are rejected.
 - Guest and customer carts merge by product/variant key without duplicate lines; foreign or expired sessions do not mutate state.
 - Current public product visibility, category visibility, variant ownership, effective price, stock, active payment/bank configuration, shipping/pickup options, coupons, and shipping discounts are re-read for each quote and completion.
-- Completion requires a valid payment method/option and delivery selection, then atomically creates a pending order/payment, records usage/history, conditionally deducts stock, clears the cart, completes the session, and stores the replay response.
+- Completion requires a valid payment method/option and delivery selection, then atomically creates a pending order/payment, records usage/history, conditionally deducts stock, clears the cart, completes the session, and stores the replay response. For Mercado Pago card payments, placement creates the pending order, deducts stock, and records the initial SUBMITTING attempt in a single database transaction, deferring cart cleanup and session completion until verified provider payment approval or accepted processing/review.
 - Matching idempotency retries return the stored response without duplicate writes; mismatched reuse returns a controlled conflict.
 - Order and order-item snapshots cannot be updated after placement; later catalog/configuration edits do not change history.
 **Cross-Domain Dependencies:**
-- Reads from Catalog, Inventory, and Commerce Configuration. Owns the transaction boundary that writes pending Orders persistence; it does not own later order lifecycle commands.
+- Reads from Catalog, Inventory, and Commerce Configuration. Owns the transaction boundary that writes pending Orders persistence; coordinates with Payments module for card placement and active order lookup. It does not own later order lifecycle commands.
 
-### 2.8 Orders Module (`backend/src/modules/orders/`)
-**Phase 5 status:** No standalone module is implemented yet. Checkout persists the core `Order`, `OrderItem`, and `OrderPayment` records needed for pending placement and account history. Phase 6 will introduce the sales/purchase-order lifecycle and its CRM commands.
-**Target ownership:** Sales, Purchase Orders, Order History.
+### 2.8 Orders & Sales Modules (`backend/src/modules/orders/`, `backend/src/modules/sales/`)
+**Ownership:** Sales lifecycle, order history, payment reconciliation, dispatch tracking, and fulfillment guards.
 **Aggregates:**
-- `Sale` (Aggregate Root): Future confirmed transaction projection. Owns `SaleItem` snapshots and `SaleHistory`.
-- `PurchaseOrder` (Aggregate Root): Future unpaid intent that can be converted to a `Sale`.
+- `Order` (Aggregate Root): Persisted customer order and delivery/pricing snapshots.
+- `Sale` (Aggregate Root): Confirmed sales projection with history and state transitions.
+- `OrderHistory`: Immutable chronological transition events.
 **Invariants:**
-- Historical checkout snapshots are already immutable in the Phase 5 persistence boundary.
-- Future Sale creation MUST deduct stock (replacing frontend `stock_reserved` mock behavior).
-- Future Purchase Order conversion must be idempotent.
-- Future payment-received state must not re-deduct stock.
+- Historical checkout snapshots are immutable.
+- Payment confirmation for Mercado Pago sales requires verified provider state; manual override commands are rejected.
+- Fulfillment commands (pack, ship, deliver) require verified payment (`PAID` or `PARTIALLY_REFUNDED`) and are blocked by active disputes, full refunds, or fraud holds.
+- Cancellation of paid provider orders requires a verified full refund in Mercado Pago first.
 **Cross-Domain Dependencies:**
-- Phase 6 will depend on Checkout's persisted order output, CRM Customers, and Inventory; it is not a Phase 5 dependency.
+- Coordinates with Payments for provider status DTOs and fulfillment guards; coordinates with Inventory for ledger-managed stock actions.
 
 ### 2.9 CRM Customers Module (`backend/src/modules/customers/`)
 **Ownership:** CRM Customer profiles, aggregated statistics.
@@ -154,6 +154,24 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 **Invariants:** Revenue/Sales aggregates only count payment-received, non-cancelled, non-refunded sales.
 **Prohibited Coupling:** Visit tracking is out of scope and must not be mocked from order data.
 
+### 2.12 Payments Module (`backend/src/modules/payments/`)
+**Ownership:** Mercado Pago Card Payments (Orders API), attempt lifecycle, webhook inbox, scheduled reconciliation, retry lifecycle, payment status normalization.
+**Aggregates:**
+- `OrderPayment`: Payment summary attached to `Order`.
+- `PaymentAttempt`: Sequential attempts per order with client/provider idempotency keys and allowlisted provider status.
+- `PaymentNotification`: Durable webhook inbox with signature verification and processing state.
+**Invariants:**
+- Server-authoritative totals: charged amount always matches frozen backend order total in ARS.
+- At most one active payable attempt per order.
+- Stock is reserved at card submit and compensated exactly once through the inventory ledger on expiry (10-minute retry window) or cancellation.
+- Card tokens and raw payload bodies are never persisted.
+- Webhooks require valid HMAC `x-signature` within timestamp tolerance and are processed durably.
+- Indeterminate creation outcomes transition to `UNKNOWN` with held stock; escalation occurs at 30 minutes for administrative investigation.
+**Cross-Domain Dependencies:**
+- Coordinates with Checkout for initial placement and active order queries.
+- Provides fulfillment guards and payment status DTOs to Sales.
+- Restores stock via Inventory ledger.
+
 ## 3. Frontend Evidence & Mappers
 
 **Evidence Source:**
@@ -178,21 +196,32 @@ The backend will be structured as a modular monolith inside `backend/src/`.
 - Do not couple the database Schema directly to the REST API responses (No raw Prisma exposure).
 - Do not rely on frontend-provided calculated totals or status values.
 - Do not merge `Sale` and `PurchaseOrder` into a single frontend UI type; they maintain conceptual separation.
-- Do not couple domain logic to external payment/carrier APIs, webhooks, refunds, financial reconciliation, or notification delivery in Phase 5.
+- External payment processing (Mercado Pago Orders API, webhooks, reconciliation) is strictly encapsulated within `backend/src/modules/payments/` via ports (`MercadoPagoOrdersPort`) and HTTP adapters. Domain modules (`sales`, `checkout`, `inventory`) interact only through internal domain ports and transaction coordinators, never calling external payment APIs directly.
 - Do not scatter checkout `fetch()` calls through components or import Prisma into the Next.js frontend; the repository/API adapter is the boundary.
 - Do not remove static checkout/cart mocks until the dedicated mock-removal gate proves API parity, UX/error coverage, restart persistence, and rollback readiness.
 
-## 5. Phase 5 Flow and Exclusions
+## 5. Checkout & Payment Flows
 
 ```text
 Frontend cart/store
-  -> checkout repository (mock by default; API only by explicit source selection)
+  -> checkout repository / payment store
   -> POST /api/v1/checkout/quote
   -> CheckoutController -> CheckoutService -> Catalog/Commerce/Inventory projections
   -> authoritative quote + opaque session/quote IDs
+
+Bank transfer flow:
   -> POST /api/v1/checkout/complete
   -> one Prisma transaction: revalidate -> deduct stock/history -> order/item/payment snapshots
      -> coupon usage/redemption -> cart cleanup -> session completion -> idempotency response
+
+Mercado Pago Card flow:
+  -> Card Payment Brick (@mercadopago/sdk-react) tokenizes card
+  -> POST /api/v1/checkout/payments/mercadopago
+  -> one Prisma transaction: revalidate quote -> deduct stock -> order/item/payment snapshots
+     -> claim initial SUBMITTING attempt
+  -> in-request provider call (Orders API CREATE with X-Idempotency-Key)
+  -> reducer updates attempt/payment/order -> clears submitted cart generation on approved/processing
+  -> webhooks (POST /api/v1/payments/mercadopago/webhooks) & scheduled workers reconcile lifecycle
 ```
 
-The transaction creates a pending order and payment intent only. Real Mercado Pago/Stripe sessions, carrier labels/tracking, webhooks, refunds, financial reconciliation, external emails/notifications, Phase 6 sales lifecycle, and Phase 8 abandoned-cart recovery remain explicitly out of scope.
+Bank transfer completion creates a pending order and payment intent. For Mercado Pago card payments, placement creates the pending order and reserves stock, followed by an immediate in-request Orders API payment attempt, signed webhook processing, and background reconciliation. Carrier shipping labels/tracking and external email delivery remain explicitly out of scope.

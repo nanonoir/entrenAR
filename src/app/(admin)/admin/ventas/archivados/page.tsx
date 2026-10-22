@@ -12,6 +12,7 @@ import {
   getShippingStatusLabel,
   getShippingStatusTone,
 } from "@/lib/data/admin/sales-flow/helpers";
+import { isSaleCancelled } from "@/lib/data/admin/sales-flow/archive";
 import type { AdminSale } from "@/lib/data/admin/sales-flow/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -27,11 +28,8 @@ const FILTER_LABELS: Record<ArchivedFilter, string> = {
 };
 
 function getArchivedFinalStatus(sale: AdminSale) {
-  if (sale.paymentStatus === "cancelled" || sale.paymentStatus === "refunded") {
-    return {
-      label: getPaymentStatusLabel(sale.paymentStatus),
-      tone: getPaymentStatusTone(sale.paymentStatus),
-    };
+  if (isSaleCancelled(sale)) {
+    return { label: getPaymentStatusLabel("cancelled"), tone: getPaymentStatusTone("cancelled") };
   }
 
   return {
@@ -57,7 +55,7 @@ export default function ArchivedSalesPage() {
   const archivedSales = sales.filter((sale) => sale.archived);
   const filtered = archivedSales.filter((sale) => {
     if (activeFilter === "delivered" && sale.shippingStatus !== "delivered") return false;
-    if (activeFilter === "cancelled" && sale.paymentStatus !== "cancelled") return false;
+    if (activeFilter === "cancelled" && !isSaleCancelled(sale)) return false;
     if (activeFilter === "refunded" && sale.paymentStatus !== "refunded") return false;
 
     if (search.trim()) {
@@ -76,7 +74,7 @@ export default function ArchivedSalesPage() {
   const quickFilters: { key: ArchivedFilter; count: number }[] = [
     { key: "all", count: archivedSales.length },
     { key: "delivered", count: archivedSales.filter((sale) => sale.shippingStatus === "delivered").length },
-    { key: "cancelled", count: archivedSales.filter((sale) => sale.paymentStatus === "cancelled").length },
+    { key: "cancelled", count: archivedSales.filter(isSaleCancelled).length },
     { key: "refunded", count: archivedSales.filter((sale) => sale.paymentStatus === "refunded").length },
   ];
 

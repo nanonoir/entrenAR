@@ -8,9 +8,12 @@ import type {
   CheckoutLineItemInput,
   CheckoutQuoteInput,
 } from "@/lib/api/checkout/checkout.repository";
+import type { CheckoutCardPaymentInput } from "@/lib/api/checkout/checkout-card-payment";
 import {
+  checkoutCardPaymentRequestSchema,
   checkoutCompleteRequestSchema,
   checkoutQuoteRequestSchema,
+  type CheckoutCardPaymentRequestDto,
   type CheckoutCompleteRequestDto,
   type CheckoutQuoteRequestDto,
 } from "@/lib/api/checkout/checkout-api.schemas";
@@ -29,6 +32,20 @@ export function toCheckoutCompletePayload(input: CheckoutCompleteInput): Checkou
     paymentMethodId: input.paymentMethodId,
     ...(input.paymentOptionId === undefined ? {} : { paymentOptionId: input.paymentOptionId.trim() }),
     ...(input.quoteId === undefined ? {} : { quoteId: input.quoteId.trim() }),
+  });
+  if (!parsed.success) throw validationError(parsed.error);
+  return parsed.data;
+}
+
+export function toCheckoutCardPaymentPayload(input: CheckoutCardPaymentInput): CheckoutCardPaymentRequestDto {
+  const parsed = checkoutCardPaymentRequestSchema.safeParse({
+    ...buildSelectionPayload(input),
+    card: input.card,
+    customer: toCustomerPayload(input.customer),
+    idempotencyKey: input.idempotencyKey.trim(),
+    quoteId: input.quoteId.trim(),
+    ...(input.deviceId === undefined ? {} : { deviceId: input.deviceId.trim() }),
+    ...(input.paymentOptionId === undefined ? {} : { paymentOptionId: input.paymentOptionId.trim() }),
   });
   if (!parsed.success) throw validationError(parsed.error);
   return parsed.data;

@@ -16,7 +16,7 @@ import {
   getShippingStatusTone,
   isSaleEditable,
 } from "@/lib/data/admin/sales-flow/helpers";
-import { isSaleArchivable } from "@/lib/data/admin/sales-flow/archive";
+import { isSaleArchivable, isSaleCancelled } from "@/lib/data/admin/sales-flow/archive";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -69,7 +69,7 @@ export default function SalesListPage() {
   const filtered = baseSales.filter((sale) => {
     // Quick filter
     if (activeFilter === "porCobrar" && sale.paymentStatus !== "pending") return false;
-    if (activeFilter === "porEmpaquetar" && (sale.shippingStatus !== "to_pack" || sale.paymentStatus === "cancelled")) return false;
+    if (activeFilter === "porEmpaquetar" && (sale.shippingStatus !== "to_pack" || isSaleCancelled(sale))) return false;
     if (activeFilter === "porEnviar" && sale.shippingStatus !== "to_ship") return false;
     if (activeFilter === "porRetirar" && sale.shippingStatus !== "pickup") return false;
     if (activeFilter === "porArchivar" && !isSaleArchivable(sale)) return false;

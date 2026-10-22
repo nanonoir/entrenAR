@@ -1,9 +1,10 @@
 # PRD — Mercado Pago Payment Integration (EntrenAR)
 
-**Status:** Refined — Owner decisions resolved (§7), ready for design/ExecPlan  
-**Refined:** 2026-10-21  
-**Scope:** Embedded Mercado Pago payment in the existing checkout, server-side payment processing, verified notifications, and order/payment/stock reconciliation.  
-**Boundary:** Exploration and refinement only. No ExecPlan, design, or implementation has started.
+**Status:** Implemented and Delivered<br>
+**Refined:** 2026-10-21<br>
+**Delivered:** 2026-10-22<br>
+**Scope:** Embedded Mercado Pago payment in the existing checkout, server-side payment processing, verified notifications, and order/payment/stock reconciliation.<br>
+**Boundary:** Canonical product requirements document for the delivered Mercado Pago Card Payments integration.
 
 ## 1. Objective
 

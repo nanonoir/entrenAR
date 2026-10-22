@@ -44,6 +44,7 @@ import type {
   SessionFixture,
 } from "./support/checkout-http.types";
 
+import { settleCheckoutPaymentFixtures } from "./support/payments-settle.helpers";
 import {
   CARD_ORDER_TOTAL,
   CARD_SHIPPING_METHOD,
@@ -120,6 +121,7 @@ describe("Mercado Pago card payment endpoints (e2e, mocked provider port)", () =
   afterAll(async () => {
     try {
       if (prisma && fixtures) {
+        await settleCheckoutPaymentFixtures(prisma, fixtures);
         const guestOrders = await prisma.order.findMany({ select: { id: true }, where: { customerEmail: fixtures.guestOwner.email } });
         const ids = guestOrders.map((order) => order.id);
         await prisma.checkoutIdempotencyKey.deleteMany({ where: { orderId: { in: ids } } });

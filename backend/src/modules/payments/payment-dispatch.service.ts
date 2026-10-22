@@ -75,6 +75,7 @@ export class PaymentDispatchService {
         expectedAmount,
         items: order.items,
         orderId: order.id,
+        shippingCost: order.shippingCost,
       },
       input.card,
       input.deviceId,
@@ -126,6 +127,14 @@ export class PaymentDispatchService {
     if (error instanceof MercadoPagoOrdersError && !error.outcomeUncertain) {
       switch (error.category) {
         case MERCADOPAGO_ERROR_CATEGORY.VALIDATION:
+          this.logger.warn(JSON.stringify({
+            attemptId,
+            category: error.category,
+            event: "mercadopago_validation_rejected",
+            httpStatus: error.httpStatus ?? null,
+            providerCode: error.providerCode ?? null,
+            providerDetail: error.providerDetail ?? null,
+          }));
           return this.reducer.rejectWithoutCharge(attemptId, `provider_${error.category}`);
         case MERCADOPAGO_ERROR_CATEGORY.AUTH:
           // Our credentials/configuration failed: not a card rejection. No order exists at the provider.

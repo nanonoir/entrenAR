@@ -65,6 +65,16 @@ export function buildWebhookManifest(dataId: string, requestId: string, timestam
   return `id:${dataId.toLowerCase()};request-id:${requestId};ts:${timestamp};`;
 }
 
+/**
+ * The docs say alphanumeric ids are signed lowercased, while the official SDK signs `data.id` as received; both
+ * manifests are HMAC-checked with the secret, so accepting either does not weaken authentication.
+ */
+function manifestCandidates(dataId: string, requestId: string, timestamp: string): string[] {
+  const lowercased = buildWebhookManifest(dataId, requestId, timestamp);
+  const asReceived = `id:${dataId};request-id:${requestId};ts:${timestamp};`;
+  return lowercased === asReceived ? [lowercased] : [lowercased, asReceived];
+}
+
 export function verifyMercadoPagoWebhookSignature(input: WebhookSignatureInput): WebhookSignatureResult {
   const parsed = parseSignatureHeader(input.signatureHeader);
   const { dataId, requestId } = input;
@@ -82,11 +92,12 @@ export function verifyMercadoPagoWebhookSignature(input: WebhookSignatureInput):
     return { ok: false, reason: "malformed" };
   }
 
-  const expected = createHmac("sha256", input.secret).update(buildWebhookManifest(dataId, requestId, parsed.timestamp)).digest();
   const received = Buffer.from(parsed.signature, "hex");
-  if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
-    return { ok: false, reason: "invalid_signature" };
-  }
+  const matches = manifestCandidates(dataId, requestId, parsed.timestamp).some((manifest) => {
+    const expected = createHmac("sha256", input.secret).update(manifest).digest();
+    return received.length === expected.length && timingSafeEqual(received, expected);
+  });
+  if (!matches) return { ok: false, reason: "invalid_signature" };
 
   const timestampMs = timestampToMilliseconds(parsed.timestamp);
   if (Math.abs(input.nowMs - timestampMs) > WEBHOOK_MAX_SKEW_MS) return { ok: false, reason: "stale" };

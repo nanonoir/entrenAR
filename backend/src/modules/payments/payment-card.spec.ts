@@ -106,6 +106,34 @@ describe("buildCreateOrderRequest", () => {
     ]);
   });
 
+  it("adds a shipping line item when the order has shipping and the lines add up to the total", () => {
+    const request = buildCreateOrderRequest({ ...snapshot, expectedAmount: "275.00", shippingCost: { toString: () => "100.00" } }, card, undefined);
+
+    expect(request.items).toHaveLength(3);
+    expect(request.items?.[2]).toMatchObject({ quantity: 1, title: "Envío", unitPrice: "100.00" });
+  });
+
+  it("omits the items when a discount makes them differ from the total", () => {
+    expect(buildCreateOrderRequest({ ...snapshot, expectedAmount: "150.00" }, card, undefined)).not.toHaveProperty("items");
+    expect(buildCreateOrderRequest({ ...snapshot, expectedAmount: "250.00", shippingCost: "100.00" }, card, undefined)).not.toHaveProperty("items");
+  });
+
+  it("requires the exact cents total", () => {
+    expect(buildCreateOrderRequest({ ...snapshot, expectedAmount: "175.01" }, card, undefined)).not.toHaveProperty("items");
+    expect(buildCreateOrderRequest({ ...snapshot, expectedAmount: "175.00", shippingCost: 0 }, card, undefined).items).toHaveLength(2);
+  });
+
+  it("omits external codes longer than the provider's 30-character limit", () => {
+    const items = [
+      { productName: "Whey Pro", quantity: 2, sku: "x".repeat(31), unitPrice: 75, variantName: "Vanilla" },
+      { productName: "Shaker", quantity: 1, sku: "SHK-1", unitPrice: 25, variantName: null },
+    ];
+    const request = buildCreateOrderRequest({ ...snapshot, items }, card, undefined);
+
+    expect(request.items?.[0]).not.toHaveProperty("externalCode");
+    expect(request.items?.[1]).toMatchObject({ externalCode: "SHK-1" });
+  });
+
   it("omits the device id when none was supplied and rejects unsupported brands", () => {
     expect(buildCreateOrderRequest(snapshot, card, undefined)).not.toHaveProperty("deviceId");
     expect(() => buildCreateOrderRequest(snapshot, { ...card, paymentMethodId: "pix" }, undefined)).toThrow();

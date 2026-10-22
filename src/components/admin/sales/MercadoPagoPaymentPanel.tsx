@@ -32,6 +32,7 @@ const HOLD_LABELS: Record<string, string> = {
 };
 
 const HELD_STOCK_WARNING_MS = 60 * 60 * 1000;
+const UNKNOWN_RESOLVE_AFTER_MS = 30 * 60 * 1000;
 
 function Warning({ children }: { children: React.ReactNode }) {
   return (
@@ -142,7 +143,8 @@ export function MercadoPagoPaymentPanel({ sale }: { sale: AdminSale }) {
   const provider = sale.providerPayment;
   if (!provider) return null;
   const detail = provider.detail;
-  const canResolveUnknown = Boolean(detail?.attentionRequiredAt) && detail?.attempts.some((attempt) => attempt.status === "UNKNOWN") === true;
+  const canResolveUnknown = detail?.attempts.some((attempt) => attempt.status === "UNKNOWN"
+    && (Boolean(detail.attentionRequiredAt) || renderedAt - new Date(attempt.submittedAt).getTime() >= UNKNOWN_RESOLVE_AFTER_MS)) === true;
 
   async function handleResolve() {
     const result = await resolveUnknownPayment(sale.id);

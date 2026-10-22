@@ -58,6 +58,9 @@ describe("sales.state-machine", () => {
     expect(canArchiveSale(confirmed)).toBe(false);
     expect(canArchiveSale({ ...confirmed, shippingStatus: OrderShippingStatus.DELIVERED })).toBe(true);
     expect(canArchiveSale({ ...confirmed, status: OrderStatus.CANCELLED })).toBe(true);
+    const delivered = { ...confirmed, shippingStatus: OrderShippingStatus.DELIVERED };
+    expect(canArchiveSale({ ...delivered, paymentStatus: PaymentStatus.PARTIALLY_REFUNDED })).toBe(true);
+    expect(canArchiveSale({ ...delivered, paymentStatus: PaymentStatus.REFUNDED })).toBe(false);
   });
 
   it("resolves every persisted lifecycle event", () => {

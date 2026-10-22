@@ -3,6 +3,7 @@ import type { ConfigService } from "@nestjs/config";
 import type { AppConfig } from "../../../config/app.config";
 import {
   canceledOrder,
+  cardRejected402Body,
   chargedBackOrder,
   failedOrder,
   partiallyRefundedOrder,
@@ -14,6 +15,7 @@ import {
   MERCADOPAGO_API_ORIGIN,
   MERCADOPAGO_REQUEST_TIMEOUT_MS,
   MercadoPagoHttpOrdersAdapter,
+  searchWindow,
 } from "./mercadopago-orders.http-adapter";
 import { MercadoPagoOrdersError, type CreateMercadoPagoOrderRequest } from "./mercadopago-orders.port";
 
@@ -207,26 +209,83 @@ describe("MercadoPagoHttpOrdersAdapter", () => {
   });
 
   describe("searchOrders", () => {
-    it("searches by external reference with a bounded limit", async () => {
-      const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: [processedAccreditedOrder, failedOrder] }));
-      const orders = await createAdapter(fetchMock).searchOrders({ externalReference: "order_internal_1", limit: 500 });
+    const submittedAt = new Date(Date.now() - 10 * 60_000);
+
+    it("searches by external reference with the required creation window and a bounded page size", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: [processedAccreditedOrder, failedOrder], paging: { total: 2 } }));
+      const orders = await createAdapter(fetchMock).searchOrders({ externalReference: "order_internal_1", limit: 500, submittedAt });
 
       const [url] = fetchMock.mock.calls[0] as [string];
-      expect(url).toBe(`${MERCADOPAGO_API_ORIGIN}/v1/orders?external_reference=order_internal_1&limit=20`);
+      const params = new URL(url).searchParams;
+      expect(url.startsWith(`${MERCADOPAGO_API_ORIGIN}/v1/orders?`)).toBe(true);
+      expect(params.get("external_reference")).toBe("order_internal_1");
+      expect(params.get("type")).toBe("online");
+      expect(params.get("page_size")).toBe("20");
+      expect(params.has("limit")).toBe(false);
+      expect(params.get("begin_date")).toBe(new Date(submittedAt.getTime() - 3_600_000).toISOString());
+      expect(new Date(params.get("end_date")!).getTime()).toBeGreaterThan(submittedAt.getTime());
       expect(orders).toHaveLength(2);
     });
 
-    it("accepts a bare array and truncates to the limit", async () => {
-      const fetchMock = jest.fn().mockResolvedValue(jsonResponse([processedAccreditedOrder, failedOrder, canceledOrder]));
-      const orders = await createAdapter(fetchMock).searchOrders({ externalReference: "order_internal_1", limit: 2 });
+    it("accepts an empty data list", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ data: [], paging: { total: 0 } }));
 
-      expect(orders).toHaveLength(2);
+      await expect(createAdapter(fetchMock).searchOrders({ externalReference: "x", submittedAt })).resolves.toEqual([]);
     });
 
     it("rejects an unexpected search shape", async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ unexpected: true }));
 
-      await expect(createAdapter(fetchMock).searchOrders({ externalReference: "x" })).rejects.toMatchObject({ category: "unknown" });
+      await expect(createAdapter(fetchMock).searchOrders({ externalReference: "x", submittedAt })).rejects.toMatchObject({ category: "unknown" });
+    });
+
+    it("bounds the window: submittedAt + 24h for old attempts, now + 5m for recent ones", () => {
+      const old = new Date("2026-10-01T00:00:00.000Z");
+      expect(searchWindow(old, new Date("2026-10-20T00:00:00.000Z"))).toEqual({ beginDate: "2026-09-30T23:00:00.000Z", endDate: "2026-10-02T00:00:00.000Z" });
+
+      const now = new Date("2026-10-21T12:00:00.000Z");
+      expect(searchWindow(new Date("2026-10-21T11:55:00.000Z"), now)).toEqual({ beginDate: "2026-10-21T10:55:00.000Z", endDate: "2026-10-21T12:05:00.000Z" });
+    });
+  });
+
+  describe("failed card payments (HTTP 402 with the order in data)", () => {
+    it("returns the failed order from create instead of throwing", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(jsonResponse(cardRejected402Body, 402));
+      const order = await createAdapter(fetchMock).createOrder(createRequest, "key");
+
+      expect(order).toMatchObject({ status: "failed", statusDetail: "failed" });
+      expect(order.transactions[0]).toMatchObject({ status: "failed", statusDetail: "invalid_card_token" });
+    });
+
+    it("returns the failed order from get", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(jsonResponse(cardRejected402Body, 402));
+
+      await expect(createAdapter(fetchMock).getOrder("a")).resolves.toMatchObject({ status: "failed" });
+    });
+
+    it("keeps HTTP error semantics when the body has no valid order, with a safe detail", async () => {
+      const body = { data: { not: "an order" }, errors: [{ code: "failed", details: [`card_token: ${CARD_TOKEN}${"x".repeat(30)}`, "PAY123: invalid_card_token"] }] };
+      const error = await catchError(createAdapter(jest.fn().mockResolvedValue(jsonResponse(body, 402))).createOrder(createRequest, "key"));
+
+      expect(error).toMatchObject({ category: "unknown", httpStatus: 402, outcomeUncertain: true, providerCode: "failed" });
+      expect(error.providerDetail).toContain("invalid_card_token");
+      expect(error.providerDetail).not.toContain(CARD_TOKEN);
+      expect(error.providerDetail!.length).toBeLessThanOrEqual(300);
+    });
+  });
+
+  describe("items", () => {
+    const itemRequest = { ...createRequest, items: [{ quantity: 2, title: "Proteina", unitPrice: "6172.84" }, { quantity: 1, title: "Envío", unitPrice: "100.00" }] };
+
+    async function sentBody(request: CreateMercadoPagoOrderRequest) {
+      const fetchMock = jest.fn().mockResolvedValue(jsonResponse(processedAccreditedOrder, 201));
+      await createAdapter(fetchMock).createOrder(request, "key");
+      return JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    }
+
+    it("sends items only when their cents add up to the total exactly", async () => {
+      expect((await sentBody({ ...itemRequest, totalAmount: "12445.68", payment: { ...itemRequest.payment, amount: "12445.68" } })).items).toHaveLength(2);
+      expect(await sentBody(itemRequest)).not.toHaveProperty("items");
     });
   });
 });
