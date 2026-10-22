@@ -6,6 +6,8 @@ export const PAYMENT_STATEMENT_DESCRIPTOR = "ENTRENAR";
 const SHIPPING_ITEM_CODE = "SHIPPING";
 const SHIPPING_ITEM_TITLE = "Envío";
 const ITEM_TITLE_MAX_LENGTH = 256;
+/** Provider limit for `items[].external_code`; longer SKUs are omitted rather than truncated into a misleading code. */
+const ITEM_EXTERNAL_CODE_MAX_LENGTH = 30;
 
 export interface PaymentRequestSnapshot {
   customerEmail: string;
@@ -36,8 +38,8 @@ export function moneyString(value: { toString(): string } | number | string): st
  * do not (coupon discounts) the list is omitted; discounts are never redistributed and prices are never negative.
  */
 function buildItems(snapshot: PaymentRequestSnapshot): CreateMercadoPagoOrderRequest["items"] | undefined {
-  const items = snapshot.items.map((item) => ({
-    externalCode: item.sku,
+  const items: Array<NonNullable<CreateMercadoPagoOrderRequest["items"]>[number]> = snapshot.items.map((item) => ({
+    ...(item.sku.length <= ITEM_EXTERNAL_CODE_MAX_LENGTH ? { externalCode: item.sku } : {}),
     quantity: item.quantity,
     title: (item.variantName ? `${item.productName} - ${item.variantName}` : item.productName).slice(0, ITEM_TITLE_MAX_LENGTH),
     unitPrice: moneyString(item.unitPrice),

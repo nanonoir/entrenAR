@@ -123,6 +123,17 @@ describe("buildCreateOrderRequest", () => {
     expect(buildCreateOrderRequest({ ...snapshot, expectedAmount: "175.00", shippingCost: 0 }, card, undefined).items).toHaveLength(2);
   });
 
+  it("omits external codes longer than the provider's 30-character limit", () => {
+    const items = [
+      { productName: "Whey Pro", quantity: 2, sku: "x".repeat(31), unitPrice: 75, variantName: "Vanilla" },
+      { productName: "Shaker", quantity: 1, sku: "SHK-1", unitPrice: 25, variantName: null },
+    ];
+    const request = buildCreateOrderRequest({ ...snapshot, items }, card, undefined);
+
+    expect(request.items?.[0]).not.toHaveProperty("externalCode");
+    expect(request.items?.[1]).toMatchObject({ externalCode: "SHK-1" });
+  });
+
   it("omits the device id when none was supplied and rejects unsupported brands", () => {
     expect(buildCreateOrderRequest(snapshot, card, undefined)).not.toHaveProperty("deviceId");
     expect(() => buildCreateOrderRequest(snapshot, { ...card, paymentMethodId: "pix" }, undefined)).toThrow();
