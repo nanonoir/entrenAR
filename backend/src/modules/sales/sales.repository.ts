@@ -2,11 +2,14 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { MutationGate } from "../../common/prisma/mutation-gate";
 import { Prisma } from "../../generated/prisma/client";
-import { OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { OrderDeliveryType, OrderInventoryPolicy, OrderShippingStatus, OrderStatus, PaymentNotificationStatus, PaymentStatus } from "../../generated/prisma/enums";
+import { WEBHOOK_TOPIC } from "../payments/payment-notification.service";
+import { lockOrderAndPayment } from "../payments/payments-transaction";
 import { salesOrderInclude, type OrderHistoryRecord, type SalesOrderRecord } from "./sales.mapper";
 import { SALE_SORT_BY, type CreateManualSale, type SalesListQuery } from "./sales.schemas";
 
 export type TransactionClient = Prisma.TransactionClient;
+export interface PaymentRiskAlertDto { id: string; reason?: string; receivedAt: string; resourceId: string; topic: string; }
 export interface SalesPageResult { items: SalesOrderRecord[]; total: number; }
 export interface CreateSaleItemRecord { attributes: Prisma.InputJsonValue; compareAtPrice?: number; lineSubtotal: Prisma.Decimal | number; productId: string; productName: string; quantity: number; sku: string; snapshot: Prisma.InputJsonValue; unitPrice: number; variantId?: string; variantName?: string; weightGrams?: number; }
 export interface CreateSaleRecord { confirmedAt?: Date; currency: string; customerDni?: string; customerEmail: string; customerFirstName: string; customerId?: string; customerLastName: string; customerPhone?: string; customerSnapshot: Prisma.InputJsonValue; deliverySnapshot: Prisma.InputJsonValue; deliveryType: OrderDeliveryType; discountAmount: Prisma.Decimal | number; discountSnapshot: Prisma.InputJsonValue; inventoryEffectId?: string; inventoryPolicy?: OrderInventoryPolicy; internalNotes?: string; items: readonly CreateSaleItemRecord[]; number: string; paymentMethodId: string; paymentMethodSnapshot: Prisma.InputJsonValue; paymentOptionId?: string; paymentStatus: PaymentStatus; shippingAddressSnapshot?: Prisma.InputJsonValue | null; shippingCost: Prisma.Decimal | number; shippingStatus?: OrderShippingStatus; sourceOrderId?: string; status: OrderStatus; subtotal: Prisma.Decimal | number; total: Prisma.Decimal | number; userId?: string; }
@@ -27,6 +30,17 @@ export class SalesRepository {
       this.prisma.order.count({ where }),
     ]);
     return { items, total };
+  }
+  async lockOrderAndPayment(transaction: TransactionClient, orderId: string): Promise<void> { await lockOrderAndPayment(transaction, orderId); }
+  /** Quarantined optional-event notifications (fraud/chargeback) that could not be tied to an order. */
+  async listUnresolvedRiskAlerts(limit = 50): Promise<PaymentRiskAlertDto[]> {
+    const rows = await this.prisma.paymentNotification.findMany({
+      orderBy: { receivedAt: "desc" },
+      select: { id: true, quarantineReason: true, receivedAt: true, resourceId: true, topic: true },
+      take: limit,
+      where: { status: PaymentNotificationStatus.QUARANTINED, topic: { in: [WEBHOOK_TOPIC.FRAUD_ALERT, WEBHOOK_TOPIC.CHARGEBACK] } },
+    });
+    return rows.map((row) => ({ id: row.id, ...(row.quarantineReason ? { reason: row.quarantineReason } : {}), receivedAt: row.receivedAt.toISOString(), resourceId: row.resourceId, topic: row.topic }));
   }
   async findById(id: string): Promise<SalesOrderRecord | null> { return this.findByIdIn(this.prisma, id); }
   async findByOrderNumber(number: string): Promise<SalesOrderRecord | null> { return this.prisma.order.findUnique({ include: salesOrderInclude, where: { number } }); }

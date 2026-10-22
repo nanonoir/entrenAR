@@ -12,6 +12,7 @@ import { PaymentNotificationService } from "./payment-notification.service";
 import { PaymentCircuitService } from "./payment-circuit.service";
 import { PaymentDispatchService } from "./payment-dispatch.service";
 import { PaymentReducerService } from "./payment-reducer.service";
+import { PaymentUnknownResolutionService } from "./payment-unknown-resolution.service";
 import { PaymentRetryService } from "./payment-retry.service";
 import { PaymentStatusService } from "./payment-status.service";
 import { PaymentsController } from "./payments.controller";
@@ -27,6 +28,7 @@ import { PaymentsTransaction } from "./payments-transaction";
     PaymentNotificationProcessorService,
     PaymentReducerService,
     PaymentStatusService,
+    PaymentUnknownResolutionService,
   ],
   imports: [InventoryModule],
   providers: [
@@ -40,6 +42,7 @@ import { PaymentsTransaction } from "./payments-transaction";
     PaymentReducerService,
     PaymentRetryService,
     PaymentStatusService,
+    PaymentUnknownResolutionService,
     PaymentWorkersService,
     PaymentsRepository,
     PaymentsTransaction,

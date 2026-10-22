@@ -7,7 +7,8 @@ import { InventoryMovementKind, InventoryReferenceType, OrderInventoryPolicy, Or
 import { INVENTORY_ORIGIN } from "../inventory/inventory.constants";
 import { InventoryRepository } from "../inventory/inventory.repository";
 import { toAdminSaleDetailDto, toAdminSaleSummaryDto, type AdminSaleDetailDto, type AdminSaleSummaryDto, type SalesOrderRecord } from "./sales.mapper";
-import { manualSaleRecord, SalesRepository, type AppendHistoryInput, type CreateSaleRecord, type TransactionClient } from "./sales.repository";
+import { assertCancellationAllowed, assertFulfillmentAllowed, assertManualCommandAllowed, isProviderManaged } from "./sales.payment-guards";
+import { manualSaleRecord, SalesRepository, type PaymentRiskAlertDto, type AppendHistoryInput, type CreateSaleRecord, type TransactionClient } from "./sales.repository";
 import { SALE_COMMAND, type AddSaleNote, type CancelSale, type ConvertOrderToSale, type CreateManualSale, type SalesCommand, type SalesListQuery, type ShipSale } from "./sales.schemas";
 import { resolveHistoryEventType, SaleTransitionError, transitionSale, type SaleState, type SaleTransitionOptions } from "./sales.state-machine";
 
@@ -22,6 +23,7 @@ export class SalesService {
     private readonly inventoryRepository: InventoryRepository,
   ) {}
   async list(query: SalesListQuery): Promise<SalesPageDto> { const page = await this.salesRepository.list(query); return { items: page.items.map(toAdminSaleSummaryDto), limit: query.limit, page: query.page, total: page.total }; }
+  async listRiskAlerts(): Promise<{ items: PaymentRiskAlertDto[] }> { return { items: await this.salesRepository.listUnresolvedRiskAlerts() }; }
   async get(identifier: string): Promise<AdminSaleDetailDto> { const order = await this.salesRepository.findByIdentifier(identifier); if (!order) throw this.notFound(); return toAdminSaleDetailDto(order); }
   async detail(identifier: string): Promise<AdminSaleDetailDto> { return this.get(identifier); }
   async execute(identifier: string, command: SalesCommand, actor?: SalesActor): Promise<AdminSaleDetailDto> {
@@ -83,6 +85,7 @@ export class SalesService {
     if (!identifier) throw this.conflict("A source order is required for conversion.");
     return this.salesRepository.transaction(async (transaction) => {
       const source = await this.orderOrThrow(transaction, identifier);
+      assertManualCommandAllowed(source, SALE_COMMAND.CONVERT_ORDER_TO_SALE);
       if (await this.salesRepository.findBySourceOrderIdInTransaction(transaction, source.id)) throw this.conflict("The source order has already been converted into a sale.");
       if (source.status !== OrderStatus.PENDING) throw this.conflict("Only pending orders can be converted into sales.");
       const converted = convertedSaleRecord(source);
@@ -105,13 +108,21 @@ export class SalesService {
 
   private async executeLifecycle(identifier: string, command: LifecycleCommand, actor?: SalesActor): Promise<AdminSaleDetailDto> {
     return this.salesRepository.transaction(async (transaction) => {
-      const order = await this.orderOrThrow(transaction, identifier);
+      let order = await this.orderOrThrow(transaction, identifier);
+      if (isProviderManaged(order)) {
+        // Shared order lock (order, then payment) so provider reducers cannot interleave; re-read the locked state.
+        await this.salesRepository.lockOrderAndPayment(transaction, order.id);
+        order = await this.orderOrThrow(transaction, order.id);
+        if (command.type === SALE_COMMAND.CONFIRM || command.type === SALE_COMMAND.REOPEN) assertManualCommandAllowed(order, command.type);
+      }
       if (command.type === SALE_COMMAND.CANCEL && order.status === OrderStatus.CANCELLED) {
         throw this.conflict("Sale is already cancelled.");
       }
       let transition;
       try { transition = transitionSale(toSaleState(order), command.type, transitionOptions(command)); }
       catch (error) { if (error instanceof SaleTransitionError) throw this.conflict(error.message); throw error; }
+      if (command.type === SALE_COMMAND.PACK || command.type === SALE_COMMAND.SHIP || command.type === SALE_COMMAND.DELIVER) assertFulfillmentAllowed(order);
+      if (command.type === SALE_COMMAND.CANCEL) assertCancellationAllowed(order);
       if (command.type === SALE_COMMAND.CONFIRM) {
         if (!order.payment) throw this.conflict("Sale cannot be confirmed without a payment record.");
         if (order.payment.status === PaymentStatus.PAID) throw this.conflict("Sale payment has already been received.");

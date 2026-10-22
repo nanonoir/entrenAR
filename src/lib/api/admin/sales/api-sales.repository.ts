@@ -4,6 +4,7 @@ import {
 } from "./client";
 import {
   mapAdminSaleDetail,
+  mapPaymentRiskAlertsResponse,
   mapPurchaseOrderResponse,
   mapPurchaseOrdersListResponse,
   mapSalesListResponse,
@@ -31,6 +32,7 @@ import type {
   CreateManualSalePayload,
   CreatePurchaseOrderPayload,
   CreateSupplierPayload,
+  PaymentRiskAlert,
   PurchaseOrder,
   PurchaseOrderDetail,
   PurchaseOrderFilterQuery,
@@ -120,6 +122,16 @@ export class ApiSalesRepository implements SalesRepository {
     return mapAdminSaleDetail(response);
   }
 
+  async resolveUnknownPayment(id: string): Promise<AdminSaleDetail> {
+    const response = await this.client.post<unknown>(`${saleCommandPath(id, "payment")}/resolve-unknown`, {});
+    return mapAdminSaleDetail(response);
+  }
+
+  async getPaymentRiskAlerts(): Promise<PaymentRiskAlert[]> {
+    const response = await this.client.get<unknown>("/admin/sales/payment-risk-alerts");
+    return mapPaymentRiskAlertsResponse(response);
+  }
+
   async getSuppliers(query: SupplierFilterQuery = {}): Promise<Supplier[]> {
     const response = await this.client.get<unknown>(withQuery("/admin/suppliers", toSupplierQueryParams(query)));
     return mapSuppliersListResponse(response);
@@ -190,7 +202,7 @@ export const getAdminSalesRepository = (client?: SalesApiClient): ApiSalesReposi
 type SaleCommand = "archive" | "confirm" | "deliver" | "reopen" | "unarchive" | "unpack" | "pack";
 type PurchaseOrderCommand = "cancel" | "receive" | "submit";
 
-function saleCommandPath(id: string, command: SaleCommand | "cancel" | "notes" | "ship"): string {
+function saleCommandPath(id: string, command: SaleCommand | "cancel" | "notes" | "payment" | "ship"): string {
   return `/admin/sales/${encodeURIComponent(id)}/${command}`;
 }
 

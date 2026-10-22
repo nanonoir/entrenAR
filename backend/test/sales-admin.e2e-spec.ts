@@ -9,11 +9,15 @@ import { AppModule } from "../src/app.module";
 import { configureHttpApplication } from "../src/app.setup";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import { AuthService } from "../src/modules/auth/auth.service";
+import { WEBHOOK_TOPIC } from "../src/modules/payments/payment-notification.service";
 import {
   CatalogVisibility,
   OrderDeliveryType,
   OrderShippingStatus,
   OrderStatus,
+  PaymentAttemptStatus,
+  PaymentNotificationStatus,
+  PaymentProvider,
   PaymentStatus,
   Role,
   StockMode,
@@ -33,6 +37,7 @@ describe("sales CRM administration API (e2e)", () => {
   const saleIds: string[] = [];
   const sourceOrderIds: string[] = [];
   const purchaseOrderIds: string[] = [];
+  const notificationIds: string[] = [];
   let poProductId = "";
   let poProductVariantId = "";
   let poVariantId = "";
@@ -82,6 +87,7 @@ describe("sales CRM administration API (e2e)", () => {
   afterAll(async () => {
     try {
       if (prisma) {
+        await prisma.paymentNotification.deleteMany({ where: { id: { in: notificationIds } } });
         await prisma.purchaseOrder.deleteMany({ where: { id: { in: purchaseOrderIds } } });
         await prisma.order.deleteMany({ where: { id: { in: [...saleIds, ...sourceOrderIds] } } });
         await prisma.supplier.deleteMany({ where: { id: { in: supplierIds } } });
@@ -330,6 +336,144 @@ describe("sales CRM administration API (e2e)", () => {
     await expectError(await request(`/admin/purchase-orders/${cancellable.id}/cancel`, { body: {}, method: "POST", token: adminToken }), 409, "CONFLICT");
   });
 
+  it("exposes the payment-risk-alerts feed to ADMIN only", async () => {
+    await expectError(await request("/admin/sales/payment-risk-alerts"), 401, "UNAUTHORIZED");
+    await expectError(await request("/admin/sales/payment-risk-alerts", { token: customerToken }), 403, "FORBIDDEN");
+    const suffix = randomUUID().replaceAll("-", "");
+    const fraud = await prismaOrThrow().paymentNotification.create({ data: { dedupKey: `e2e-fraud-${suffix}`, quarantineReason: "unresolved_order", resourceId: `e2e-res-${suffix}`, status: PaymentNotificationStatus.QUARANTINED, topic: WEBHOOK_TOPIC.FRAUD_ALERT } });
+    const ignored = await prismaOrThrow().paymentNotification.create({ data: { dedupKey: `e2e-other-${suffix}`, resourceId: `e2e-other-${suffix}`, status: PaymentNotificationStatus.QUARANTINED, topic: "payment" } });
+    notificationIds.push(fraud.id, ignored.id);
+    const response = await request("/admin/sales/payment-risk-alerts", { token: adminToken });
+    expect(response.status).toBe(200);
+    const body = await json<{ items: Array<{ id: string; reason?: string; resourceId: string; topic: string }> }>(response);
+    expect(body.items).toEqual(expect.arrayContaining([expect.objectContaining({ id: fraud.id, reason: "unresolved_order", resourceId: `e2e-res-${suffix}`, topic: WEBHOOK_TOPIC.FRAUD_ALERT })]));
+    expect(body.items.some((item) => item.id === ignored.id)).toBe(false);
+  });
+
+  it("exposes Mercado Pago payment detail without secrets and leaves manual sales untouched", async () => {
+    const orderId = await createProviderOrder("detail", { holds: ["dispute"], refundedAmount: 40, status: PaymentStatus.PARTIALLY_REFUNDED });
+    const response = await request(`/admin/sales/${orderId}`, { token: adminToken });
+    expect(response.status).toBe(200);
+    const raw = await response.text();
+    for (const forbidden of ["clientKey", "requestHash", "providerIdempotencyKey", "e2e-client-key", "e2e-request-hash"]) expect(raw).not.toContain(forbidden);
+    const sale = JSON.parse(raw) as ProviderSaleResponse;
+    expect(sale).toEqual(expect.objectContaining({ paymentAttention: true, paymentDispute: true, paymentProvider: "MERCADOPAGO", paymentRefundedAmount: 40, paymentStatus: "PARTIALLY_REFUNDED" }));
+    expect(sale.payment?.providerPayment).toEqual(expect.objectContaining({ attemptCount: 1, dispute: true, fullRefund: false, holds: ["dispute"], provider: "MERCADOPAGO", refundedAmount: 40, unresolvedReconciliation: false }));
+    expect(sale.payment?.providerPayment?.attempts[0]).toEqual(expect.objectContaining({ attemptNumber: 1, providerOrderId: `${orderId}-mp-order`, status: "APPROVED" }));
+
+    const list = await json<{ items: Array<{ id: string; paymentProvider?: string }> }>(await request(`/admin/sales?search=${encodeURIComponent(orderId)}`, { token: adminToken }));
+    expect(list.items.find((item) => item.id === orderId)?.paymentProvider).toBe("MERCADOPAGO");
+
+    const manual = await createSale(`e2e-manual-dto-${randomUUID().replaceAll("-", "")}`);
+    expect(manual).not.toHaveProperty("paymentProvider");
+    expect(manual.payment).not.toHaveProperty("providerPayment");
+  });
+
+  it("blocks manual confirm, reopen and conversion for Mercado Pago orders", async () => {
+    const pending = await createProviderOrder("confirm", { status: PaymentStatus.PENDING, orderStatus: OrderStatus.PENDING, attemptStatus: PaymentAttemptStatus.PROCESSING });
+    await expectError(await request(`/admin/sales/${pending}/confirm`, { body: {}, method: "POST", token: adminToken }), 409, "PAYMENT_PROVIDER_MANAGED");
+    const cancelled = await createProviderOrder("reopen", { status: PaymentStatus.REFUNDED, refundedAmount: 100, holds: ["full_refund"] });
+    await saleCommand(cancelled, "cancel", { cancellationReason: "refunded", restoreStock: false });
+    await expectError(await request(`/admin/sales/${cancelled}/reopen`, { body: {}, method: "POST", token: adminToken }), 409, "PAYMENT_PROVIDER_MANAGED");
+    await expectError(await request("/admin/sales/convert-order", { body: { orderId: pending }, method: "POST", token: adminToken }), 409, "PAYMENT_PROVIDER_MANAGED");
+  });
+
+  it("gates pack, ship and deliver on verified payment and holds, keeping partial refunds fulfillable", async () => {
+    const pending = await createProviderOrder("gate-pending", { status: PaymentStatus.PENDING, orderStatus: OrderStatus.PENDING, attemptStatus: PaymentAttemptStatus.PROCESSING });
+    // A PENDING order is rejected by the lifecycle state machine before the payment guard is reached.
+    await expectError(await request(`/admin/sales/${pending}/pack`, { body: {}, method: "POST", token: adminToken }), 409, "CONFLICT");
+    const unpaid = await createProviderOrder("gate-unpaid", { orderStatus: OrderStatus.CONFIRMED, status: PaymentStatus.PENDING, attemptStatus: PaymentAttemptStatus.PROCESSING });
+    await expectError(await request(`/admin/sales/${unpaid}/pack`, { body: {}, method: "POST", token: adminToken }), 409, "PAYMENT_FULFILLMENT_BLOCKED");
+    const held = await createProviderOrder("gate-held", { holds: ["dispute"], status: PaymentStatus.PAID });
+    await expectError(await request(`/admin/sales/${held}/pack`, { body: {}, method: "POST", token: adminToken }), 409, "PAYMENT_FULFILLMENT_BLOCKED");
+    const fullRefund = await createProviderOrder("gate-refund", { holds: ["full_refund"], refundedAmount: 100, status: PaymentStatus.REFUNDED });
+    await expectError(await request(`/admin/sales/${fullRefund}/pack`, { body: {}, method: "POST", token: adminToken }), 409, "PAYMENT_FULFILLMENT_BLOCKED");
+    await expect(prismaOrThrow().order.findUniqueOrThrow({ select: { shippingStatus: true }, where: { id: held } })).resolves.toEqual({ shippingStatus: OrderShippingStatus.TO_PACK });
+
+    const partial = await createProviderOrder("gate-partial", { refundedAmount: 40, status: PaymentStatus.PARTIALLY_REFUNDED });
+    expect((await saleCommand(partial, "pack")).shippingStatus).toBe("TO_SHIP");
+    expect((await saleCommand(partial, "ship", { carrier: "E2E", trackingCode: "E2E-TRACK" })).shippingStatus).toBe("SHIPPED");
+  });
+
+  it("requires a verified full refund before cancelling a paid Mercado Pago order", async () => {
+    const paid = await createProviderOrder("cancel-paid", { status: PaymentStatus.PAID });
+    await expectError(await request(`/admin/sales/${paid}/cancel`, { body: { cancellationReason: "customer", restoreStock: false }, method: "POST", token: adminToken }), 409, "PAYMENT_REFUND_REQUIRED");
+    const partial = await createProviderOrder("cancel-partial", { refundedAmount: 40, status: PaymentStatus.PARTIALLY_REFUNDED });
+    await expectError(await request(`/admin/sales/${partial}/cancel`, { body: { cancellationReason: "customer", restoreStock: false }, method: "POST", token: adminToken }), 409, "PAYMENT_REFUND_REQUIRED");
+    const unverified = await createProviderOrder("cancel-unverified", { holds: ["full_refund", "unverified_provider_state"], refundedAmount: 100, status: PaymentStatus.REFUNDED });
+    await expectError(await request(`/admin/sales/${unverified}/cancel`, { body: { cancellationReason: "customer", restoreStock: false }, method: "POST", token: adminToken }), 409, "PAYMENT_REFUND_REQUIRED");
+    const active = await createProviderOrder("cancel-active", { attemptStatus: PaymentAttemptStatus.UNKNOWN, orderStatus: OrderStatus.PENDING, status: PaymentStatus.PENDING });
+    await expectError(await request(`/admin/sales/${active}/cancel`, { body: { cancellationReason: "customer", restoreStock: false }, method: "POST", token: adminToken }), 409, "PAYMENT_ATTEMPT_ACTIVE");
+    await expect(prismaOrThrow().order.findUniqueOrThrow({ select: { status: true }, where: { id: paid } })).resolves.toEqual({ status: OrderStatus.CONFIRMED });
+
+    const refunded = await createProviderOrder("cancel-refunded", { holds: ["full_refund"], refundedAmount: 100, status: PaymentStatus.REFUNDED });
+    expect((await saleCommand(refunded, "cancel", { cancellationReason: "refunded in MP", restoreStock: false })).status).toBe("CANCELLED");
+    const closed = await createProviderOrder("cancel-closed", { attemptStatus: PaymentAttemptStatus.REJECTED, orderStatus: OrderStatus.PENDING, status: PaymentStatus.PENDING });
+    expect((await saleCommand(closed, "cancel", { cancellationReason: "payment rejected", restoreStock: false })).status).toBe("CANCELLED");
+  });
+
+  it("keeps transfer and legacy manual sales on the existing rules", async () => {
+    const pending = await createSale(`e2e-manual-pending-${randomUUID().replaceAll("-", "")}`, { paymentStatus: PaymentStatus.PENDING });
+    expect((await saleCommand(pending.id, "confirm")).paymentStatus).toBe("PAID");
+    expect((await saleCommand(pending.id, "pack")).shippingStatus).toBe("TO_SHIP");
+    const paid = await createSale(`e2e-manual-paid-${randomUUID().replaceAll("-", "")}`);
+    expect((await saleCommand(paid.id, "cancel", { cancellationReason: "manual cancel", restoreStock: false })).status).toBe("CANCELLED");
+    expect((await saleCommand(paid.id, "reopen")).status).not.toBe("CANCELLED");
+  });
+
+  async function createProviderOrder(label: string, options: ProviderOrderOptions): Promise<string> {
+    const database = prismaOrThrow();
+    const suffix = randomUUID().replaceAll("-", "");
+    const id = `sales-e2e-mp-${label}-${suffix}`;
+    const paymentStatus = options.status;
+    const orderStatus = options.orderStatus ?? OrderStatus.CONFIRMED;
+    const attemptStatus = options.attemptStatus ?? (paymentStatus === PaymentStatus.PENDING ? PaymentAttemptStatus.PROCESSING : PaymentAttemptStatus.APPROVED);
+    await database.order.create({
+      data: {
+        confirmedAt: orderStatus === OrderStatus.CONFIRMED ? new Date() : null,
+        customerEmail: `${id}@example.test`,
+        customerFirstName: "Provider",
+        customerLastName: "E2E",
+        customerSnapshot: { email: `${id}@example.test`, firstName: "Provider", lastName: "E2E" },
+        deliverySnapshot: { method: "shipping" },
+        deliveryType: OrderDeliveryType.SHIPPING,
+        discountSnapshot: {},
+        id,
+        number: `E2E-MP-${label}-${suffix}`.slice(0, 120),
+        payment: {
+          create: {
+            amount: 100,
+            attempts: { create: [{
+              attemptNumber: 1,
+              clientKey: "e2e-client-key",
+              expectedAmount: 100,
+              providerIdempotencyKey: `e2e-idem-${suffix}`,
+              providerOrderId: `${id}-mp-order`,
+              providerUpdatedAt: new Date(),
+              rawOrderStatus: attemptStatus === PaymentAttemptStatus.APPROVED ? "processed" : "processing",
+              refundedAmount: options.refundedAmount ?? 0,
+              requestHash: "e2e-request-hash",
+              status: attemptStatus,
+            }] },
+            currency: "ARS",
+            fulfillmentHoldReasons: options.holds ?? [],
+            paymentMethodId: "mercadopago",
+            paymentMethodSnapshot: { source: "e2e" },
+            provider: PaymentProvider.MERCADOPAGO,
+            refundedAmount: options.refundedAmount ?? 0,
+            status: paymentStatus,
+          },
+        },
+        shippingStatus: OrderShippingStatus.TO_PACK,
+        status: orderStatus,
+        subtotal: 100,
+        total: 100,
+      },
+    });
+    saleIds.push(id);
+    return id;
+  }
+
   function prismaOrThrow(): PrismaService {
     if (!prisma) throw new Error("Sales CRM e2e Prisma service was not initialized.");
     return prisma;
@@ -437,6 +581,18 @@ interface SaleResponse {
   shippingStatus: string;
   sourceOrderId?: string;
   status: string;
+}
+
+interface ProviderOrderOptions {
+  attemptStatus?: PaymentAttemptStatus;
+  holds?: string[];
+  orderStatus?: OrderStatus;
+  refundedAmount?: number;
+  status: PaymentStatus;
+}
+
+interface ProviderSaleResponse {
+  payment: { providerPayment?: { attempts: Array<Record<string, unknown>> } & Record<string, unknown> } | null;
 }
 
 interface SaleListResponse {

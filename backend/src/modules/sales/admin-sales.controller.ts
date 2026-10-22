@@ -8,7 +8,8 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { Role } from "../../generated/prisma/enums";
 import { Roles } from "../auth/decorators/roles.decorator";
-import { AddSaleNoteRequestDto, AdminSaleDetailResponseDto, AdminSaleListResponseDto, CancelSaleRequestDto, ConvertOrderToSaleRequestDto, CreateManualSaleRequestDto, ShipSaleRequestDto } from "./dto/sales-openapi.dto";
+import { PaymentUnknownResolutionService } from "../payments/payment-unknown-resolution.service";
+import { AddSaleNoteRequestDto, AdminPaymentRiskAlertListResponseDto, AdminSaleDetailResponseDto, AdminSaleListResponseDto, CancelSaleRequestDto, ConvertOrderToSaleRequestDto, CreateManualSaleRequestDto, ShipSaleRequestDto } from "./dto/sales-openapi.dto";
 import { addSaleNoteSchema, archiveSaleSchema, cancelSaleSchema, confirmSaleSchema, convertOrderToSaleSchema, createManualSaleSchema, deliverSaleSchema, packSaleSchema, reopenSaleSchema, salesIdentifierSchema, salesListQuerySchema, shipSaleSchema, unarchiveSaleSchema, unpackSaleSchema, type AddSaleNote, type CancelSale, type ConvertOrderToSale, type CreateManualSale, type SalesListQuery, type ShipSale } from "./sales.schemas";
 import { SalesService } from "./sales.service";
 
@@ -23,12 +24,20 @@ interface RequestWithAuthenticatedUser extends Request { user: AccessTokenPayloa
 @Roles(Role.ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminSalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly unknownResolution: PaymentUnknownResolutionService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: "List sales for administration" })
   @ApiOkResponse({ type: AdminSaleListResponseDto })
   list(@Query(new ZodValidationPipe(salesListQuerySchema)) query: SalesListQuery) { return this.salesService.list(query); }
+
+  @Get("payment-risk-alerts")
+  @ApiOperation({ summary: "List unresolved Mercado Pago fraud/chargeback alerts that are not tied to an order" })
+  @ApiOkResponse({ type: AdminPaymentRiskAlertListResponseDto })
+  riskAlerts() { return this.salesService.listRiskAlerts(); }
 
   @Get(":id")
   @ApiOperation({ summary: "Get an immutable sale detail and timeline" })
@@ -84,6 +93,18 @@ export class AdminSalesController {
   @ApiBody({ type: CancelSaleRequestDto })
   @ApiOkResponse({ type: AdminSaleDetailResponseDto })
   cancel(@Param("id", new ZodValidationPipe(salesIdentifierSchema)) id: string, @Body(new ZodValidationPipe(cancelSaleSchema)) input: CancelSale, @Req() request: RequestWithAuthenticatedUser) { return this.salesService.cancelSale(id, input, actor(request)); }
+
+  @Post(":id/payment/resolve-unknown")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Re-check an UNKNOWN Mercado Pago attempt with the provider and either apply its state or, if the provider confirms no order exists, cancel the order and return its stock" })
+  @ApiOkResponse({ type: AdminSaleDetailResponseDto })
+  @ApiResponse({ description: "CONFLICT: not eligible, or the provider state changed concurrently", status: HttpStatus.CONFLICT, type: ApiErrorResponseDto })
+  @ApiResponse({ description: "SERVICE_UNAVAILABLE: Mercado Pago could not be checked; nothing changed", status: HttpStatus.SERVICE_UNAVAILABLE, type: ApiErrorResponseDto })
+  async resolveUnknownPayment(@Param("id", new ZodValidationPipe(salesIdentifierSchema)) id: string, @Req() request: RequestWithAuthenticatedUser) {
+    const sale = await this.salesService.get(id);
+    await this.unknownResolution.resolve(sale.id, { id: request.user.userId, role: request.user.role });
+    return this.salesService.get(sale.id);
+  }
 
   @Post(":id/reopen")
   @HttpCode(HttpStatus.OK)

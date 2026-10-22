@@ -1,7 +1,21 @@
 import { z } from "zod";
 
 const API_SALE_STATUS = ["PENDING", "CONFIRMED", "CANCELLED"] as const;
-const API_PAYMENT_STATUS = ["PENDING", "PAID", "REFUNDED"] as const;
+const API_PAYMENT_STATUS = ["PENDING", "PAID", "REFUNDED", "PARTIALLY_REFUNDED", "CHARGED_BACK"] as const;
+const API_PAYMENT_PROVIDER = ["MERCADOPAGO"] as const;
+const API_PAYMENT_ATTEMPT_STATUS = [
+  "SUBMITTING",
+  "UNKNOWN",
+  "PROCESSING",
+  "ACTION_REQUIRED",
+  "APPROVED",
+  "REJECTED",
+  "CANCELLED",
+  "EXPIRED",
+  "PARTIALLY_REFUNDED",
+  "REFUNDED",
+  "CHARGED_BACK",
+] as const;
 const API_DELIVERY_TYPE = ["SHIPPING", "PICKUP"] as const;
 const API_SHIPPING_STATUS = ["TO_PACK", "TO_SHIP", "SHIPPED", "DELIVERED", "PICKUP", "CANCELLED"] as const;
 const API_HISTORY_EVENT_TYPE = [
@@ -17,6 +31,12 @@ const API_HISTORY_EVENT_TYPE = [
   "ORDER_UNARCHIVED",
   "NOTE_ADDED",
   "ORDER_CONVERTED",
+  "PAYMENT_REJECTED",
+  "PAYMENT_EXPIRED",
+  "PAYMENT_PARTIALLY_REFUNDED",
+  "PAYMENT_REFUNDED",
+  "PAYMENT_CHARGED_BACK",
+  "PAYMENT_ATTENTION_REQUIRED",
 ] as const;
 const API_ROLE = ["CUSTOMER", "ADMIN"] as const;
 const API_SUPPLIER_STATUS = ["ACTIVE", "INACTIVE"] as const;
@@ -59,6 +79,10 @@ const saleSummaryResponseSchema = z.object({
   isArchived: z.boolean(),
   itemCount: z.number().int().nonnegative(),
   number: identifierSchema,
+  paymentAttention: z.boolean().optional(),
+  paymentDispute: z.boolean().optional(),
+  paymentProvider: z.enum(API_PAYMENT_PROVIDER).optional(),
+  paymentRefundedAmount: moneySchema.optional(),
   paymentStatus: z.enum(API_PAYMENT_STATUS).nullable(),
   shippingStatus: z.enum(API_SHIPPING_STATUS),
   sourceOrderId: identifierSchema.optional(),
@@ -83,6 +107,45 @@ const saleItemResponseSchema = z.object({
   weightGrams: z.number().int().nonnegative().optional(),
 }).strict();
 
+const optionalText = z.string().trim().optional();
+
+const salePaymentAttemptResponseSchema = z.object({
+  attemptNumber: z.number().int().positive(),
+  challengeCreatedAt: dateTimeSchema.optional(),
+  outcomeAt: dateTimeSchema.optional(),
+  providerOrderId: optionalText,
+  providerReferenceId: optionalText,
+  providerTransactionId: optionalText,
+  providerUpdatedAt: dateTimeSchema.optional(),
+  rawOrderStatus: optionalText,
+  rawOrderStatusDetail: optionalText,
+  rawTransactionStatus: optionalText,
+  rawTransactionStatusDetail: optionalText,
+  refundedAmount: moneySchema,
+  status: z.enum(API_PAYMENT_ATTEMPT_STATUS),
+  submittedAt: dateTimeSchema,
+}).strict();
+
+const saleProviderPaymentResponseSchema = z.object({
+  attemptCount: z.number().int().nonnegative(),
+  attempts: z.array(salePaymentAttemptResponseSchema),
+  attentionReason: optionalText,
+  attentionRequiredAt: dateTimeSchema.optional(),
+  chargedBack: z.boolean(),
+  dispute: z.boolean(),
+  fraudAlert: z.boolean(),
+  fullRefund: z.boolean(),
+  holds: z.array(z.string()),
+  lastVerifiedAt: dateTimeSchema.optional(),
+  provider: z.enum(API_PAYMENT_PROVIDER),
+  rawStatus: optionalText,
+  rawStatusDetail: optionalText,
+  refundedAmount: moneySchema,
+  retryUntil: dateTimeSchema.optional(),
+  reviewStartedAt: dateTimeSchema.optional(),
+  unresolvedReconciliation: z.boolean(),
+}).strict();
+
 const salePaymentResponseSchema = z.object({
   amount: moneySchema,
   bankTransferSnapshot: snapshotSchema.optional(),
@@ -90,7 +153,18 @@ const salePaymentResponseSchema = z.object({
   paymentMethodId: identifierSchema,
   paymentMethodSnapshot: snapshotSchema,
   paymentOptionId: identifierSchema.optional(),
+  providerPayment: saleProviderPaymentResponseSchema.optional(),
   status: z.enum(API_PAYMENT_STATUS),
+}).strict();
+
+export const paymentRiskAlertListResponseSchema = z.object({
+  items: z.array(z.object({
+    id: identifierSchema,
+    reason: optionalText,
+    receivedAt: dateTimeSchema,
+    resourceId: z.string().trim(),
+    topic: requiredText(80),
+  }).strict()),
 }).strict();
 
 const saleHistoryResponseSchema = z.object({
@@ -366,6 +440,7 @@ export const purchaseOrderFilterQuerySchema = z.object({
 export type AdminSaleSummaryResponseDto = z.output<typeof adminSaleSummaryResponseSchema>;
 export type AdminSaleDetailResponseDto = z.output<typeof adminSaleDetailResponseSchema>;
 export type AdminSaleListResponseDto = z.output<typeof adminSaleListResponseSchema>;
+export type PaymentRiskAlertListResponseDto = z.output<typeof paymentRiskAlertListResponseSchema>;
 export type SupplierResponseDto = z.output<typeof supplierResponseSchema>;
 export type SupplierListResponseDto = z.output<typeof supplierListResponseSchema>;
 export type PurchaseOrderResponseDto = z.output<typeof purchaseOrderResponseSchema>;
@@ -384,6 +459,8 @@ export type UpdatePurchaseOrderRequestDto = z.output<typeof updatePurchaseOrderR
 export {
   API_DELIVERY_TYPE,
   API_HISTORY_EVENT_TYPE,
+  API_PAYMENT_ATTEMPT_STATUS,
+  API_PAYMENT_PROVIDER,
   API_PAYMENT_STATUS,
   API_PURCHASE_ORDER_STATUS,
   API_ROLE,

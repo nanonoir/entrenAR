@@ -8,6 +8,7 @@ import type {
   CancelSalePayload,
   CreateManualSalePayload,
   CreatePurchaseOrderPayload,
+  PaymentRiskAlert,
   PurchaseOrderDetail,
   PurchaseOrderFilterQuery,
   SalesFilterQuery,
@@ -106,10 +107,12 @@ export type AdminSalesState = {
   isInitializing: boolean;
   isLoading: boolean;
   loadingOperations: string[];
+  riskAlerts: PaymentRiskAlert[];
   source: SalesRepository["source"];
   status: SalesAsyncStatus;
 
   fetchSales: (query?: SalesFilterQuery) => Promise<boolean>;
+  fetchRiskAlerts: () => Promise<boolean>;
   fetchSale: (id: string) => Promise<boolean>;
   fetchPurchaseOrders: (query?: PurchaseOrderFilterQuery) => Promise<boolean>;
   fetchPurchaseOrder: (id: string) => Promise<boolean>;
@@ -122,6 +125,7 @@ export type AdminSalesState = {
   shipSale: (id: string, payload?: ShipSalePayload) => Promise<AdminSaleDetail | null>;
   deliverSale: (id: string) => Promise<AdminSaleDetail | null>;
   cancelSale: (id: string, input: CancelSaleInput, options?: CancelSaleOptions) => Promise<AdminSaleDetail | null>;
+  resolveUnknownPayment: (id: string) => Promise<AdminSaleDetail | null>;
   reopenSale: (id: string) => Promise<AdminSaleDetail | null>;
   archiveSale: (id: string) => Promise<AdminSaleDetail | null>;
   unarchiveSale: (id: string) => Promise<AdminSaleDetail | null>;
@@ -290,12 +294,17 @@ export function createAdminSalesStore(options: AdminSalesStoreOptions = {}) {
       isInitializing: configuredRepository.source === "api",
       isLoading: false,
       loadingOperations: [],
+      riskAlerts: [],
       source: configuredRepository.source,
       status: configuredRepository.source === "mock" ? SALES_ASYNC_STATUS.SUCCESS : SALES_ASYNC_STATUS.IDLE,
 
       fetchSales: (query: SalesFilterQuery = {}) => run("sales", (repository) => repository.getSales(query), {
         commit: (result) => set((state) => ({ sales: result.items.map((sale) => mergeSale(state.sales.find((currentSale) => currentSale.id === sale.id), sale)) })),
         initialize: true,
+      }).then((result) => result !== null).catch(() => false),
+
+      fetchRiskAlerts: () => run("risk-alerts", (repository) => repository.getPaymentRiskAlerts(), {
+        commit: (result) => set({ riskAlerts: result }),
       }).then((result) => result !== null).catch(() => false),
 
       fetchSale: (id: string) => run("sale-detail", (repository) => repository.getSaleById(id), {
@@ -383,6 +392,13 @@ export function createAdminSalesStore(options: AdminSalesStoreOptions = {}) {
           history: [...sale.history, makeEvent("sale_cancelled", `Motivo: ${payload.cancellationReason}`)],
         }), "Venta cancelada", (result) => withCancellationEvents(result, payload, sendEmail));
       },
+
+      resolveUnknownPayment: (id) => run(`sale-resolve-unknown-${id}`, (repository) => repository.resolveUnknownPayment(id), {
+        commit: (result) => replaceSale(set, result),
+      }).then((result) => {
+        if (result) addAdminToast(result.status === "cancelled" ? "Pago no encontrado: pedido cancelado y stock devuelto" : "Pago encontrado y actualizado");
+        return result;
+      }),
 
       reopenSale: (id) => mutateSale("reopen", id, (repository) => repository.reopenSale(id), (sale) => ({
         ...sale,

@@ -26,6 +26,8 @@ export type ReconcileKind = "financial" | "pending";
 export type ReconcileOutcome = "applied" | "failed" | "stale" | "unresolved";
 export type ExpiryOutcome = "postponed" | "released" | "skipped";
 
+export type ProviderOrderLocation = { kind: "found"; providerOrderId: string } | { kind: "absent" } | { kind: "unresolved" };
+
 export interface ClaimedAttempt {
   id: string;
   providerOrderId: string | null;
@@ -106,15 +108,25 @@ export class PaymentReconciliationService {
 
   /** Unreferenced provider order for an UNKNOWN attempt: bounded search by external reference, never trusting absence. */
   private async resolveProviderOrderId(attemptId: string): Promise<string | null> {
+    const located = await this.locateProviderOrder(attemptId);
+    return located.kind === "found" ? located.providerOrderId : null;
+  }
+
+  /**
+   * Searches the provider by external reference for the order of an attempt with no provider ID. `absent` means
+   * the search succeeded and returned no order for this reference; `unresolved` means orders exist but cannot be
+   * safely attributed to the attempt. Search failures propagate.
+   */
+  async locateProviderOrder(attemptId: string): Promise<ProviderOrderLocation> {
     const attempt = await this.prisma.paymentAttempt.findUnique({
       select: { payment: { select: { orderId: true } } },
       where: { id: attemptId },
     });
-    if (!attempt) return null;
+    if (!attempt) return { kind: "unresolved" };
 
     const { orderId } = attempt.payment;
     const found = (await this.port.searchOrders({ externalReference: orderId })).filter((order) => order.externalReference === orderId);
-    if (found.length === 0) return null;
+    if (found.length === 0) return { kind: "absent" };
 
     const known = await this.prisma.paymentAttempt.findMany({
       select: { providerOrderId: true },
@@ -122,13 +134,13 @@ export class PaymentReconciliationService {
     });
     const knownIds = new Set(known.map((row) => row.providerOrderId));
     const unmatched = found.filter((order) => !knownIds.has(order.id));
-    if (unmatched.length === 0) return null;
+    if (unmatched.length === 0) return { kind: "unresolved" };
 
     const unresolved = await this.repository.unresolvedAttemptsWithoutProviderOrder(orderId);
-    if (unmatched.length === 1 && unresolved.length === 1 && unresolved[0]!.id === attemptId) return unmatched[0]!.id;
+    if (unmatched.length === 1 && unresolved.length === 1 && unresolved[0]!.id === attemptId) return { kind: "found", providerOrderId: unmatched[0]!.id };
 
     await this.reducer.flagAttention(attemptId, "ambiguous_provider_orders");
-    return null;
+    return { kind: "unresolved" };
   }
 
   /** Clears the lease and schedules the next read; only the claim that owns the fence may write. */

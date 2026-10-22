@@ -335,8 +335,12 @@ function saleSortValue(sale: AdminSaleDetail, sortBy: SalesFilterQuery["sortBy"]
   return sale.createdAt;
 }
 
-function toUiPaymentStatus(status: "PAID" | "PENDING" | "REFUNDED"): SalePaymentStatus {
-  return status === "PAID" ? "received" : status === "REFUNDED" ? "refunded" : "pending";
+function toUiPaymentStatus(status: "PAID" | "PENDING" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CHARGED_BACK"): SalePaymentStatus {
+  if (status === "PAID") return "received";
+  if (status === "REFUNDED") return "refunded";
+  if (status === "PARTIALLY_REFUNDED") return "partially_refunded";
+  if (status === "CHARGED_BACK") return "charged_back";
+  return "pending";
 }
 
 function toUiAddress(value: Record<string, unknown>): SaleAddress {

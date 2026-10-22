@@ -26,6 +26,8 @@ export function getPaymentStatusLabel(status: SalePaymentStatus): string {
     received: "Recibido",
     cancelled: "Cancelado",
     refunded: "Reembolsado",
+    partially_refunded: "Reembolso parcial",
+    charged_back: "Contracargo",
   };
   return labels[status];
 }
@@ -36,8 +38,39 @@ export function getPaymentStatusTone(status: SalePaymentStatus): "warning" | "su
     received: "success",
     cancelled: "neutral",
     refunded: "sale",
+    partially_refunded: "warning",
+    charged_back: "sale",
   };
   return tones[status];
+}
+
+export function isProviderManagedSale(sale: AdminSale): boolean {
+  return Boolean(sale.providerPayment);
+}
+
+/** Short indicators shown next to the payment badge for provider-managed sales. */
+export function getPaymentFlags(sale: AdminSale): { label: string; tone: "warning" | "sale" | "neutral" }[] {
+  const provider = sale.providerPayment;
+  if (!provider) return [];
+  const flags: { label: string; tone: "warning" | "sale" | "neutral" }[] = [{ label: "Mercado Pago", tone: "neutral" }];
+  if (provider.dispute) flags.push({ label: "Disputa", tone: "sale" });
+  else if (provider.attention) flags.push({ label: "Requiere atención", tone: "warning" });
+  if (provider.refundedAmount) flags.push({ label: `Reembolsado ${formatARS(provider.refundedAmount)}`, tone: "warning" });
+  return flags;
+}
+
+/** Mirrors the backend fulfillment guard so the UI can explain why pack/ship are disabled. */
+export function getFulfillmentBlockReason(sale: AdminSale): string | null {
+  const provider = sale.providerPayment;
+  if (!provider || sale.paymentStatus === "cancelled") return null;
+  const detail = provider.detail;
+  if (sale.paymentStatus === "refunded") return "El pago fue reembolsado por completo: no se puede preparar ni enviar el pedido.";
+  if (sale.paymentStatus === "charged_back") return "El pago tiene un contracargo: no se puede preparar ni enviar el pedido.";
+  if (sale.paymentStatus === "pending") return "El pago todavía no fue acreditado por Mercado Pago.";
+  if (detail ? detail.holds.length > 0 : provider.dispute) {
+    return "El pago tiene una retención activa (disputa, reembolso total o estado sin verificar). Resolvela en el panel de Mercado Pago.";
+  }
+  return null;
 }
 
 export function getShippingStatusLabel(status: SaleShippingStatus): string {

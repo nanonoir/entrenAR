@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-import { OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentStatus, Role } from "../../../generated/prisma/enums";
+import { OrderDeliveryType, OrderShippingStatus, OrderStatus, PaymentAttemptStatus, PaymentProvider, PaymentStatus, Role } from "../../../generated/prisma/enums";
 
 export class AdminSaleCustomerResponseDto {
   @ApiProperty({ format: "email" }) email!: string;
@@ -52,7 +52,57 @@ export class AdminSaleHistoryResponseDto {
   @ApiProperty() type!: string;
 }
 
+export class AdminSalePaymentAttemptResponseDto {
+  @ApiProperty() attemptNumber!: number;
+  @ApiPropertyOptional({ format: "date-time" }) challengeCreatedAt?: string;
+  @ApiPropertyOptional({ format: "date-time" }) outcomeAt?: string;
+  @ApiPropertyOptional() providerOrderId?: string;
+  @ApiPropertyOptional() providerReferenceId?: string;
+  @ApiPropertyOptional() providerTransactionId?: string;
+  @ApiPropertyOptional({ format: "date-time" }) providerUpdatedAt?: string;
+  @ApiPropertyOptional() rawOrderStatus?: string;
+  @ApiPropertyOptional() rawOrderStatusDetail?: string;
+  @ApiPropertyOptional() rawTransactionStatus?: string;
+  @ApiPropertyOptional() rawTransactionStatusDetail?: string;
+  @ApiProperty() refundedAmount!: number;
+  @ApiProperty({ enum: Object.values(PaymentAttemptStatus) }) status!: PaymentAttemptStatus;
+  @ApiProperty({ format: "date-time" }) submittedAt!: string;
+}
+
+export class AdminSaleProviderPaymentResponseDto {
+  @ApiProperty() attemptCount!: number;
+  @ApiProperty({ type: [AdminSalePaymentAttemptResponseDto] }) attempts!: AdminSalePaymentAttemptResponseDto[];
+  @ApiPropertyOptional() attentionReason?: string;
+  @ApiPropertyOptional({ format: "date-time" }) attentionRequiredAt?: string;
+  @ApiProperty() chargedBack!: boolean;
+  @ApiProperty() dispute!: boolean;
+  @ApiProperty() fraudAlert!: boolean;
+  @ApiProperty() fullRefund!: boolean;
+  @ApiProperty({ type: [String] }) holds!: string[];
+  @ApiPropertyOptional({ format: "date-time" }) lastVerifiedAt?: string;
+  @ApiProperty({ enum: Object.values(PaymentProvider) }) provider!: PaymentProvider;
+  @ApiPropertyOptional() rawStatus?: string;
+  @ApiPropertyOptional() rawStatusDetail?: string;
+  @ApiProperty() refundedAmount!: number;
+  @ApiPropertyOptional({ format: "date-time" }) retryUntil?: string;
+  @ApiPropertyOptional({ format: "date-time" }) reviewStartedAt?: string;
+  @ApiProperty() unresolvedReconciliation!: boolean;
+}
+
+export class AdminPaymentRiskAlertResponseDto {
+  @ApiProperty() id!: string;
+  @ApiPropertyOptional() reason?: string;
+  @ApiProperty({ format: "date-time" }) receivedAt!: string;
+  @ApiProperty() resourceId!: string;
+  @ApiProperty() topic!: string;
+}
+
+export class AdminPaymentRiskAlertListResponseDto {
+  @ApiProperty({ type: [AdminPaymentRiskAlertResponseDto] }) items!: AdminPaymentRiskAlertResponseDto[];
+}
+
 export class AdminSalePaymentResponseDto {
+  @ApiPropertyOptional({ type: AdminSaleProviderPaymentResponseDto }) providerPayment?: AdminSaleProviderPaymentResponseDto;
   @ApiProperty() amount!: number;
   @ApiPropertyOptional({ type: Object }) bankTransferSnapshot?: Record<string, unknown>;
   @ApiProperty() currency!: string;
@@ -72,6 +122,10 @@ export class AdminSaleSummaryResponseDto {
   @ApiProperty() isArchived!: boolean;
   @ApiProperty() itemCount!: number;
   @ApiProperty() number!: string;
+  @ApiPropertyOptional() paymentAttention?: boolean;
+  @ApiPropertyOptional() paymentDispute?: boolean;
+  @ApiPropertyOptional({ enum: Object.values(PaymentProvider) }) paymentProvider?: PaymentProvider;
+  @ApiPropertyOptional() paymentRefundedAmount?: number;
   @ApiProperty({ enum: Object.values(PaymentStatus), nullable: true }) paymentStatus!: PaymentStatus | null;
   @ApiProperty({ enum: Object.values(OrderShippingStatus) }) shippingStatus!: OrderShippingStatus;
   @ApiPropertyOptional() sourceOrderId?: string;
