@@ -100,7 +100,11 @@ export function CheckoutPayment({
             <div className="mt-4 grid gap-3">
               <PaymentErrorNotice onRefreshQuote={onRefreshQuote} />
               {card.mountQuote ? (
-                <CardPaymentBoundary amount={card.mountQuote.total} onSubmit={card.submit} quoteId={card.mountQuote.quoteId} />
+                <CardPaymentBoundary
+                  amount={card.mountQuote.total}
+                  onSubmit={(formData) => card.submit(card.mountQuote?.quoteId ?? "", formData)}
+                  scope="checkout"
+                />
               ) : (
                 <p className="rounded-card border border-border bg-background p-3 text-sm text-text-muted" role="status">
                   Completá tus datos y la entrega, y esperá la cotización final para pagar con tarjeta.

@@ -5,10 +5,10 @@ import { LoaderCircle } from "lucide-react";
 import { CardPaymentBoundary } from "@/components/checkout/CardPaymentBoundary";
 import { ChallengeFrame } from "@/components/checkout/ChallengeFrame";
 import { PaymentErrorNotice } from "@/components/checkout/PaymentErrorNotice";
-import { usePaymentStatusPolling, useRetryCountdown } from "@/components/checkout/use-payment-status-polling";
+import { usePaymentStatusPolling, useRetryCountdown, useRetryWindowOpen } from "@/components/checkout/use-payment-status-polling";
 import { Alert } from "@/components/ui/Alert";
 import { Container } from "@/components/ui/Container";
-import { BOUND_ORDER_MODE, resolveBoundOrderMode } from "@/lib/api/payments/payment-result";
+import { BOUND_ORDER_MODE, resolveBoundOrderMode, retryBrickScope } from "@/lib/api/payments/payment-result";
 import type { PaymentView } from "@/lib/api/payments/payments.mappers";
 import { formatCurrency } from "@/lib/pricing";
 import { checkoutRoutes } from "@/lib/routes";
@@ -24,7 +24,7 @@ export function CheckoutBoundPayment({ view }: CheckoutBoundPaymentProps) {
   const mode = resolveBoundOrderMode(view);
   const refresh = useCheckoutPaymentStore((state) => state.refresh);
   const retryCard = useCheckoutPaymentStore((state) => state.retryCard);
-  const secondsLeft = useRetryCountdown(mode === BOUND_ORDER_MODE.RETRY ? view.retry.until : null);
+  const retryOpen = useRetryWindowOpen(mode === BOUND_ORDER_MODE.RETRY ? view.retry.until : null);
 
   usePaymentStatusPolling(mode === BOUND_ORDER_MODE.CHALLENGE);
 
@@ -59,17 +59,15 @@ export function CheckoutBoundPayment({ view }: CheckoutBoundPaymentProps) {
             <div role="alert">
               <Alert title="El pago fue rechazado" tone="danger">
                 <p>Podés intentarlo de nuevo con otra tarjeta para el mismo pedido ({formatCurrency(view.amount)}).</p>
-                <p className="mt-1 text-sm" role="timer">
-                  {secondsLeft > 0 ? `Tenés ${formatCountdown(secondsLeft)} para reintentar.` : "El tiempo para reintentar terminó."}
-                </p>
+                <RetryCountdown until={view.retry.until} />
               </Alert>
             </div>
             <PaymentErrorNotice />
-            {secondsLeft > 0 ? (
+            {retryOpen ? (
               <CardPaymentBoundary
                 amount={view.amount}
-                onSubmit={(_quoteId, formData) => handleRetry(formData)}
-                quoteId={`retry-${view.attempt?.id ?? view.version}`}
+                onSubmit={handleRetry}
+                scope={retryBrickScope(view)}
               />
             ) : (
               <button
@@ -84,6 +82,16 @@ export function CheckoutBoundPayment({ view }: CheckoutBoundPaymentProps) {
         ) : null}
       </div>
     </Container>
+  );
+}
+
+/** Owns the per-second tick so it never re-renders the card Brick above it. */
+function RetryCountdown({ until }: { until: string | null }) {
+  const secondsLeft = useRetryCountdown(until);
+  return (
+    <p className="mt-1 text-sm" role="timer">
+      {secondsLeft > 0 ? `Tenés ${formatCountdown(secondsLeft)} para reintentar.` : "El tiempo para reintentar terminó."}
+    </p>
   );
 }
 

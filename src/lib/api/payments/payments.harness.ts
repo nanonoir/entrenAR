@@ -7,10 +7,12 @@ import { isAllowedChallengeOrigin, isTrustedChallengeMessage, sanitizeChallengeU
 import { isStaleQuotePaymentError, isUncertainPaymentError } from "@/lib/api/payments/payment-errors";
 import {
   BOUND_ORDER_MODE,
+  cardBrickKey,
   nextPollDelayMs,
   PAYMENT_RESULT_KIND,
   resolveBoundOrderMode,
   resolvePaymentResult,
+  retryBrickScope,
   retrySecondsRemaining,
   shouldClearSubmittedCart,
 } from "@/lib/api/payments/payment-result";
@@ -195,6 +197,15 @@ function testResultMapping(): void {
   assert.equal(retrySecondsRemaining(until, Date.parse("2026-01-01T00:00:30.000Z")), 30);
   assert.equal(retrySecondsRemaining(until, Date.parse("2026-01-01T00:02:00.000Z")), 0);
   assert.equal(retrySecondsRemaining(null, 0), 0);
+
+  const rejected = { attempt: { id: "a1", number: 1, status: "rejected" }, retry: { eligible: true, until } };
+  assert.equal(
+    cardBrickKey(retryBrickScope(view({ ...rejected, version: 3 })), 650.99),
+    cardBrickKey(retryBrickScope(view({ ...rejected, version: 9, nextPollSeconds: 5 })), 650.99),
+    "polling a rejected order keeps the Brick key",
+  );
+  assert.notEqual(retryBrickScope(view(rejected)), retryBrickScope(view({ ...rejected, attempt: { id: "a2", number: 2, status: "rejected" } })));
+  assert.notEqual(cardBrickKey("quote", 100), cardBrickKey("quote", 101));
 }
 
 function testCartGeneration(): void {

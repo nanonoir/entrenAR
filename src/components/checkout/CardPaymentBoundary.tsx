@@ -1,18 +1,22 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 import { LoaderCircle } from "lucide-react";
 import { getMercadoPagoPublicKey } from "@/components/checkout/use-checkout-card-payment";
 import { Alert } from "@/components/ui/Alert";
+import { cardBrickKey } from "@/lib/api/payments/payment-result";
 
 interface CardPaymentBoundaryProps {
   /** Amount the Brick displays; the backend always recomputes the charge from the quote. */
   amount: number;
-  quoteId: string;
+  /** Identity of what is being paid (order + attempt, or the checkout); with `amount` it forms the Brick key. */
+  scope: string;
   /** Resolves when the payment was placed and throws otherwise so the Brick re-enables its button. */
-  onSubmit: (quoteId: string, formData: unknown) => Promise<void>;
+  onSubmit: (formData: unknown) => Promise<void>;
 }
+
+const BRICK_CUSTOMIZATION = { paymentMethods: { maxInstallments: 12, minInstallments: 1 }, visual: { hidePaymentButton: false } };
 
 let sdkInitialized = false;
 
@@ -35,15 +39,26 @@ function ensureSdk(): boolean {
  * so a stale amount is never combined with a new quote.
  */
 export function CardPaymentBoundary(props: CardPaymentBoundaryProps) {
-  return <CardPaymentBrick key={`${props.quoteId}:${props.amount}`} {...props} />;
+  return <CardPaymentBrick key={cardBrickKey(props.scope, props.amount)} {...props} />;
 }
 
-function CardPaymentBrick({ amount, onSubmit, quoteId }: CardPaymentBoundaryProps) {
+function CardPaymentBrick({ amount, onSubmit }: CardPaymentBoundaryProps) {
   // Client-only: the SDK touches `window`, so it is initialized only after hydration.
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
   const [ready, setReady] = useState(false);
   const [sdkFailed, setSdkFailed] = useState(false);
   const mounted = hydrated && ensureSdk();
+
+  // The SDK re-initializes the Brick when prop identities change, so everything handed to it is stable
+  // and reads the latest `onSubmit` through a ref.
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
+  const initialization = useMemo(() => ({ amount }), [amount]);
+  const handleSubmit = useCallback(async (formData: unknown) => onSubmitRef.current(formData), []);
+  const handleReady = useCallback(() => setReady(true), []);
+  const handleError = useCallback(() => setSdkFailed(true), []);
   const loadFailed = sdkFailed || (hydrated && !mounted);
 
   if (loadFailed) {
@@ -66,12 +81,12 @@ function CardPaymentBrick({ amount, onSubmit, quoteId }: CardPaymentBoundaryProp
       ) : null}
       {mounted ? (
         <CardPayment
-          customization={{ paymentMethods: { maxInstallments: 12, minInstallments: 1 }, visual: { hidePaymentButton: false } }}
-          initialization={{ amount }}
+          customization={BRICK_CUSTOMIZATION}
+          initialization={initialization}
           locale="es-AR"
-          onError={() => setSdkFailed(true)}
-          onReady={() => setReady(true)}
-          onSubmit={async (formData) => onSubmit(quoteId, formData)}
+          onError={handleError}
+          onReady={handleReady}
+          onSubmit={handleSubmit}
         />
       ) : null}
     </div>

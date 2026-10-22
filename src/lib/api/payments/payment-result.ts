@@ -85,6 +85,20 @@ export function resolveBoundOrderMode(view: PaymentView): BoundOrderMode {
   return BOUND_ORDER_MODE.RESULT;
 }
 
+/**
+ * Identity of a mounted card Brick: the scope (order + attempt for a retry, a constant for a first
+ * submit) plus the authoritative amount. Polling, countdown ticks and unchanged quote refreshes
+ * never change it, so the Brick is not re-initialized by them.
+ */
+export function cardBrickKey(scope: string, amount: number): string {
+  return `${scope}:${amount}`;
+}
+
+/** Brick scope of the same-order retry: changes only with the order or the rejected attempt. */
+export function retryBrickScope(view: PaymentView): string {
+  return `retry-${view.orderId}-${view.attempt?.id ?? view.retry.until ?? ""}`;
+}
+
 /** Seconds left in the rejected-retry window, relative to the server deadline. */
 export function retrySecondsRemaining(until: string | null, nowMs: number): number {
   if (!until) return 0;

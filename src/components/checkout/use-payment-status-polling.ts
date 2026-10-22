@@ -61,6 +61,20 @@ export function usePaymentStatusPolling(active: boolean): void {
   }, [active]);
 }
 
+/** Whether the retry window is still open; flips once at the deadline instead of ticking every second. */
+export function useRetryWindowOpen(until: string | null): boolean {
+  const [closedFor, setClosedFor] = useState<string | null>(() => (until && retrySecondsRemaining(until, Date.now()) <= 0 ? until : null));
+
+  useEffect(() => {
+    if (!until) return;
+    const remainingMs = Date.parse(until) - Date.now();
+    const timer = setTimeout(() => setClosedFor(until), Number.isNaN(remainingMs) ? 0 : Math.max(0, remainingMs));
+    return () => clearTimeout(timer);
+  }, [until]);
+
+  return Boolean(until) && closedFor !== until;
+}
+
 /** Whole seconds left until `until`, ticking once per second. */
 export function useRetryCountdown(until: string | null): number {
   const [now, setNow] = useState(() => Date.now());
