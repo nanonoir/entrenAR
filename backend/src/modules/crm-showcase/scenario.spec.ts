@@ -23,7 +23,7 @@ describe("CRM showcase deterministic historical scenario", () => {
     const scenario = assembleScenario(input);
     const timelines = scenario.orders.map((order) => buildTimeline(scenario, order, order.index % 7 === 0 ? OrderDeliveryType.PICKUP : OrderDeliveryType.SHIPPING));
     expect(new Set(timelines.map((item) => item.state.status))).toEqual(new Set(Object.values(OrderStatus)));
-    expect(new Set(timelines.map((item) => item.paymentStatus))).toEqual(new Set(Object.values(PaymentStatus)));
+    expect(new Set(timelines.map((item) => item.paymentStatus))).toEqual(new Set([PaymentStatus.PENDING, PaymentStatus.PAID, PaymentStatus.REFUNDED]));
     expect(new Set(timelines.map((item) => item.state.shippingStatus))).toEqual(new Set(Object.values(OrderShippingStatus)));
     expect(timelines.filter((item) => item.restore).every((item) => item.state.status === OrderStatus.CANCELLED && item.paymentStatus === PaymentStatus.REFUNDED)).toBe(true);
     expect(timelines.flatMap((item) => item.history).every((event) => event.createdAt instanceof Date && event.createdAt <= input.referenceDate)).toBe(true);

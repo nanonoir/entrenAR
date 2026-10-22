@@ -1,7 +1,7 @@
 import * as assert from "node:assert/strict";
 
 import { createCorsOriginValidator } from "../app.setup";
-import { loadAppConfig, NODE_ENV } from "./app.config";
+import { getMercadoPagoConfig, isMercadoPagoConfigured, loadAppConfig, NODE_ENV } from "./app.config";
 
 const validEnvironment = {
   DATABASE_URL: "postgresql://entrenar:password@127.0.0.1:5432/entrenar?schema=public",
@@ -58,6 +58,60 @@ describe("app.config", () => {
     assert.equal(check(undefined), true);
     assert.equal(check("https://store.example.com/"), true);
     assert.equal(check("https://untrusted.example.com"), false);
+  });
+
+  describe("Mercado Pago", () => {
+    const credentials = {
+      MERCADOPAGO_ACCESS_TOKEN: "TEST-access-token-value",
+      MERCADOPAGO_WEBHOOK_SECRET: "webhook-secret-value",
+    };
+
+    it("is unavailable when no Mercado Pago variable is set, including blank values", () => {
+      assert.equal(loadAppConfig(validEnvironment).mercadoPago, undefined);
+      assert.equal(isMercadoPagoConfigured(loadAppConfig({ ...validEnvironment, MERCADOPAGO_ACCESS_TOKEN: "  " })), false);
+    });
+
+    it("is ready when fully configured", () => {
+      const config = loadAppConfig({ ...validEnvironment, ...credentials, MERCADOPAGO_ENVIRONMENT: "production", NODE_ENV: "production" });
+
+      assert.deepEqual(getMercadoPagoConfig(config), {
+        accessToken: credentials.MERCADOPAGO_ACCESS_TOKEN,
+        environment: "production",
+        webhookSecret: credentials.MERCADOPAGO_WEBHOOK_SECRET,
+      });
+    });
+
+    it("defaults the environment to test outside production", () => {
+      const config = loadAppConfig({ ...validEnvironment, ...credentials });
+
+      assert.equal(config.mercadoPago?.environment, "test");
+    });
+
+    it("requires an explicit environment in production", () => {
+      assert.throws(
+        () => loadAppConfig({ ...validEnvironment, ...credentials, NODE_ENV: "production" }),
+        /MERCADOPAGO_ENVIRONMENT is required/,
+      );
+    });
+
+    it("fails validation for partial configuration", () => {
+      assert.throws(
+        () => loadAppConfig({ ...validEnvironment, MERCADOPAGO_ACCESS_TOKEN: credentials.MERCADOPAGO_ACCESS_TOKEN }),
+        /MERCADOPAGO_WEBHOOK_SECRET is required/,
+      );
+      assert.throws(
+        () => loadAppConfig({ ...validEnvironment, MERCADOPAGO_ENVIRONMENT: "test" }),
+        /MERCADOPAGO_ACCESS_TOKEN is required[\s\S]*MERCADOPAGO_WEBHOOK_SECRET is required/,
+      );
+    });
+
+    it("rejects an unknown environment without echoing credentials", () => {
+      assert.throws(
+        () => loadAppConfig({ ...validEnvironment, ...credentials, MERCADOPAGO_ENVIRONMENT: "sandbox" }),
+        (error: Error) => /MERCADOPAGO_ENVIRONMENT must be test or production/.test(error.message)
+          && !error.message.includes(credentials.MERCADOPAGO_ACCESS_TOKEN),
+      );
+    });
   });
 
   it("rejects missing JWT secrets", () => {

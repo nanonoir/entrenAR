@@ -169,6 +169,33 @@ enum PaymentStatus {
   PENDING
   PAID
   REFUNDED
+  PARTIALLY_REFUNDED
+  CHARGED_BACK
+}
+
+enum PaymentProvider {
+  MERCADOPAGO
+}
+
+enum PaymentAttemptStatus {
+  SUBMITTING
+  UNKNOWN
+  PROCESSING
+  ACTION_REQUIRED
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  CHARGED_BACK
+}
+
+enum PaymentNotificationStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  QUARANTINED
 }
 
 enum OrderDeliveryType {
@@ -198,6 +225,12 @@ enum OrderHistoryEventType {
   ORDER_UNARCHIVED
   NOTE_ADDED
   ORDER_CONVERTED
+  PAYMENT_REJECTED
+  PAYMENT_EXPIRED
+  PAYMENT_PARTIALLY_REFUNDED
+  PAYMENT_REFUNDED
+  PAYMENT_CHARGED_BACK
+  PAYMENT_ATTENTION_REQUIRED
 }
 
 enum PurchaseOrderStatus {
@@ -866,12 +899,91 @@ model OrderPayment {
   amount                Decimal       @db.Decimal(12, 2)
   paymentMethodSnapshot Json          @default("{}")
   bankTransferSnapshot  Json?
+  provider              PaymentProvider?
+  activeAttemptId       String?       @unique
+  refundedAmount        Decimal       @default(0) @db.Decimal(12, 2)
+  retryUntil            DateTime?
+  fulfillmentHoldReasons String[]     @default([])
+  reviewStartedAt       DateTime?
+  attentionRequiredAt   DateTime?
+  attentionReason       String?
+  rowVersion            Int           @default(0)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  activeAttempt         PaymentAttempt? @relation("ActivePaymentAttempt", fields: [activeAttemptId], references: [id], onDelete: SetNull)
+  attempts              PaymentAttempt[] @relation("PaymentAttempts")
 
   @@index([status, createdAt])
   @@index([paymentMethodId])
+  @@index([retryUntil])
+  @@index([attentionRequiredAt])
+}
+
+model PaymentAttempt {
+  id                          String               @id @default(cuid())
+  paymentId                   String
+  attemptNumber               Int
+  clientKey                   String
+  requestHash                 String
+  providerIdempotencyKey      String               @unique
+  expectedAmount              Decimal              @db.Decimal(12, 2)
+  currency                    String               @default("ARS")
+  status                      PaymentAttemptStatus @default(SUBMITTING)
+  providerOrderId             String?              @unique
+  providerTransactionId       String?              @unique
+  providerReferenceIds        Json?
+  rawOrderStatus              String?
+  rawOrderStatusDetail        String?
+  rawTransactionStatus        String?
+  rawTransactionStatusDetail  String?
+  providerVersion             String?
+  providerUpdatedAt           DateTime?
+  refundedAmount              Decimal              @default(0) @db.Decimal(12, 2)
+  localVersion                Int                  @default(0)
+  submittedAt                 DateTime             @default(now())
+  outcomeAt                   DateTime?
+  challengeCreatedAt          DateTime?
+  nextReconcileAt             DateTime?
+  reconcileLeaseUntil         DateTime?
+  reconcileFence              Int                  @default(0)
+  retryCount                  Int                  @default(0)
+  lastError                   String?
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  payment                     OrderPayment         @relation("PaymentAttempts", fields: [paymentId], references: [id], onDelete: Cascade)
+  activeForPayment            OrderPayment?        @relation("ActivePaymentAttempt")
+  notifications               PaymentNotification[]
+
+  @@unique([paymentId, attemptNumber])
+  @@unique([paymentId, clientKey])
+  @@index([status, nextReconcileAt])
+}
+
+model PaymentNotification {
+  id                String                    @id @default(cuid())
+  dedupKey          String                    @unique
+  resourceId        String
+  topic             String
+  eventId           String?
+  requestId         String?
+  providerTimestamp DateTime?
+  receivedAt        DateTime                  @default(now())
+  metadata          Json?
+  status            PaymentNotificationStatus @default(PENDING)
+  attemptId         String?
+  quarantineReason  String?
+  nextRunAt         DateTime                  @default(now())
+  leaseUntil        DateTime?
+  leaseFence        Int                       @default(0)
+  processAttempts   Int                       @default(0)
+  processedAt       DateTime?
+  updatedAt         DateTime                  @updatedAt
+  attempt           PaymentAttempt?           @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextRunAt])
+  @@index([resourceId])
+  @@index([attemptId])
 }
 
 model OrderHistory {
@@ -883,6 +995,7 @@ model OrderHistory {
   actorId     String?
   actorRole   Role?
   metadata    Json?
+  effectKey   String?                @unique
   createdAt   DateTime               @default(now())
   order       Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 

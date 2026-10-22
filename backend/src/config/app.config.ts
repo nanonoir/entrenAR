@@ -8,6 +8,19 @@ export const NODE_ENV = {
 
 export type NodeEnvironment = (typeof NODE_ENV)[keyof typeof NODE_ENV];
 
+export const MERCADOPAGO_ENVIRONMENT = {
+  PRODUCTION: "production",
+  TEST: "test",
+} as const;
+
+export type MercadoPagoEnvironment = (typeof MERCADOPAGO_ENVIRONMENT)[keyof typeof MERCADOPAGO_ENVIRONMENT];
+
+export interface MercadoPagoConfig {
+  accessToken: string;
+  environment: MercadoPagoEnvironment;
+  webhookSecret: string;
+}
+
 export interface AppConfig {
   bodyLimitBytes: number;
   corsOrigin: string;
@@ -21,6 +34,8 @@ export interface AppConfig {
   jwtAdminRefreshTtlSeconds?: number;
   jwtRefreshSecret: string;
   jwtRefreshTtlSeconds: number;
+  /** Present only when the whole Mercado Pago integration is configured. */
+  mercadoPago?: MercadoPagoConfig;
   refreshConcurrencyToleranceSeconds?: number;
   nodeEnv: NodeEnvironment;
   port: number;
@@ -56,6 +71,12 @@ const corsOriginsSchema = z.string().transform((value, context) => {
   return origins;
 });
 
+const optionalSecretSchema = (name: string) => z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(8, { error: `${name} is too short to be a valid credential.` }).optional(),
+);
+const MERCADOPAGO_ENV_KEYS = ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_SECRET", "MERCADOPAGO_ENVIRONMENT"] as const;
+
 const appConfigSchema = z.object({
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(10_485_760).default(104_857),
   CORS_ORIGIN: httpUrlSchema.optional(),
@@ -70,11 +91,39 @@ const appConfigSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, { error: "JWT_REFRESH_SECRET must contain at least 32 characters." }),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3_600).max(7_776_000).default(2_592_000),
   REFRESH_CONCURRENCY_TOLERANCE_SECONDS: z.coerce.number().int().min(1).max(60).default(5),
+  MERCADOPAGO_ACCESS_TOKEN: optionalSecretSchema("MERCADOPAGO_ACCESS_TOKEN"),
+  MERCADOPAGO_ENVIRONMENT: z.preprocess(
+    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+    z.enum([MERCADOPAGO_ENVIRONMENT.TEST, MERCADOPAGO_ENVIRONMENT.PRODUCTION], {
+      error: "MERCADOPAGO_ENVIRONMENT must be test or production.",
+    }).optional(),
+  ),
+  MERCADOPAGO_WEBHOOK_SECRET: optionalSecretSchema("MERCADOPAGO_WEBHOOK_SECRET"),
   NODE_ENV: z.enum([NODE_ENV.DEVELOPMENT, NODE_ENV.PRODUCTION, NODE_ENV.TEST]).default(NODE_ENV.DEVELOPMENT),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   THROTTLE_LIMIT: z.coerce.number().int().min(1).max(1_000).default(100),
   THROTTLE_TTL_SECONDS: z.coerce.number().int().min(1).max(3_600).default(60),
-}, { error: "Invalid backend environment configuration." });
+}, { error: "Invalid backend environment configuration." }).superRefine((environment, context) => {
+  const hasCredentials = environment.MERCADOPAGO_ACCESS_TOKEN !== undefined && environment.MERCADOPAGO_WEBHOOK_SECRET !== undefined;
+  const configured = [
+    environment.MERCADOPAGO_ACCESS_TOKEN,
+    environment.MERCADOPAGO_WEBHOOK_SECRET,
+    environment.MERCADOPAGO_ENVIRONMENT,
+  ];
+  if (configured.every((value) => value === undefined)) return;
+
+  // Non-production may omit the environment when both credentials exist; it then defaults to test.
+  const environmentMayDefault = hasCredentials && environment.NODE_ENV !== NODE_ENV.PRODUCTION;
+  MERCADOPAGO_ENV_KEYS.forEach((key, index) => {
+    if (configured[index] === undefined && !(key === "MERCADOPAGO_ENVIRONMENT" && environmentMayDefault)) {
+      context.addIssue({
+        code: "custom",
+        message: `${key} is required when any Mercado Pago setting is configured.`,
+        path: [key],
+      });
+    }
+  });
+});
 
 type EnvironmentVariables = Readonly<Record<string, string | undefined>>;
 
@@ -109,12 +158,30 @@ export function loadAppConfig(environment: EnvironmentVariables = process.env): 
     jwtAdminRefreshTtlSeconds: parsed.JWT_ADMIN_REFRESH_TTL_SECONDS,
     jwtRefreshSecret: parsed.JWT_REFRESH_SECRET,
     jwtRefreshTtlSeconds: parsed.JWT_REFRESH_TTL_SECONDS,
+    ...(parsed.MERCADOPAGO_ACCESS_TOKEN !== undefined && parsed.MERCADOPAGO_WEBHOOK_SECRET !== undefined
+      ? {
+          mercadoPago: {
+            accessToken: parsed.MERCADOPAGO_ACCESS_TOKEN,
+            environment: parsed.MERCADOPAGO_ENVIRONMENT ?? MERCADOPAGO_ENVIRONMENT.TEST,
+            webhookSecret: parsed.MERCADOPAGO_WEBHOOK_SECRET,
+          },
+        }
+      : {}),
     refreshConcurrencyToleranceSeconds: parsed.REFRESH_CONCURRENCY_TOLERANCE_SECONDS,
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
     throttleLimit: parsed.THROTTLE_LIMIT,
     throttleTtlSeconds: parsed.THROTTLE_TTL_SECONDS,
   };
+}
+
+/** Typed readiness accessor: the Mercado Pago settings when fully configured, otherwise undefined (integration unavailable). */
+export function getMercadoPagoConfig(config: Pick<AppConfig, "mercadoPago">): MercadoPagoConfig | undefined {
+  return config.mercadoPago;
+}
+
+export function isMercadoPagoConfigured(config: Pick<AppConfig, "mercadoPago">): boolean {
+  return config.mercadoPago !== undefined;
 }
 
 export function validateEnvironment(environment: Record<string, unknown>): AppConfig {

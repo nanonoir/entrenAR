@@ -18,6 +18,7 @@ import { CatalogScraperModule } from "./modules/catalog-scraper/catalog-scraper.
 import { CommerceModule } from "./modules/commerce/commerce.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
 import { WishlistModule } from "./modules/wishlist/wishlist.module";
 import { CheckoutModule } from "./modules/checkout/checkout.module";
 import { CustomersModule } from "./modules/customers/customers.module";
@@ -52,6 +53,7 @@ import { ShowcaseResetModule } from "./modules/showcase-reset/showcase-reset.mod
     CatalogScraperModule,
     CommerceModule,
     HealthModule,
+    PaymentsModule,
     InventoryModule,
     WishlistModule,
     CheckoutModule,
